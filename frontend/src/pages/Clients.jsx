@@ -20,14 +20,13 @@ export default function Clients() {
   const [editStatus, setEditStatus] = useState("");
   const [editPaid, setEditPaid] = useState("");
 
-    const loadData = useCallback(async () => {
+  const loadData = useCallback(async () => {
     try {
       const [{ data: b }, { data: p }] = await Promise.all([
         api.get("/bookings", { params: { status: statusFilter, payment_type: paymentFilter, q: search || undefined } }),
         api.get("/photographers"),
       ]);
       
-      // Memastikan data aman menjadi Array sebelum disimpan ke state
       setBookings(Array.isArray(b) ? b : (b?.data || b?.bookings || []));
       setPhotographers(Array.isArray(p) ? p : (p?.data || p?.photographers || []));
     } catch {
@@ -36,7 +35,6 @@ export default function Clients() {
       setLoading(false);
     }
   }, [statusFilter, paymentFilter, search]);
-
 
   useEffect(() => {
     loadData();
@@ -85,6 +83,9 @@ export default function Clients() {
       toast.error("Gagal menghapus");
     }
   };
+
+  const safeBookings = Array.isArray(bookings) ? bookings : [];
+  const safePhotographers = Array.isArray(photographers) ? photographers : [];
 
   return (
     <AdminLayout title="Database Client" subtitle="Kelola jadwal, fotografer, dan kirim invoice">
@@ -142,10 +143,10 @@ export default function Clients() {
               {loading && (
                 <tr><td colSpan={6} className="p-6 text-center text-muted-foreground">Memuat data...</td></tr>
               )}
-              {!loading && bookings.length === 0 && (
+              {!loading && safeBookings.length === 0 && (
                 <tr><td colSpan={6} className="p-6 text-center text-muted-foreground">Tidak ada client ditemukan.</td></tr>
               )}
-              {bookings.map((b) => (
+              {safeBookings.map((b) => (
                 <tr key={b.booking_id} className="border-b border-moss-900/5 hover:bg-moss-50/30 transition-colors">
                   <td className="p-3.5">
                     <p className="font-bold text-moss-900">{b.full_name}</p>
@@ -240,7 +241,7 @@ export default function Clients() {
                   <SelectTrigger className="bg-white"><SelectValue placeholder="Pilih fotografer" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">— Belum Ditugaskan —</SelectItem>
-                    {photographers.map((p) => (
+                    {safePhotographers.map((p) => (
                       <SelectItem key={p.photographer_id} value={p.photographer_id}>
                         {p.name} (Fee: {rupiah(p.fee_per_session)})
                       </SelectItem>
