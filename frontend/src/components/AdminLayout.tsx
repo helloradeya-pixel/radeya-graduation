@@ -1,7 +1,7 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import { LayoutDashboard, Users, Settings, LogOut, Camera, Plus } from "lucide-react";
-import { useAuth } from "@/context/AuthContext";
-import { Button } from "@/components/ui/button";
+import { useAuth } from "../context/AuthContext";
+import { Button } from "/components/ui/button";
 
 const nav = [
   { to: "/dashboard", label: "Ringkasan", icon: LayoutDashboard, testid: "nav-dashboard" },
