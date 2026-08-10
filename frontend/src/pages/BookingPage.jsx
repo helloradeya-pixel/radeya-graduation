@@ -56,12 +56,19 @@ export default function BookingPage() {
   });
 
   const set = (k) => (e) => setF((p) => ({ ...p, [k]: e.target?.value ?? e }));
-    const pkg = (packages || []).find((p) => p.package_id === f.package_id);
+     const pkg = Array.isArray(packages) ? packages.find((p) => p.package_id === f.package_id) : undefined;
   const amount = pkg ? (f.payment_type === "dp" ? pkg.dp_amount || Math.round(pkg.price * 0.3) : pkg.price) : 0;
 
   useEffect(() => {
-    api.get("/packages", { params: { only_active: true } }).then(({ data }) => setPackages(data)).catch(() => {});
+    api.get("/packages", { params: { only_active: true } })
+      .then(({ data }) => {
+        setPackages(Array.isArray(data) ? data : (data?.data || data?.packages || []));
+      })
+      .catch(() => {
+        setPackages([]);
+      });
   }, []);
+
 
   const submit = async (e) => {
     e.preventDefault();
