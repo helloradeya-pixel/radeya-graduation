@@ -1,8 +1,8 @@
 import { useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Camera, ArrowRight, ShieldCheck } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { useAuth } from "@/context/AuthContext";
+import { Button } from "../components/ui/button";
+import { useAuth } from "../context/AuthContext";
 
 export default function Login() {
   const { user, loading } = useAuth();
