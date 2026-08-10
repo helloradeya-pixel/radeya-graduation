@@ -32,12 +32,20 @@ app = FastAPI(redirect_slashes=True)
 async def root_favicon():
     return Response(status_code=204)
 
+# Konfigurasi CORS eksplisit untuk mendukung kredensial (cookies)
+origins = [
+    "https://radeya-graduation-booking.vercel.app",
+    "http://localhost:3000",
+    "http://localhost:5173"
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 api_router = APIRouter(prefix="/api")
