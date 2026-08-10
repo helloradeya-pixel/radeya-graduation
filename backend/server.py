@@ -476,6 +476,10 @@ async def analytics(request: Request):
 async def config():
     return {"admin_whatsapp": ADMIN_WHATSAPP}
 
+@api_router.get("/favicon.ico")
+async def favicon():
+    return Response(status_code=204)
+
 @api_router.get("/")
 async def root():
     return {"message": "Graduation Photo Booking API"}
