@@ -5,7 +5,7 @@ import { id as idLocale } from "date-fns/locale";
 import { toast } from "sonner";
 import {
   Camera, CalendarDays, MapPin, Clock, Upload, CheckCircle2, ArrowRight,
-  Instagram, Phone, GraduationCap, FileImage, ExternalLink, X, Loader2, CreditCard,
+  Instagram, Phone, GraduationCap, FileImage, ExternalLink, X, Loader2, CreditCard, FileText,
 } from "lucide-react";
 
 import { Button } from "../components/ui/button";
@@ -167,10 +167,10 @@ export default function BookingPage() {
         <div className="relative z-10 max-w-xl mx-auto">
           <p className="text-xs uppercase tracking-[0.25em] text-[#BEAF9D] font-medium">Limited Slots Available</p>
           <h1 className="mt-3 text-3xl sm:text-5xl font-serif font-normal tracking-tight leading-tight">
-            Preserve Your Milestone.
+            Capture Your <span className="italic text-[#BEAF9D]">Special Chapter</span>.
           </h1>
           <p className="mt-4 text-[#EBE7DF]/80 text-sm max-w-md mx-auto leading-relaxed">
-            Select a package, complete the transfer, upload your receipt, and confirm via WhatsApp.
+            Choose your package, transfer to the designated bank account, upload payment proof, and confirm via WhatsApp.
           </p>
         </div>
       </div>
@@ -329,6 +329,41 @@ export default function BookingPage() {
               )}
             </div>
           </Section>
+
+          {/* Kotak Syarat dan Ketentuan (T&C) */}
+          <div className="rounded-2xl bg-[#F8F6F0] p-6 border border-[#EBE7DF] space-y-4">
+            <div className="flex items-center gap-2 text-[#2C2A29] font-serif font-semibold text-base">
+              <FileText className="h-5 w-5 text-[#BEAF9D]" />
+              <span>Syarat dan Ketentuan Pemesanan (T&C)</span>
+            </div>
+            
+            <div className="space-y-3 text-xs sm:text-sm text-[#666666] leading-relaxed">
+              <div>
+                <span className="font-semibold text-[#2C2A29]">1. Pembatalan</span>
+                <p className="mt-0.5">DP (Down Payment) yang sudah dibayarkan tidak dapat dikembalikan (non-refundable) apabila terjadi pembatalan dari pihak klien.</p>
+              </div>
+
+              <div>
+                <span className="font-semibold text-[#2C2A29]">2. Pelunasan (Full Payment)</span>
+                <p className="mt-0.5">Pelunasan wajib dilakukan paling lambat H-1 sebelum tanggal sesi pemotretan.</p>
+              </div>
+
+              <div>
+                <span className="font-semibold text-[#2C2A29]">3. Perubahan Jadwal (Reschedule)</span>
+                <p className="mt-0.5">Perubahan jadwal pada Hari H tidak dapat dilakukan. Bisa reschedule kapan saja selama slot tanggal penggantinya masih kosong. Kabari admin secepatnya ya!.</p>
+              </div>
+
+              <div>
+                <span className="font-semibold text-[#2C2A29]">4. Penyimpanan Berkas (File Storage)</span>
+                <p className="mt-0.5">Hasil foto akan disimpan melalui tautan Google Drive dengan masa aktif maksimal 1 bulan sejak file dikirimkan. Setelah melewati batas waktu tersebut, file akan terhapus otomatis. Klien dianjurkan untuk segera melakukan backup mandiri.</p>
+              </div>
+
+              <div>
+                <span className="font-semibold text-[#2C2A29]">5. Ketentuan Umum</span>
+                <p className="mt-0.5">Dengan melakukan pembayaran DP, klien dianggap telah membaca dan menyetujui seluruh syarat dan ketentuan di atas.</p>
+              </div>
+            </div>
+          </div>
 
           <Button
             type="submit"
