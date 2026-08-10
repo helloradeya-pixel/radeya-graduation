@@ -5,7 +5,7 @@ import { id as idLocale } from "date-fns/locale";
 import { toast } from "sonner";
 import {
   Camera, CalendarDays, MapPin, Clock, Upload, CheckCircle2, ArrowRight,
-  Instagram, Phone, GraduationCap, FileImage, ExternalLink, X, Loader2,
+  Instagram, Phone, GraduationCap, FileImage, ExternalLink, X, Loader2, CreditCard,
 } from "lucide-react";
 
 import { Button } from "../components/ui/button";
@@ -112,7 +112,7 @@ export default function BookingPage() {
           <h2 className="text-2xl font-serif text-[#2C2A29] tracking-tight mt-6">Booking Terkirim!</h2>
           <p className="text-sm text-[#666666] mt-2">
             No. Invoice <span className="font-semibold text-[#2C2A29]" data-testid="success-invoice-number">{result.invoice_number}</span>.
-            Langkah terakhir: kirim detail booking ke admin via WhatsApp untuk konfirmasi.
+            Langkah terakhir: konfirmasi transfer dan kirim detail booking ke admin via WhatsApp.
           </p>
 
           <dl className="mt-6 space-y-2 rounded-2xl bg-[#F8F6F0] p-4 text-sm">
@@ -130,7 +130,7 @@ export default function BookingPage() {
 
           <a href={result.whatsapp_link} target="_blank" rel="noreferrer" data-testid="share-whatsapp-button">
             <Button className="mt-6 w-full h-12 rounded-2xl bg-[#BEAF9D] hover:bg-[#A89987] text-white font-medium transition-all shadow-sm">
-              Kirim ke WhatsApp Admin <ArrowRight className="ml-2 h-4 w-4" />
+              Konfirmasi via WhatsApp <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </a>
           <a href={result.gcal_link} target="_blank" rel="noreferrer" data-testid="add-to-gcal-button">
@@ -172,7 +172,7 @@ export default function BookingPage() {
             Abadikan hari kelulusanmu.
           </h1>
           <p className="mt-4 text-[#EBE7DF]/80 text-sm max-w-md mx-auto leading-relaxed">
-            Isi form di bawah, upload bukti transfer, lalu konfirmasi ke admin via WhatsApp. Jadwal langsung tercatat.
+            Pilih paket, transfer ke rekening tertera, upload bukti transfer, lalu konfirmasi via WhatsApp.
           </p>
         </div>
       </div>
@@ -188,7 +188,7 @@ export default function BookingPage() {
             </div>
           ))}
           <div className="rounded-2xl border border-[#EBE7DF] bg-white p-4 shadow-sm flex flex-col justify-center">
-            <p className="text-[10px] uppercase tracking-wider text-[#666666]">Konfirmasi via</p>
+            <p className="text-[10px] uppercase tracking-wider text-[#666666]">Info & Konfirmasi</p>
             <p className="mt-1 font-serif text-base font-semibold text-[#2C2A29]">WhatsApp Admin</p>
             <p className="text-xs text-[#BEAF9D] font-medium mt-0.5">0821-1251-570</p>
           </div>
@@ -274,10 +274,28 @@ export default function BookingPage() {
             </Field>
           </Section>
 
-          <Section n={3} title="Pembayaran & Bukti Transfer" desc="Pilih DP atau langsung lunas, lalu upload bukti transfernya.">
+          <Section n={3} title="Pembayaran & Rekening" desc="Lakukan transfer ke rekening di bawah sebelum upload bukti bayar.">
+            {/* Kotak Informasi Rekening Bank */}
+            <div className="sm:col-span-2 rounded-2xl bg-[#F8F6F0] p-5 border border-[#EBE7DF] space-y-3">
+              <div className="flex items-center gap-2 text-[#2C2A29] font-serif font-semibold text-sm">
+                <CreditCard className="h-4 w-4 text-[#BEAF9D]" />
+                <span>Silakan Transfer Pembayaran Ke:</span>
+              </div>
+              <div className="grid gap-2 text-xs text-[#666666]">
+                <div className="flex justify-between items-center bg-white p-3 rounded-xl border border-[#EBE7DF]">
+                  <div>
+                    <span className="font-semibold text-[#2C2A29]">BCA</span>
+                    <p className="font-mono text-sm text-[#2C2A29] mt-0.5">2952093623</p>
+                  </div>
+                  <span className="text-[11px] text-[#888] text-right">a.n. Yulviana Kusnia</span>
+                </div>
+                {/* Tambahkan bank lain jika ada */}
+              </div>
+            </div>
+
             <div className="sm:col-span-2">
               <RadioGroup value={f.payment_type} onValueChange={(v) => setF((s) => ({ ...s, payment_type: v }))} className="grid gap-3 sm:grid-cols-2">
-                {[["dp", "Bayar DP", "Sisa dilunasi saat hari-H"], ["full", "Full Payment", "Langsung lunas, bebas pikiran"]].map(([v, t, d]) => (
+                {[["dp", "Bayar DP", "Pelunasan paling telat H-1"], ["full", "Full Payment", "Langsung lunas, bebas pikiran"]].map(([v, t, d]) => (
                   <label
                     key={v}
                     data-testid={`payment-option-${v}`}
@@ -342,7 +360,7 @@ export default function BookingPage() {
             {submitting ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Mengirim...</> : <>Kirim Booking <ArrowRight className="ml-2 h-5 w-5" /></>}
           </Button>
           <p className="text-center text-xs text-[#666666] flex items-center justify-center gap-1">
-            Setelah submit kamu akan diarahkan ke WhatsApp admin <ExternalLink className="h-3 w-3" />
+            Setelah submit kamu akan diarahkan untuk konfirmasi via WhatsApp admin <ExternalLink className="h-3 w-3" />
           </p>
 
         </div>
