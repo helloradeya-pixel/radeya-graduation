@@ -1,6 +1,10 @@
 import axios from "axios";
 
-export const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+// Mencegah nilai "undefined" jika env variable belum diset di Vercel
+const rawBaseUrl = process.env.REACT_APP_BACKEND_URL;
+const backendUrl = (!rawBaseUrl || rawBaseUrl === "undefined") ? "" : rawBaseUrl;
+
+export const API = `${backendUrl}/api`;
 
 export const api = axios.create({ baseURL: API, withCredentials: true });
 
