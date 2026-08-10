@@ -56,7 +56,7 @@ export default function BookingPage() {
   });
 
   const set = (k) => (e) => setF((p) => ({ ...p, [k]: e.target?.value ?? e }));
-  const pkg = packages.find((p) => p.package_id === f.package_id);
+    const pkg = (packages || []).find((p) => p.package_id === f.package_id);
   const amount = pkg ? (f.payment_type === "dp" ? pkg.dp_amount || Math.round(pkg.price * 0.3) : pkg.price) : 0;
 
   useEffect(() => {
