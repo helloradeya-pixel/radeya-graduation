@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { api } from "@/lib/api";
+import { api } from "../lib/api"; // Ubah menjadi path relatif
 
 const AuthContext = createContext(null);
 
