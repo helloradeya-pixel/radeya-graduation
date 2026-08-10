@@ -13,6 +13,7 @@ from fastapi.responses import Response as FastResponse
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel, Field, EmailStr
+from passlib.context import CryptContext
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -25,7 +26,6 @@ db = client[os.environ['DB_NAME']]
 
 app = FastAPI()
 
-# --- CORSMiddleware dipindah ke atas sebelum router agar preflight request tertangani ---
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -37,6 +37,10 @@ app.add_middleware(
 api_router = APIRouter(prefix="/api")
 
 ADMIN_WHATSAPP = os.environ.get("ADMIN_WHATSAPP", "628211251570")
+ADMIN_EMAIL = "hello.radeya@gmail.com"
+ADMIN_PASSWORD_DEFAULT = os.environ.get("ADMIN_PASSWORD", "braggart666")
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 STORAGE_BASE = (os.environ.get("INTEGRATION_PROXY_URL") or "").strip() or "https://integrations.emergentagent.com"
 STORAGE_URL = STORAGE_BASE.rstrip("/") + "/objstore/api/v1/storage"
@@ -75,7 +79,7 @@ def get_object(path: str):
 
 EMAIL_BASE_URL = "https://integrations.emergentagent.com"
 EMAIL_KEY = os.environ.get("EMERGENT_EMAIL_KEY")
-EMAIL_FROM_NAME = os.environ.get("EMAIL_FROM_NAME", "Graduation Photo Studio")
+EMAIL_FROM_NAME = os.environ.get("EMAIL_FROM_NAME", "Radeyaphoto Studio")
 
 async def send_email(to: str, subject: str, html: str, reply_to: Optional[str] = None):
     payload = {"to": [to], "subject": subject, "html": html, "from_name": EMAIL_FROM_NAME}
@@ -91,6 +95,10 @@ class User(BaseModel):
     email: str
     name: str
     picture: Optional[str] = None
+
+class LoginPayload(BaseModel):
+    email: EmailStr
+    password: str
 
 class PackageIn(BaseModel):
     name: str
@@ -146,26 +154,27 @@ async def get_current_user(request: Request) -> User:
         raise HTTPException(status_code=401, detail="User not found")
     return User(**{k: user.get(k) for k in ["user_id", "email", "name", "picture"]})
 
-@api_router.post("/auth/session")
-async def create_session(response: Response, x_session_id: str = Header(None, alias="X-Session-ID")):
-    if not x_session_id:
-        raise HTTPException(status_code=400, detail="Missing session id")
-    async with httpx.AsyncClient(timeout=30) as c:
-        r = await c.get("https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data", headers={"X-Session-ID": x_session_id})
-    if r.status_code != 200:
-        raise HTTPException(status_code=401, detail="Invalid session id")
-    data = r.json()
-    existing = await db.users.find_one({"email": data["email"]}, {"_id": 0})
-    if existing:
-        user_id = existing["user_id"]
-        await db.users.update_one({"user_id": user_id}, {"$set": {"name": data.get("name"), "picture": data.get("picture")}})
-    else:
-        user_id = f"user_{uuid.uuid4().hex[:12]}"
-        await db.users.insert_one({"user_id": user_id, "email": data["email"], "name": data.get("name", ""), "picture": data.get("picture"), "created_at": now_iso()})
-    st = data["session_token"]
-    await db.user_sessions.insert_one({"user_id": user_id, "session_token": st, "expires_at": (datetime.now(timezone.utc) + timedelta(days=7)).isoformat(), "created_at": now_iso()})
+@api_router.post("/auth/login")
+async def login_password(body: LoginPayload, response: Response):
+    if body.email.lower() != ADMIN_EMAIL.lower():
+        raise HTTPException(status_code=403, detail="Email admin tidak dikenali.")
+    
+    user = await db.users.find_one({"email": ADMIN_EMAIL}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=401, detail="Akun admin belum diinisialisasi.")
+    
+    if not pwd_context.verify(body.password, user["password_hash"]):
+        raise HTTPException(status_code=401, detail="Password salah.")
+    
+    st = f"tok_{uuid.uuid4().hex}"
+    await db.user_sessions.insert_one({
+        "user_id": user["user_id"],
+        "session_token": st,
+        "expires_at": (datetime.now(timezone.utc) + timedelta(days=7)).isoformat(),
+        "created_at": now_iso()
+    })
     response.set_cookie("session_token", st, httponly=True, secure=True, samesite="none", path="/", max_age=7 * 24 * 3600)
-    return {"user_id": user_id, "email": data["email"], "name": data.get("name"), "picture": data.get("picture")}
+    return {"user_id": user["user_id"], "email": user["email"], "name": user["name"], "session_token": st}
 
 @api_router.get("/auth/me", response_model=User)
 async def auth_me(request: Request):
@@ -482,7 +491,7 @@ async def favicon():
 
 @api_router.get("/")
 async def root():
-    return {"message": "Graduation Photo Booking API"}
+    return {"message": "Radeyaphoto Booking API"}
 
 app.include_router(api_router)
 
@@ -505,6 +514,20 @@ async def startup():
     if await db.photographers.count_documents({}) == 0:
         for n, f in [("Rizky", 150000), ("Dinda", 150000)]:
             await db.photographers.insert_one({"photographer_id": f"pho_{uuid.uuid4().hex[:10]}", "name": n, "phone": "", "fee_per_session": f, "active": True})
+    
+    admin_exists = await db.users.find_one({"email": ADMIN_EMAIL})
+    hashed_pw = pwd_context.hash(ADMIN_PASSWORD_DEFAULT)
+    if not admin_exists:
+        await db.users.insert_one({
+            "user_id": f"user_{uuid.uuid4().hex[:12]}",
+            "email": ADMIN_EMAIL,
+            "name": "Radeya Admin",
+            "password_hash": hashed_pw,
+            "created_at": now_iso()
+        })
+        logger.info("Default admin user created.")
+    else:
+        await db.users.update_one({"email": ADMIN_EMAIL}, {"$set": {"password_hash": hashed_pw}})
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
