@@ -111,7 +111,7 @@ class User(BaseModel):
     picture: Optional[str] = None
 
 class LoginPayload(BaseModel):
-    email: str  # Menggunakan str biasa agar tidak error import email-validator di Vercel
+    email: str
     password: str
 
 class PackageIn(BaseModel):
