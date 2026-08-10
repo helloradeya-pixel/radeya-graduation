@@ -27,6 +27,11 @@ db = client[os.environ['DB_NAME']]
 # Menggunakan redirect_slashes=True untuk mencegah error 405 pada serverless Vercel
 app = FastAPI(redirect_slashes=True)
 
+# Tambahan route root favicon untuk mengatasi error 500 dari browser
+@app.get("/favicon.ico", include_in_schema=False)
+async def root_favicon():
+    return Response(status_code=204)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -506,10 +511,6 @@ async def analytics(request: Request):
 @api_router.get("/config")
 async def config():
     return {"admin_whatsapp": ADMIN_WHATSAPP}
-
-@api_router.get("/favicon.ico")
-async def favicon():
-    return Response(status_code=204)
 
 @api_router.get("/")
 async def root():
