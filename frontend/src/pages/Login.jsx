@@ -3,6 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { Camera, ArrowRight, ShieldCheck } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { useAuth } from "../context/AuthContext";
+import loginBg from "../assets/ADS00060.jpg";
 
 export default function Login() {
   const { user, loading } = useAuth();
@@ -21,7 +22,7 @@ export default function Login() {
     <div className="min-h-screen grid lg:grid-cols-2 bg-[#F8F6F0] text-[#2C2A29] font-sans">
       <div className="relative hidden lg:block overflow-hidden">
         <img
-          src="https://images.unsplash.com/photo-1561409958-c0e6ad782a81?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDQ2MzR8MHwxfHNlYXJjaHwxfHxvdXRkb29yJTIwZ3JhZHVhdGlvbiUyMHBob3RvfGVufDB8fHx8MTc4NjMzODI2Nnww&ixlib=rb-4.1.0&q=85"
+          src={loginBg}
           alt="Graduation"
           className="absolute inset-0 h-full w-full object-cover"
         />
