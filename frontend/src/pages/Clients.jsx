@@ -20,20 +20,23 @@ export default function Clients() {
   const [editStatus, setEditStatus] = useState("");
   const [editPaid, setEditPaid] = useState("");
 
-  const loadData = useCallback(async () => {
+    const loadData = useCallback(async () => {
     try {
       const [{ data: b }, { data: p }] = await Promise.all([
         api.get("/bookings", { params: { status: statusFilter, payment_type: paymentFilter, q: search || undefined } }),
         api.get("/photographers"),
       ]);
-      setBookings(b);
-      setPhotographers(p);
+      
+      // Memastikan data aman menjadi Array sebelum disimpan ke state
+      setBookings(Array.isArray(b) ? b : (b?.data || b?.bookings || []));
+      setPhotographers(Array.isArray(p) ? p : (p?.data || p?.photographers || []));
     } catch {
       toast.error("Gagal memuat data client");
     } finally {
       setLoading(false);
     }
   }, [statusFilter, paymentFilter, search]);
+
 
   useEffect(() => {
     loadData();
