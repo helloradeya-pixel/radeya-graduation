@@ -1,8 +1,10 @@
 fastapi
 uvicorn
 motor
-pymongo
 pydantic
-python-dotenv
 httpx
 requests
+python-dotenv
+passlib
+bcrypt
+python-multipart
