@@ -1,1 +1,504 @@
+import os
+import uuid
+import logging
+from pathlib import Path
+from datetime import datetime, timezone, timedelta
+from typing import List, Optional, Literal
 
+import httpx
+import requests
+from dotenv import load_dotenv
+from fastapi import FastAPI, APIRouter, HTTPException, UploadFile, File, Form, Header, Query, Request, Response
+from fastapi.responses import Response as FastResponse
+from starlette.middleware.cors import CORSMiddleware
+from motor.motor_asyncio import AsyncIOMotorClient
+from pydantic import BaseModel, Field, EmailStr
+
+ROOT_DIR = Path(__file__).parent
+load_dotenv(ROOT_DIR / '.env')
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
+client = AsyncIOMotorClient(os.environ['MONGO_URL'])
+db = client[os.environ['DB_NAME']]
+
+app = FastAPI()
+api_router = APIRouter(prefix="/api")
+
+ADMIN_WHATSAPP = os.environ.get("ADMIN_WHATSAPP", "628211251570")
+
+STORAGE_BASE = (os.environ.get("INTEGRATION_PROXY_URL") or "").strip() or "https://integrations.emergentagent.com"
+STORAGE_URL = STORAGE_BASE.rstrip("/") + "/objstore/api/v1/storage"
+EMERGENT_KEY = os.environ.get("EMERGENT_LLM_KEY")
+APP_NAME = "gradphoto"
+storage_key = None
+
+MIME_TYPES = {"jpg": "image/jpeg", "jpeg": "image/jpeg", "png": "image/png", "webp": "image/webp", "pdf": "application/pdf"}
+
+def init_storage(force: bool = False):
+    global storage_key
+    if storage_key and not force:
+        return storage_key
+    resp = requests.post(f"{STORAGE_URL}/init", json={"emergent_key": EMERGENT_KEY}, timeout=30)
+    resp.raise_for_status()
+    storage_key = resp.json()["storage_key"]
+    return storage_key
+
+def put_object(path: str, data: bytes, content_type: str) -> dict:
+    key = init_storage()
+    resp = requests.put(f"{STORAGE_URL}/objects/{path}", headers={"X-Storage-Key": key, "Content-Type": content_type}, data=data, timeout=120)
+    if resp.status_code == 404:
+        key = init_storage(force=True)
+        resp = requests.put(f"{STORAGE_URL}/objects/{path}", headers={"X-Storage-Key": key, "Content-Type": content_type}, data=data, timeout=120)
+    resp.raise_for_status()
+    return resp.json()
+
+def get_object(path: str):
+    key = init_storage()
+    resp = requests.get(f"{STORAGE_URL}/objects/{path}", headers={"X-Storage-Key": key}, timeout=60)
+    if resp.status_code == 404:
+        key = init_storage(force=True)
+        resp = requests.get(f"{STORAGE_URL}/objects/{path}", headers={"X-Storage-Key": key}, timeout=60)
+    resp.raise_for_status()
+    return resp.content, resp.headers.get("Content-Type", "application/octet-stream")
+
+EMAIL_BASE_URL = "https://integrations.emergentagent.com"
+EMAIL_KEY = os.environ.get("EMERGENT_EMAIL_KEY")
+EMAIL_FROM_NAME = os.environ.get("EMAIL_FROM_NAME", "Graduation Photo Studio")
+
+async def send_email(to: str, subject: str, html: str, reply_to: Optional[str] = None):
+    payload = {"to": [to], "subject": subject, "html": html, "from_name": EMAIL_FROM_NAME}
+    if reply_to:
+        payload["contact_email"] = reply_to
+    async with httpx.AsyncClient(timeout=30) as c:
+        resp = await c.post(f"{EMAIL_BASE_URL}/api/v1/email/send", headers={"X-Email-Key": EMAIL_KEY}, json=payload)
+    resp.raise_for_status()
+    return resp.json().get("id")
+
+class User(BaseModel):
+    user_id: str
+    email: str
+    name: str
+    picture: Optional[str] = None
+
+class PackageIn(BaseModel):
+    name: str
+    price: float
+    duration_minutes: int = 60
+    description: Optional[str] = ""
+    dp_amount: float = 0
+    active: bool = True
+
+class Package(PackageIn):
+    package_id: str
+
+class PhotographerIn(BaseModel):
+    name: str
+    phone: Optional[str] = ""
+    fee_per_session: float = 0
+    active: bool = True
+
+class Photographer(PhotographerIn):
+    photographer_id: str
+
+class BookingUpdate(BaseModel):
+    status: Optional[Literal["pending", "confirmed", "completed", "cancelled"]] = None
+    photographer_id: Optional[str] = None
+    amount_paid: Optional[float] = None
+    photographer_fee: Optional[float] = None
+    photographer_paid: Optional[bool] = None
+    notes: Optional[str] = None
+
+def now_iso():
+    return datetime.now(timezone.utc).isoformat()
+
+async def get_current_user(request: Request) -> User:
+    token = request.cookies.get("session_token")
+    if not token:
+        auth = request.headers.get("authorization")
+        if auth and auth.lower().startswith("bearer "):
+            token = auth[7:]
+    if not token:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    session = await db.user_sessions.find_one({"session_token": token}, {"_id": 0})
+    if not session:
+        raise HTTPException(status_code=401, detail="Invalid session")
+    exp = session["expires_at"]
+    if isinstance(exp, str):
+        exp = datetime.fromisoformat(exp)
+    if exp.tzinfo is None:
+        exp = exp.replace(tzinfo=timezone.utc)
+    if exp < datetime.now(timezone.utc):
+        raise HTTPException(status_code=401, detail="Session expired")
+    user = await db.users.find_one({"user_id": session["user_id"]}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found")
+    return User(**{k: user.get(k) for k in ["user_id", "email", "name", "picture"]})
+
+@api_router.post("/auth/session")
+async def create_session(response: Response, x_session_id: str = Header(None, alias="X-Session-ID")):
+    if not x_session_id:
+        raise HTTPException(status_code=400, detail="Missing session id")
+    async with httpx.AsyncClient(timeout=30) as c:
+        r = await c.get("https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data", headers={"X-Session-ID": x_session_id})
+    if r.status_code != 200:
+        raise HTTPException(status_code=401, detail="Invalid session id")
+    data = r.json()
+    existing = await db.users.find_one({"email": data["email"]}, {"_id": 0})
+    if existing:
+        user_id = existing["user_id"]
+        await db.users.update_one({"user_id": user_id}, {"$set": {"name": data.get("name"), "picture": data.get("picture")}})
+    else:
+        user_id = f"user_{uuid.uuid4().hex[:12]}"
+        await db.users.insert_one({"user_id": user_id, "email": data["email"], "name": data.get("name", ""), "picture": data.get("picture"), "created_at": now_iso()})
+    st = data["session_token"]
+    await db.user_sessions.insert_one({"user_id": user_id, "session_token": st, "expires_at": (datetime.now(timezone.utc) + timedelta(days=7)).isoformat(), "created_at": now_iso()})
+    response.set_cookie("session_token", st, httponly=True, secure=True, samesite="none", path="/", max_age=7 * 24 * 3600)
+    return {"user_id": user_id, "email": data["email"], "name": data.get("name"), "picture": data.get("picture")}
+
+@api_router.get("/auth/me", response_model=User)
+async def auth_me(request: Request):
+    return await get_current_user(request)
+
+@api_router.post("/auth/logout")
+async def logout(request: Request, response: Response):
+    token = request.cookies.get("session_token")
+    if token:
+        await db.user_sessions.delete_many({"session_token": token})
+    response.delete_cookie("session_token", path="/", samesite="none", secure=True)
+    return {"ok": True}
+
+@api_router.get("/packages", response_model=List[Package])
+async def list_packages(only_active: bool = False):
+    q = {"active": True} if only_active else {}
+    docs = await db.packages.find(q, {"_id": 0}).sort("price", 1).to_list(500)
+    return docs
+
+@api_router.post("/packages", response_model=Package)
+async def create_package(body: PackageIn, request: Request):
+    await get_current_user(request)
+    doc = {"package_id": f"pkg_{uuid.uuid4().hex[:10]}", **body.model_dump()}
+    await db.packages.insert_one(dict(doc))
+    return doc
+
+@api_router.put("/packages/{package_id}", response_model=Package)
+async def update_package(package_id: str, body: PackageIn, request: Request):
+    await get_current_user(request)
+    r = await db.packages.update_one({"package_id": package_id}, {"$set": body.model_dump()})
+    if r.matched_count == 0:
+        raise HTTPException(404, "Paket tidak ditemukan")
+    return await db.packages.find_one({"package_id": package_id}, {"_id": 0})
+
+@api_router.delete("/packages/{package_id}")
+async def delete_package(package_id: str, request: Request):
+    await get_current_user(request)
+    await db.packages.delete_one({"package_id": package_id})
+    return {"ok": True}
+
+@api_router.get("/photographers", response_model=List[Photographer])
+async def list_photographers():
+    return await db.photographers.find({}, {"_id": 0}).sort("name", 1).to_list(500)
+
+@api_router.post("/photographers", response_model=Photographer)
+async def create_photographer(body: PhotographerIn, request: Request):
+    await get_current_user(request)
+    doc = {"photographer_id": f"pho_{uuid.uuid4().hex[:10]}", **body.model_dump()}
+    await db.photographers.insert_one(dict(doc))
+    return doc
+
+@api_router.put("/photographers/{photographer_id}", response_model=Photographer)
+async def update_photographer(photographer_id: str, body: PhotographerIn, request: Request):
+    await get_current_user(request)
+    r = await db.photographers.update_one({"photographer_id": photographer_id}, {"$set": body.model_dump()})
+    if r.matched_count == 0:
+        raise HTTPException(404, "Fotografer tidak ditemukan")
+    return await db.photographers.find_one({"photographer_id": photographer_id}, {"_id": 0})
+
+@api_router.delete("/photographers/{photographer_id}")
+async def delete_photographer(photographer_id: str, request: Request):
+    await get_current_user(request)
+    await db.photographers.delete_one({"photographer_id": photographer_id})
+    return {"ok": True}
+
+@api_router.post("/upload/proof")
+async def upload_proof(file: UploadFile = File(...)):
+    ext = (file.filename or "img.jpg").split(".")[-1].lower()
+    if ext not in MIME_TYPES:
+        raise HTTPException(400, "Format file harus JPG, PNG, WEBP atau PDF")
+    data = await file.read()
+    if len(data) > 6 * 1024 * 1024:
+        raise HTTPException(400, "Ukuran file maksimal 6MB")
+    path = f"{APP_NAME}/proofs/{uuid.uuid4().hex}.{ext}"
+    content_type = file.content_type or MIME_TYPES[ext]
+    result = put_object(path, data, content_type)
+    file_id = f"file_{uuid.uuid4().hex[:12]}"
+    await db.files.insert_one({
+        "id": file_id, "storage_path": result["path"], "original_filename": file.filename,
+        "content_type": content_type, "size": result.get("size", len(data)),
+        "is_deleted": False, "created_at": now_iso(),
+    })
+    return {"file_id": file_id, "storage_path": result["path"], "content_type": content_type}
+
+@api_router.get("/files/{file_id}")
+async def download_file(file_id: str):
+    rec = await db.files.find_one({"id": file_id, "is_deleted": False}, {"_id": 0})
+    if not rec:
+        raise HTTPException(404, "File tidak ditemukan")
+    data, ct = get_object(rec["storage_path"])
+    return FastResponse(content=data, media_type=rec.get("content_type", ct))
+
+def gcal_link(b: dict) -> str:
+    from urllib.parse import quote_plus
+    d = b["shoot_date"].replace("-", "")
+    s = b["start_time"].replace(":", "") + "00"
+    e = b["end_time"].replace(":", "") + "00"
+    text = quote_plus(f"Foto Graduation - {b['full_name']}")
+    details = quote_plus(f"Paket: {b['package_name']}\nUniversitas: {b['university']}\nProdi: {b['study']}\nWA: {b['whatsapp']}\nIG: {b['instagram']}")
+    loc = quote_plus(b["location"])
+    return f"https://calendar.google.com/calendar/render?action=TEMPLATE&text={text}&dates={d}T{s}/{d}T{e}&details={details}&location={loc}&ctz=Asia/Jakarta"
+
+async def next_invoice_number() -> str:
+    count = await db.bookings.count_documents({})
+    return f"INV-{datetime.now(timezone.utc).strftime('%Y%m')}-{count + 1:04d}"
+
+@api_router.post("/bookings")
+async def create_booking(
+    full_name: str = Form(...), email: EmailStr = Form(...), instagram: str = Form(...),
+    whatsapp: str = Form(...), university: str = Form(...), study: str = Form(...),
+    package_id: str = Form(...), shoot_date: str = Form(...), location: str = Form(...),
+    start_time: str = Form(...), end_time: str = Form(...),
+    payment_type: Literal["dp", "full"] = Form(...), amount_paid: float = Form(...),
+    proof_file_id: str = Form(...), notes: str = Form(""),
+):
+    pkg = await db.packages.find_one({"package_id": package_id}, {"_id": 0})
+    if not pkg:
+        raise HTTPException(400, "Paket tidak ditemukan")
+    booking_id = f"bk_{uuid.uuid4().hex[:12]}"
+    doc = {
+        "booking_id": booking_id, "invoice_number": await next_invoice_number(),
+        "full_name": full_name, "email": str(email), "instagram": instagram, "whatsapp": whatsapp,
+        "university": university, "study": study,
+        "package_id": package_id, "package_name": pkg["name"], "package_price": pkg["price"],
+        "shoot_date": shoot_date, "location": location, "start_time": start_time, "end_time": end_time,
+        "payment_type": payment_type, "amount_paid": float(amount_paid),
+        "balance_due": max(pkg["price"] - float(amount_paid), 0),
+        "proof_file_id": proof_file_id, "notes": notes,
+        "status": "pending", "photographer_id": None, "photographer_name": None,
+        "photographer_fee": 0.0, "photographer_paid": False,
+        "invoice_sent": False, "created_at": now_iso(),
+    }
+    await db.bookings.insert_one(dict(doc))
+    doc["gcal_link"] = gcal_link(doc)
+    from urllib.parse import quote
+    msg = (f"*BOOKING FOTO GRADUATION*\n\nNama: {full_name}\nEmail: {email}\nIG: {instagram}\nWA: {whatsapp}\n"
+           f"Universitas: {university}\nProdi: {study}\n\nPaket: {pkg['name']} (Rp {pkg['price']:,.0f})\n"
+           f"Tanggal: {shoot_date}\nJam: {start_time} - {end_time}\nLokasi: {location}\n\n"
+           f"Pembayaran: {'DP' if payment_type == 'dp' else 'Full Payment'} - Rp {float(amount_paid):,.0f}\n"
+           f"No. Invoice: {doc['invoice_number']}\n\nBukti transfer sudah saya upload. Mohon konfirmasi booking saya. Terima kasih!")
+    doc["whatsapp_link"] = f"https://wa.me/{ADMIN_WHATSAPP}?text={quote(msg)}"
+    return doc
+
+@api_router.get("/bookings")
+async def list_bookings(request: Request, status: Optional[str] = None, payment_type: Optional[str] = None,
+                        photographer_id: Optional[str] = None, q: Optional[str] = None):
+    await get_current_user(request)
+    query = {}
+    if status and status != "all":
+        query["status"] = status
+    if payment_type and payment_type != "all":
+        query["payment_type"] = payment_type
+    if photographer_id and photographer_id != "all":
+        query["photographer_id"] = photographer_id
+    if q:
+        query["$or"] = [{"full_name": {"$regex": q, "$options": "i"}}, {"email": {"$regex": q, "$options": "i"}},
+                        {"university": {"$regex": q, "$options": "i"}}, {"invoice_number": {"$regex": q, "$options": "i"}}]
+    docs = await db.bookings.find(query, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    for d in docs:
+        d["gcal_link"] = gcal_link(d)
+    return docs
+
+@api_router.get("/bookings/{booking_id}")
+async def get_booking(booking_id: str, request: Request):
+    await get_current_user(request)
+    d = await db.bookings.find_one({"booking_id": booking_id}, {"_id": 0})
+    if not d:
+        raise HTTPException(404, "Booking tidak ditemukan")
+    d["gcal_link"] = gcal_link(d)
+    return d
+
+@api_router.put("/bookings/{booking_id}")
+async def update_booking(booking_id: str, body: BookingUpdate, request: Request):
+    await get_current_user(request)
+    cur = await db.bookings.find_one({"booking_id": booking_id}, {"_id": 0})
+    if not cur:
+        raise HTTPException(404, "Booking tidak ditemukan")
+    upd = {k: v for k, v in body.model_dump().items() if v is not None}
+    if "photographer_id" in upd:
+        pho = await db.photographers.find_one({"photographer_id": upd["photographer_id"]}, {"_id": 0})
+        upd["photographer_name"] = pho["name"] if pho else None
+        if pho and not body.photographer_fee:
+            upd["photographer_fee"] = pho.get("fee_per_session", 0)
+    if "amount_paid" in upd:
+        upd["balance_due"] = max(cur["package_price"] - upd["amount_paid"], 0)
+    await db.bookings.update_one({"booking_id": booking_id}, {"$set": upd})
+    d = await db.bookings.find_one({"booking_id": booking_id}, {"_id": 0})
+    d["gcal_link"] = gcal_link(d)
+    return d
+
+@api_router.delete("/bookings/{booking_id}")
+async def delete_booking(booking_id: str, request: Request):
+    await get_current_user(request)
+    await db.bookings.delete_one({"booking_id": booking_id})
+    return {"ok": True}
+
+def rupiah(v) -> str:
+    return f"Rp {float(v or 0):,.0f}".replace(",", ".")
+
+def invoice_html(b: dict) -> str:
+    rows = f"""
+    <tr><td style="padding:8px 0;border-bottom:1px solid #eee">{b['package_name']}<br>
+    <span style="color:#71717a;font-size:12px">{b['shoot_date']} · {b['start_time']}-{b['end_time']} · {b['location']}</span></td>
+    <td align="right" style="padding:8px 0;border-bottom:1px solid #eee">{rupiah(b['package_price'])}</td></tr>"""
+    return f"""<div style="font-family:Arial,Helvetica,sans-serif;max-width:640px;margin:0 auto;background:#fdfbf7;padding:24px">
+<table width="100%" cellpadding="0" cellspacing="0"><tr>
+<td><div style="font-size:22px;font-weight:bold;color:#065f46">{EMAIL_FROM_NAME}</div>
+<div style="color:#71717a;font-size:12px">Graduation Photo Outdoor</div></td>
+<td align="right"><div style="font-size:16px;font-weight:bold">INVOICE</div>
+<div style="color:#71717a;font-size:12px">{b['invoice_number']}</div></td></tr></table>
+<hr style="border:none;border-top:2px solid #065f46;margin:16px 0">
+<table width="100%" cellpadding="0" cellspacing="0"><tr valign="top">
+<td><div style="font-size:11px;letter-spacing:1px;color:#71717a">DITAGIHKAN KEPADA</div>
+<div style="font-weight:bold">{b['full_name']}</div>
+<div style="font-size:12px;color:#3f3f46">{b['email']}<br>{b['whatsapp']} · {b['instagram']}<br>{b['university']} — {b['study']}</div></td>
+<td align="right"><div style="font-size:11px;letter-spacing:1px;color:#71717a">STATUS</div>
+<div style="font-weight:bold;color:#065f46">{'LUNAS' if b.get('balance_due', 0) <= 0 else 'DP / BELUM LUNAS'}</div></td></tr></table>
+<table width="100%" cellpadding="0" cellspacing="0" style="margin-top:20px;font-size:14px">
+<tr><td style="font-size:11px;letter-spacing:1px;color:#71717a;padding-bottom:6px">DESKRIPSI</td>
+<td align="right" style="font-size:11px;letter-spacing:1px;color:#71717a;padding-bottom:6px">JUMLAH</td></tr>
+{rows}
+<tr><td style="padding-top:10px">Total Paket</td><td align="right" style="padding-top:10px">{rupiah(b['package_price'])}</td></tr>
+<tr><td>Sudah Dibayar ({'DP' if b['payment_type'] == 'dp' else 'Full Payment'})</td><td align="right">- {rupiah(b['amount_paid'])}</td></tr>
+<tr><td style="padding-top:10px;font-weight:bold;border-top:2px solid #065f46">Sisa Pembayaran</td>
+<td align="right" style="padding-top:10px;font-weight:bold;border-top:2px solid #065f46">{rupiah(b.get('balance_due', 0))}</td></tr>
+</table>
+<p style="font-size:12px;color:#71717a;margin-top:24px">Terima kasih telah mempercayakan momen kelulusanmu kepada kami.
+Hubungi admin di WhatsApp {ADMIN_WHATSAPP} untuk pertanyaan lebih lanjut.</p></div>"""
+
+@api_router.get("/bookings/{booking_id}/invoice")
+async def get_invoice(booking_id: str, request: Request):
+    await get_current_user(request)
+    b = await db.bookings.find_one({"booking_id": booking_id}, {"_id": 0})
+    if not b:
+        raise HTTPException(404, "Booking tidak ditemukan")
+    return {"invoice_number": b["invoice_number"], "html": invoice_html(b), "booking": b}
+
+@api_router.post("/bookings/{booking_id}/send-invoice")
+async def send_invoice(booking_id: str, request: Request):
+    await get_current_user(request)
+    b = await db.bookings.find_one({"booking_id": booking_id}, {"_id": 0})
+    if not b:
+        raise HTTPException(404, "Booking tidak ditemukan")
+    try:
+        eid = await send_email(b["email"], f"Invoice {b['invoice_number']} — Booking Foto Graduation", invoice_html(b))
+    except Exception as e:
+        logger.error(f"send invoice failed: {e}")
+        raise HTTPException(502, "Gagal mengirim email invoice")
+    await db.bookings.update_one({"booking_id": booking_id}, {"$set": {"invoice_sent": True, "invoice_sent_at": now_iso()}})
+    return {"ok": True, "email_id": eid, "sent_to": b["email"]}
+
+@api_router.get("/analytics/summary")
+async def analytics(request: Request):
+    await get_current_user(request)
+    bookings = await db.bookings.find({"status": {"$ne": "cancelled"}}, {"_id": 0}).to_list(5000)
+    dp_income = sum(b["amount_paid"] for b in bookings if b["payment_type"] == "dp")
+    full_income = sum(b["amount_paid"] for b in bookings if b["payment_type"] == "full")
+    total_income = dp_income + full_income
+    outstanding = sum(b.get("balance_due", 0) for b in bookings)
+    fee_total = sum(b.get("photographer_fee", 0) for b in bookings)
+    fee_unpaid = sum(b.get("photographer_fee", 0) for b in bookings if not b.get("photographer_paid"))
+
+    per_pho = {}
+    for b in bookings:
+        name = b.get("photographer_name") or "Belum Ditugaskan"
+        p = per_pho.setdefault(name, {"name": name, "sessions": 0, "revenue": 0.0, "fee": 0.0, "fee_unpaid": 0.0})
+        p["sessions"] += 1
+        p["revenue"] += b["amount_paid"]
+        p["fee"] += b.get("photographer_fee", 0)
+        if not b.get("photographer_paid"):
+            p["fee_unpaid"] += b.get("photographer_fee", 0)
+
+    per_pkg = {}
+    for b in bookings:
+        p = per_pkg.setdefault(b["package_name"], {"name": b["package_name"], "count": 0, "revenue": 0.0})
+        p["count"] += 1
+        p["revenue"] += b["amount_paid"]
+
+    monthly = {}
+    for b in bookings:
+        m = (b.get("shoot_date") or "")[:7]
+        if not m:
+            continue
+        mm = monthly.setdefault(m, {"month": m, "dp": 0.0, "full": 0.0, "bookings": 0})
+        mm["bookings"] += 1
+        mm["dp" if b["payment_type"] == "dp" else "full"] += b["amount_paid"]
+
+    status_counts = {}
+    for b in bookings:
+        status_counts[b["status"]] = status_counts.get(b["status"], 0) + 1
+
+    upcoming = sorted([b for b in bookings if b.get("shoot_date", "") >= datetime.now(timezone.utc).strftime("%Y-%m-%d")], key=lambda x: (x["shoot_date"], x["start_time"]))[:5]
+    for u in upcoming:
+        u["gcal_link"] = gcal_link(u)
+
+    return {
+        "total_bookings": len(bookings), "dp_income": dp_income, "full_income": full_income,
+        "total_income": total_income, "outstanding": outstanding,
+        "photographer_fee_total": fee_total, "photographer_fee_unpaid": fee_unpaid,
+        "net_profit": total_income - fee_total,
+        "per_photographer": sorted(per_pho.values(), key=lambda x: -x["revenue"]),
+        "per_package": sorted(per_pkg.values(), key=lambda x: -x["revenue"]),
+        "monthly": sorted(monthly.values(), key=lambda x: x["month"]),
+        "status_counts": status_counts, "upcoming": upcoming,
+    }
+
+@api_router.get("/config")
+async def config():
+    return {"admin_whatsapp": ADMIN_WHATSAPP}
+
+@api_router.get("/")
+async def root():
+    return {"message": "Graduation Photo Booking API"}
+
+app.include_router(api_router)
+app.add_middleware(
+    CORSMiddleware,
+    allow_credentials=True,
+    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+DEFAULT_PACKAGES = [
+    {"name": "Paket Basic", "price": 250000, "duration_minutes": 60, "dp_amount": 100000, "description": "1 jam · 1 lokasi · 15 foto edit", "active": True},
+    {"name": "Paket Standard", "price": 450000, "duration_minutes": 120, "dp_amount": 150000, "description": "2 jam · 2 lokasi · 30 foto edit · all raw", "active": True},
+    {"name": "Paket Premium", "price": 750000, "duration_minutes": 180, "dp_amount": 250000, "description": "3 jam · bebas lokasi · 50 foto edit · album mini", "active": True},
+]
+
+@app.on_event("startup")
+async def startup():
+    try:
+        init_storage()
+        logger.info("Storage initialized")
+    except Exception as e:
+        logger.error(f"Storage init failed: {e}")
+    if await db.packages.count_documents({}) == 0:
+        for p in DEFAULT_PACKAGES:
+            await db.packages.insert_one({"package_id": f"pkg_{uuid.uuid4().hex[:10]}", **p})
+    if await db.photographers.count_documents({}) == 0:
+        for n, f in [("Rizky", 150000), ("Dinda", 150000)]:
+            await db.photographers.insert_one({"photographer_id": f"pho_{uuid.uuid4().hex[:10]}", "name": n, "phone": "", "fee_per_session": f, "active": True})
+
+@app.on_event("shutdown")
+async def shutdown_db_client():
+    client.close()
