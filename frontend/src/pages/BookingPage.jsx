@@ -224,8 +224,9 @@ export default function BookingPage() {
           <div className="sm:col-span-2">
             <Label className="label-xs mb-3 block">Paket Foto</Label>
             <div className="grid gap-3 sm:grid-cols-3" data-testid="package-list">
-              {packages.map((p) => {
-                const active = f.package_id === p.package_id;
+  {(Array.isArray(packages) ? packages : []).map((p) => {
+    const active = f.package_id === p.package_id;
+
                 return (
                   <button
                     type="button"
