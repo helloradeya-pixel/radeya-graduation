@@ -273,7 +273,28 @@ def gcal_link(b: dict) -> str:
     s = b["start_time"].replace(":", "") + "00"
     e = b["end_time"].replace(":", "") + "00"
     text = quote_plus(f"Foto Graduation - {b['full_name']}")
-    details = quote_plus(f"Paket: {b['package_name']}\nUniversitas: {b['university']}\nProdi: {b['study']}\nWA: {b['whatsapp']}\nIG: {b['instagram']}")
+    
+    wa_num = "".join(filter(str.isdigit, b['whatsapp']))
+    if wa_num.startswith("0"):
+        wa_num = "62" + wa_num[1:]
+    wa_url = f"https://wa.me/{wa_num}"
+    
+    ig_handle = b['instagram'].strip().lstrip('@')
+    ig_url = f"https://instagram.com/{ig_handle}"
+
+    details = quote_plus(
+        f"=== DETAIL BOOKING RADEYAPHOTO ===\n\n"
+        f"No. Invoice: {b.get('invoice_number', '-')}\n"
+        f"Nama Klien: {b['full_name']}\n"
+        f"Universitas: {b['university']}\n"
+        f"Program Studi: {b['study']}\n\n"
+        f"WhatsApp: {wa_url}\n"
+        f"Instagram: {ig_url}\n\n"
+        f"Paket: {b['package_name']} (Rp {b.get('package_price', 0):,.0f})\n"
+        f"Catatan Klien: {b.get('notes', '-')}\n\n"
+        f"Fotografer: {b.get('photographer_name') or 'Belum Ditugaskan'}"
+    )
+    
     loc = quote_plus(b["location"])
     return f"https://calendar.google.com/calendar/render?action=TEMPLATE&text={text}&dates={d}T{s}/{d}T{e}&details={details}&location={loc}&ctz=Asia/Jakarta"
 
