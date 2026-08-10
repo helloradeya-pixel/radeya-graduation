@@ -42,8 +42,9 @@ export default function Dashboard() {
       </AdminLayout>
     );
 
-  const monthly = d.monthly.map((m) => ({ ...m, label: m.month }));
-  const pie = d.per_package.map((p) => ({ name: p.name, value: p.revenue }));
+    const monthly = (Array.isArray(d?.monthly) ? d.monthly : []).map((m) => ({ ...m, label: m.month }));
+  const pie = (Array.isArray(d?.per_package) ? d.per_package : []).map((p) => ({ name: p.name, value: p.revenue }));
+
 
   return (
     <AdminLayout title="Ringkasan" subtitle="Pantau pendapatan, DP, dan fee fotografer">
