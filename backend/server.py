@@ -24,6 +24,16 @@ client = AsyncIOMotorClient(os.environ['MONGO_URL'])
 db = client[os.environ['DB_NAME']]
 
 app = FastAPI()
+
+# --- CORSMiddleware dipindah ke atas sebelum router agar preflight request tertangani ---
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 api_router = APIRouter(prefix="/api")
 
 ADMIN_WHATSAPP = os.environ.get("ADMIN_WHATSAPP", "628211251570")
@@ -471,13 +481,6 @@ async def root():
     return {"message": "Graduation Photo Booking API"}
 
 app.include_router(api_router)
-app.add_middleware(
-    CORSMiddleware,
-    allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 DEFAULT_PACKAGES = [
     {"name": "Paket Basic", "price": 250000, "duration_minutes": 60, "dp_amount": 100000, "description": "1 jam · 1 lokasi · 15 foto edit", "active": True},
