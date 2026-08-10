@@ -81,10 +81,10 @@ export default function Settings() {
           <div className="rounded-lg border border-dashed border-moss-800/30 bg-moss-50/40 p-5" data-testid="new-package-form">
             <p className="label-xs mb-4">Tambah Paket Baru</p>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-              <Input data-testid="new-package-name" placeholder="Nama paket" value={np.name} onChange={(e) => setNp({ ...np, name: e.target.value })} className="h-10" />
-              <Input data-testid="new-package-price" type="number" placeholder="Harga" value={np.price} onChange={(e) => setNp({ ...np, price: e.target.value })} className="h-10" />
-              <Input data-testid="new-package-dp" type="number" placeholder="Nominal DP" value={np.dp_amount} onChange={(e) => setNp({ ...np, dp_amount: e.target.value })} className="h-10" />
-              <Input data-testid="new-package-desc" placeholder="Deskripsi" value={np.description} onChange={(e) => setNp({ ...np, description: e.target.value })} className="h-10" />
+              <Input data-testid="new-package-name" placeholder="Nama paket" value={np.name} onChange={(e) => setNp({ ...np, name: e.target.value })} className="h-10 bg-white" />
+              <Input data-testid="new-package-price" type="number" placeholder="Harga" value={np.price} onChange={(e) => setNp({ ...np, price: e.target.value })} className="h-10 bg-white" />
+              <Input data-testid="new-package-dp" type="number" placeholder="Nominal DP" value={np.dp_amount} onChange={(e) => setNp({ ...np, dp_amount: e.target.value })} className="h-10 bg-white" />
+              <Input data-testid="new-package-desc" placeholder="Deskripsi" value={np.description} onChange={(e) => setNp({ ...np, description: e.target.value })} className="h-10 bg-white" />
               <Button onClick={addPkg} data-testid="add-package-button" className="h-10 rounded-full bg-moss-800 hover:bg-moss-900 hover:text-white text-white"><Plus className="h-4 w-4 mr-1" /> Tambah</Button>
             </div>
           </div>
@@ -112,9 +112,9 @@ export default function Settings() {
           <div className="rounded-lg border border-dashed border-moss-800/30 bg-moss-50/40 p-5" data-testid="new-photographer-form">
             <p className="label-xs mb-4">Tambah Fotografer</p>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <Input data-testid="new-photographer-name" placeholder="Nama fotografer" value={nf.name} onChange={(e) => setNf({ ...nf, name: e.target.value })} className="h-10" />
-              <Input data-testid="new-photographer-phone" placeholder="No. WhatsApp" value={nf.phone} onChange={(e) => setNf({ ...nf, phone: e.target.value })} className="h-10" />
-              <Input data-testid="new-photographer-fee" type="number" placeholder="Fee per sesi" value={nf.fee_per_session} onChange={(e) => setNf({ ...nf, fee_per_session: e.target.value })} className="h-10" />
+              <Input data-testid="new-photographer-name" placeholder="Nama fotografer" value={nf.name} onChange={(e) => setNf({ ...nf, name: e.target.value })} className="h-10 bg-white" />
+              <Input data-testid="new-photographer-phone" placeholder="No. WhatsApp" value={nf.phone} onChange={(e) => setNf({ ...nf, phone: e.target.value })} className="h-10 bg-white" />
+              <Input data-testid="new-photographer-fee" type="number" placeholder="Fee per sesi" value={nf.fee_per_session} onChange={(e) => setNf({ ...nf, fee_per_session: e.target.value })} className="h-10 bg-white" />
               <Button onClick={addPho} data-testid="add-photographer-button" className="h-10 rounded-full bg-moss-800 hover:bg-moss-900 hover:text-white text-white"><Plus className="h-4 w-4 mr-1" /> Tambah</Button>
             </div>
           </div>
