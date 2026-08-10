@@ -1,12 +1,11 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import { toast } from "sonner";
 import {
   Camera, CalendarDays, MapPin, Clock, Upload, CheckCircle2, ArrowRight,
-  Instagram, Phone, GraduationCap, FileImage, Loader2, ExternalLink, X,
+  Instagram, Phone, GraduationCap, FileImage, ExternalLink, X,
 } from "lucide-react";
 
 import { Button } from "../components/ui/button";
@@ -56,7 +55,7 @@ export default function BookingPage() {
   });
 
   const set = (k) => (e) => setF((p) => ({ ...p, [k]: e.target?.value ?? e }));
-     const pkg = Array.isArray(packages) ? packages.find((p) => p.package_id === f.package_id) : undefined;
+  const pkg = Array.isArray(packages) ? packages.find((p) => p.package_id === f.package_id) : undefined;
   const amount = pkg ? (f.payment_type === "dp" ? pkg.dp_amount || Math.round(pkg.price * 0.3) : pkg.price) : 0;
 
   useEffect(() => {
@@ -68,7 +67,6 @@ export default function BookingPage() {
         setPackages([]);
       });
   }, []);
-
 
   const submit = async (e) => {
     e.preventDefault();
@@ -159,9 +157,6 @@ export default function BookingPage() {
             <Camera className="h-5 w-5" />
             <span className="font-display font-bold tracking-tight">GradFrame Studio</span>
           </div>
-          <Link to="/login" data-testid="admin-login-link" className="text-xs font-bold uppercase tracking-[0.15em] text-neutral-500 hover:text-moss-800 transition-colors">
-            Admin
-          </Link>
         </div>
       </header>
 
@@ -224,8 +219,8 @@ export default function BookingPage() {
           <div className="sm:col-span-2">
             <Label className="label-xs mb-3 block">Paket Foto</Label>
             <div className="grid gap-3 sm:grid-cols-3" data-testid="package-list">
-  {(Array.isArray(packages) ? packages : []).map((p) => {
-    const active = f.package_id === p.package_id;
+              {(Array.isArray(packages) ? packages : []).map((p) => {
+                const active = f.package_id === p.package_id;
 
                 return (
                   <button
