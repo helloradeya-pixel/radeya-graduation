@@ -1,14 +1,14 @@
-import "@/App.css";
+import "./App.css";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
-import { Toaster } from "@/components/ui/sonner";
-import { AuthProvider } from "@/context/AuthContext";
-import { ProtectedRoute } from "@/components/ProtectedRoute";
-import BookingPage from "@/pages/BookingPage";
-import Login from "@/pages/Login";
-import AuthCallback from "@/pages/AuthCallback";
-import Dashboard from "@/pages/Dashboard";
-import Clients from "@/pages/Clients";
-import Settings from "@/pages/Settings";
+import { Toaster } from "./components/ui/sonner";
+import { AuthProvider } from "./context/AuthContext";
+import { ProtectedRoute } from "./components/ProtectedRoute";
+import BookingPage from "./pages/BookingPage";
+import Login from "./pages/Login";
+import AuthCallback from "./pages/AuthCallback";
+import Dashboard from "./pages/Dashboard";
+import Clients from "./pages/Clients";
+import Settings from "./pages/Settings";
 
 function AppRouter() {
   const location = useLocation();
