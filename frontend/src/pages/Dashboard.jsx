@@ -30,7 +30,9 @@ export default function Dashboard() {
   const [d, setD] = useState(null);
 
   useEffect(() => {
-    api.get("/analytics/summary").then(({ data }) => setD(data)).catch(() => {});
+    api.get("/analytics/summary")
+      .then(({ data }) => setD(data))
+      .catch(() => {});
   }, []);
 
   if (!d)
@@ -42,9 +44,10 @@ export default function Dashboard() {
       </AdminLayout>
     );
 
-    const monthly = (Array.isArray(d?.monthly) ? d.monthly : []).map((m) => ({ ...m, label: m.month }));
+  const monthly = (Array.isArray(d?.monthly) ? d.monthly : []).map((m) => ({ ...m, label: m.month }));
   const pie = (Array.isArray(d?.per_package) ? d.per_package : []).map((p) => ({ name: p.name, value: p.revenue }));
-
+  const perPhotographer = Array.isArray(d?.per_photographer) ? d.per_photographer : [];
+  const upcoming = Array.isArray(d?.upcoming) ? d.upcoming : [];
 
   return (
     <AdminLayout title="Ringkasan" subtitle="Pantau pendapatan, DP, dan fee fotografer">
@@ -115,10 +118,10 @@ export default function Dashboard() {
                 </tr>
               </thead>
               <tbody>
-                {d.per_photographer.length === 0 && (
+                {perPhotographer.length === 0 && (
                   <tr><td colSpan={5} className="py-4 text-muted-foreground">Belum ada data.</td></tr>
                 )}
-                {d.per_photographer.map((p) => (
+                {perPhotographer.map((p) => (
                   <tr key={p.name} className="border-b border-moss-900/5">
                     <td className="py-2.5 font-medium">{p.name}</td>
                     <td className="py-2.5">{p.sessions}</td>
@@ -138,8 +141,8 @@ export default function Dashboard() {
           <p className="label-xs">Jadwal</p>
           <h3 className="text-lg font-semibold mt-1 mb-4">Sesi Foto Terdekat</h3>
           <div className="space-y-3">
-            {d.upcoming.length === 0 && <p className="text-sm text-muted-foreground">Belum ada sesi mendatang.</p>}
-            {d.upcoming.map((u) => (
+            {upcoming.length === 0 && <p className="text-sm text-muted-foreground">Belum ada sesi mendatang.</p>}
+            {upcoming.map((u) => (
               <div key={u.booking_id} className="flex items-start gap-3 rounded-md border border-moss-900/10 p-3">
                 <CalendarClock className="h-4 w-4 text-moss-800 mt-0.5 shrink-0" />
                 <div className="min-w-0 flex-1">
