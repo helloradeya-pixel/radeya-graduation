@@ -18,8 +18,6 @@ import { RadioGroup, RadioGroupItem } from "../components/ui/radio-group";
 import { api, rupiah } from "../lib/api";
 
 const HERO = "https://images.unsplash.com/photo-1561409958-c0e6ad782a81?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDQ2MzR8MHwxfHNlYXJjaHwxfHxvdXRkb29yJTIwZ3JhZHVhdGlvbiUyMHBob3RvfGVufDB8fHx8MTc4NjMzODI2Nnww&ixlib=rb-4.1.0&q=85";
-const FEATURE = "https://images.unsplash.com/photo-1570708815241-ab70c41765e9?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDQ2MzR8MHwxfHNlYXJjaHw0fHxvdXRkb29yJTIwZ3JhZHVhdGlvbiUyMHBob3RvfGVufDB8fHx8MTc4NjMzODI2Nnww&ixlib=rb-4.1.0&q=85";
-const SHOOTER = "https://images.unsplash.com/photo-1618151193636-acf8bed54982?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2OTF8MHwxfHNlYXJjaHwyfHxwaG90b2dyYXBoZXIlMjBjYW1lcmElMjBvdXRkb29yfGVufDB8fHx8MTc4NjMzODI2Nnww&ixlib=rb-4.1.0&q=85";
 
 const Section = ({ n, title, desc, children }) => (
   <section className="border-t border-[#EBE7DF] pt-8 mt-8 first:mt-0 first:border-0 first:pt-0">
@@ -177,24 +175,6 @@ export default function BookingPage() {
         </div>
       </div>
 
-      {/* Feature Cards Mini */}
-      <div className="mx-auto max-w-4xl px-4 sm:px-6 -mt-6 relative z-20">
-        <div className="grid gap-4 sm:grid-cols-3">
-          {[["Outdoor spesialis", FEATURE], ["Fotografer pro", SHOOTER]].map(([t, src]) => (
-            <div key={t} className="relative overflow-hidden rounded-2xl border border-[#EBE7DF] h-24 shadow-sm group">
-              <img src={src} alt={t} className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
-              <div className="absolute inset-0 bg-[#2C2A29]/50" />
-              <p className="absolute bottom-3 left-3 text-white text-xs font-medium tracking-wide">{t}</p>
-            </div>
-          ))}
-          <div className="rounded-2xl border border-[#EBE7DF] bg-white p-4 shadow-sm flex flex-col justify-center">
-            <p className="text-[10px] uppercase tracking-wider text-[#666666]">Info & Konfirmasi</p>
-            <p className="mt-1 font-serif text-base font-semibold text-[#2C2A29]">WhatsApp Admin</p>
-            <p className="text-xs text-[#BEAF9D] font-medium mt-0.5">0821-1251-570</p>
-          </div>
-        </div>
-      </div>
-
       {/* Main Form Container */}
       <form onSubmit={submit} className="mx-auto max-w-4xl px-4 sm:px-6 py-10" data-testid="booking-form">
         <div className="bg-white rounded-3xl border border-[#EBE7DF] p-6 sm:p-10 shadow-sm space-y-10">
@@ -289,7 +269,6 @@ export default function BookingPage() {
                   </div>
                   <span className="text-[11px] text-[#888] text-right">a.n. Yulviana Kusnia</span>
                 </div>
-                {/* Tambahkan bank lain jika ada */}
               </div>
             </div>
 
@@ -366,8 +345,8 @@ export default function BookingPage() {
         </div>
       </form>
 
-      <footer className="border-t border-[#EBE7DF] py-8 text-center text-xs text-[#666666]">
-        Radeyaphoto · Graduation Photo Outdoor
+      <footer className="border-t border-[#EBE7DF] py-10 text-center text-xs text-[#666666] tracking-wide">
+        © 2026 Radeyaphoto. All rights reserved.
       </footer>
     </div>
   );
