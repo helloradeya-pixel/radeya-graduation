@@ -4,8 +4,8 @@ import {
   BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid, PieChart, Pie, Cell, Legend,
 } from "recharts";
 import { Wallet, TrendingUp, Users, CalendarClock, CircleDollarSign, Camera, AlertCircle, ExternalLink } from "lucide-react";
-import { AdminLayout } from "@/components/AdminLayout";
-import { api, rupiah, shortRupiah, fmtDate } from "@/lib/api";
+import { AdminLayout } from "../components/AdminLayout";
+import { api, rupiah, shortRupiah, fmtDate } from "../lib/api";
 
 const COLORS = ["#065f46", "#d97706", "#0d7a56", "#a3a3a3", "#457b9d"];
 
