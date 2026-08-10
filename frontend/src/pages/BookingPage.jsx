@@ -22,22 +22,22 @@ const FEATURE = "https://images.unsplash.com/photo-1570708815241-ab70c41765e9?cr
 const SHOOTER = "https://images.unsplash.com/photo-1618151193636-acf8bed54982?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2OTF8MHwxfHNlYXJjaHwyfHxwaG90b2dyYXBoZXIlMjBjYW1lcmElMjBvdXRkb29yfGVufDB8fHx8MTc4NjMzODI2Nnww&ixlib=rb-4.1.0&q=85";
 
 const Section = ({ n, title, desc, children }) => (
-  <section className="border-t border-moss-900/10 pt-10 mt-10 first:mt-0 first:border-0 first:pt-0">
+  <section className="border-t border-[#EBE7DF] pt-8 mt-8 first:mt-0 first:border-0 first:pt-0">
     <div className="flex items-baseline gap-3">
-      <span className="font-display text-xs font-bold text-amberx">0{n}</span>
+      <span className="font-display text-xs font-semibold text-[#BEAF9D]">0{n}</span>
       <div>
-        <h3 className="text-xl sm:text-2xl font-semibold tracking-tight">{title}</h3>
-        <p className="text-sm text-muted-foreground mt-1">{desc}</p>
+        <h3 className="text-xl sm:text-2xl font-serif text-[#2C2A29] tracking-tight">{title}</h3>
+        <p className="text-sm text-[#666666] mt-1">{desc}</p>
       </div>
     </div>
-    <div className="mt-7 grid gap-6 sm:grid-cols-2">{children}</div>
+    <div className="mt-6 grid gap-5 sm:grid-cols-2">{children}</div>
   </section>
 );
 
 const Field = ({ label, icon: Icon, children, full }) => (
   <div className={full ? "sm:col-span-2" : ""}>
-    <Label className="label-xs flex items-center gap-1.5 mb-2">
-      {Icon && <Icon className="h-3.5 w-3.5" />} {label}
+    <Label className="text-xs uppercase tracking-wider text-[#666666] font-medium flex items-center gap-1.5 mb-2">
+      {Icon && <Icon className="h-3.5 w-3.5 text-[#BEAF9D]" />} {label}
     </Label>
     {children}
   </div>
@@ -99,49 +99,49 @@ export default function BookingPage() {
 
   if (result)
     return (
-      <div className="min-h-screen bg-background px-4 py-16">
+      <div className="min-h-screen bg-[#F8F6F0] text-[#2C2A29] px-4 py-16 flex items-center justify-center font-sans">
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mx-auto max-w-lg rounded-lg border border-moss-900/10 bg-white p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)]"
+          className="mx-auto max-w-lg rounded-3xl border border-[#EBE7DF] bg-white p-8 shadow-sm"
           data-testid="booking-success"
         >
-          <div className="h-12 w-12 rounded-full bg-moss-50 flex items-center justify-center">
-            <CheckCircle2 className="h-6 w-6 text-moss-800" />
+          <div className="h-12 w-12 rounded-full bg-[#BEAF9D]/20 flex items-center justify-center">
+            <CheckCircle2 className="h-6 w-6 text-[#BEAF9D]" />
           </div>
-          <h2 className="text-2xl font-bold tracking-tight mt-6">Booking Terkirim!</h2>
-          <p className="text-sm text-muted-foreground mt-2">
-            No. Invoice <span className="font-semibold text-foreground" data-testid="success-invoice-number">{result.invoice_number}</span>.
+          <h2 className="text-2xl font-serif text-[#2C2A29] tracking-tight mt-6">Booking Terkirim!</h2>
+          <p className="text-sm text-[#666666] mt-2">
+            No. Invoice <span className="font-semibold text-[#2C2A29]" data-testid="success-invoice-number">{result.invoice_number}</span>.
             Langkah terakhir: kirim detail booking ke admin via WhatsApp untuk konfirmasi.
           </p>
 
-          <dl className="mt-6 space-y-2 rounded-md bg-moss-50/60 p-4 text-sm">
+          <dl className="mt-6 space-y-2 rounded-2xl bg-[#F8F6F0] p-4 text-sm">
             {[["Nama", result.full_name], ["Paket", result.package_name],
               ["Tanggal", result.shoot_date], ["Jam", `${result.start_time} - ${result.end_time}`],
               ["Lokasi", result.location],
               ["Dibayar", `${rupiah(result.amount_paid)} (${result.payment_type === "dp" ? "DP" : "Full"})`],
               ["Sisa", rupiah(result.balance_due)]].map(([k, v]) => (
               <div key={k} className="flex justify-between gap-4">
-                <dt className="text-muted-foreground">{k}</dt>
-                <dd className="font-medium text-right">{v}</dd>
+                <dt className="text-[#666666]">{k}</dt>
+                <dd className="font-medium text-right text-[#2C2A29]">{v}</dd>
               </div>
             ))}
           </dl>
 
           <a href={result.whatsapp_link} target="_blank" rel="noreferrer" data-testid="share-whatsapp-button">
-            <Button className="mt-6 w-full h-12 rounded-full bg-moss-800 hover:bg-moss-900 hover:text-white text-white font-semibold transition-colors">
+            <Button className="mt-6 w-full h-12 rounded-2xl bg-[#BEAF9D] hover:bg-[#A89987] text-white font-medium transition-all shadow-sm">
               Kirim ke WhatsApp Admin <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </a>
           <a href={result.gcal_link} target="_blank" rel="noreferrer" data-testid="add-to-gcal-button">
-            <Button variant="outline" className="mt-3 w-full h-11 rounded-full border-moss-900/20 hover:bg-moss-50">
-              <CalendarDays className="mr-2 h-4 w-4" /> Tambahkan ke Google Calendar
+            <Button variant="outline" className="mt-3 w-full h-11 rounded-2xl border-[#BEAF9D] text-[#2C2A29] hover:bg-[#F8F6F0]">
+              <CalendarDays className="mr-2 h-4 w-4 text-[#BEAF9D]" /> Tambahkan ke Google Calendar
             </Button>
           </a>
           <button
             onClick={() => { setResult(null); setFile(null); setDate(undefined); }}
             data-testid="new-booking-button"
-            className="mt-6 w-full text-sm font-semibold text-moss-800 underline underline-offset-4"
+            className="mt-6 w-full text-sm font-medium text-[#BEAF9D] underline underline-offset-4 text-center"
           >
             Buat booking lagi
           </button>
@@ -150,199 +150,206 @@ export default function BookingPage() {
     );
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-40 border-b border-moss-900/10 bg-clay/85 backdrop-blur-xl">
-        <div className="mx-auto max-w-5xl px-4 sm:px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2 text-moss-800">
-            <Camera className="h-5 w-5" />
-            <span className="font-display font-bold tracking-tight">GradFrame Studio</span>
+    <div className="min-h-screen bg-[#F8F6F0] text-[#2C2A29] font-sans pb-16">
+      <header className="sticky top-0 z-40 border-b border-[#EBE7DF] bg-[#F8F6F0]/90 backdrop-blur-xl">
+        <div className="mx-auto max-w-4xl px-4 sm:px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-2.5 text-[#2C2A29]">
+            <Camera className="h-5 w-5 text-[#BEAF9D]" />
+            <span className="font-serif font-semibold tracking-wider text-lg">Radeyaphoto</span>
           </div>
         </div>
       </header>
 
-      <div className="relative overflow-hidden grain">
-        <img src={HERO} alt="Graduation outdoor" className="h-[46vh] max-h-[420px] w-full object-cover" />
-        <div className="absolute inset-0 bg-moss-900/70" />
-        <div className="absolute inset-0 flex items-end">
-          <div className="mx-auto w-full max-w-5xl px-4 sm:px-6 pb-10">
-            <p className="label-xs !text-white/70">Booking Sesi Foto</p>
-            <h1 className="mt-3 text-4xl sm:text-5xl font-black tracking-tight leading-none text-white max-w-xl">
-              Abadikan hari<br />kelulusanmu.
-            </h1>
-            <p className="mt-4 text-white/80 text-sm max-w-md">
-              Isi form di bawah, upload bukti transfer, lalu konfirmasi ke admin via WhatsApp. Jadwal langsung tercatat.
-            </p>
-          </div>
+      {/* Hero Section */}
+      <div className="relative overflow-hidden bg-[#2C2A29] text-white py-14 px-4 sm:px-6 text-center">
+        <div className="absolute inset-0 opacity-20">
+          <img src={HERO} alt="Graduation outdoor" className="h-full w-full object-cover" />
+        </div>
+        <div className="absolute inset-0 bg-[#2C2A29]/85" />
+        <div className="relative z-10 max-w-xl mx-auto">
+          <p className="text-xs uppercase tracking-[0.25em] text-[#BEAF9D] font-medium">Limited Slots Available</p>
+          <h1 className="mt-3 text-3xl sm:text-5xl font-serif font-normal tracking-tight leading-tight">
+            Abadikan hari kelulusanmu.
+          </h1>
+          <p className="mt-4 text-[#EBE7DF]/80 text-sm max-w-md mx-auto leading-relaxed">
+            Isi form di bawah, upload bukti transfer, lalu konfirmasi ke admin via WhatsApp. Jadwal langsung tercatat.
+          </p>
         </div>
       </div>
 
-      <div className="mx-auto max-w-5xl px-4 sm:px-6 -mt-6 relative z-10">
+      {/* Feature Cards Mini */}
+      <div className="mx-auto max-w-4xl px-4 sm:px-6 -mt-6 relative z-20">
         <div className="grid gap-4 sm:grid-cols-3">
           {[["Outdoor spesialis", FEATURE], ["Fotografer pro", SHOOTER]].map(([t, src]) => (
-            <div key={t} className="relative overflow-hidden rounded-lg border border-moss-900/10 h-28 group">
+            <div key={t} className="relative overflow-hidden rounded-2xl border border-[#EBE7DF] h-24 shadow-sm group">
               <img src={src} alt={t} className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
-              <div className="absolute inset-0 bg-moss-900/45" />
-              <p className="absolute bottom-3 left-3 text-white text-sm font-semibold">{t}</p>
+              <div className="absolute inset-0 bg-[#2C2A29]/50" />
+              <p className="absolute bottom-3 left-3 text-white text-xs font-medium tracking-wide">{t}</p>
             </div>
           ))}
-          <div className="rounded-lg border border-moss-900/10 bg-white p-4">
-            <p className="label-xs">Konfirmasi via</p>
-            <p className="mt-2 font-display text-lg font-bold text-moss-800">WhatsApp</p>
-            <p className="text-xs text-muted-foreground mt-1">0821-1251-570</p>
+          <div className="rounded-2xl border border-[#EBE7DF] bg-white p-4 shadow-sm flex flex-col justify-center">
+            <p className="text-[10px] uppercase tracking-wider text-[#666666]">Konfirmasi via</p>
+            <p className="mt-1 font-serif text-base font-semibold text-[#2C2A29]">WhatsApp Admin</p>
+            <p className="text-xs text-[#BEAF9D] font-medium mt-0.5">0821-1251-570</p>
           </div>
         </div>
       </div>
 
-      <form onSubmit={submit} className="mx-auto max-w-5xl px-4 sm:px-6 py-14" data-testid="booking-form">
-        <Section n={1} title="Data Diri" desc="Pastikan email & WhatsApp aktif, invoice dikirim ke sana.">
-          <Field label="Nama Lengkap">
-            <Input data-testid="input-full-name" required value={f.full_name} onChange={set("full_name")} placeholder="Nama sesuai ijazah" className="h-11" />
-          </Field>
-          <Field label="Email">
-            <Input data-testid="input-email" type="email" required value={f.email} onChange={set("email")} placeholder="nama@email.com" className="h-11" />
-          </Field>
-          <Field label="Instagram" icon={Instagram}>
-            <Input data-testid="input-instagram" required value={f.instagram} onChange={set("instagram")} placeholder="@username" className="h-11" />
-          </Field>
-          <Field label="WhatsApp" icon={Phone}>
-            <Input data-testid="input-whatsapp" required value={f.whatsapp} onChange={set("whatsapp")} placeholder="08xxxxxxxxxx" className="h-11" />
-          </Field>
-          <Field label="Universitas" icon={GraduationCap}>
-            <Input data-testid="input-university" required value={f.university} onChange={set("university")} placeholder="Nama universitas" className="h-11" />
-          </Field>
-          <Field label="Program Studi">
-            <Input data-testid="input-study" required value={f.study} onChange={set("study")} placeholder="Jurusan / prodi" className="h-11" />
-          </Field>
-        </Section>
+      {/* Main Form Container */}
+      <form onSubmit={submit} className="mx-auto max-w-4xl px-4 sm:px-6 py-10" data-testid="booking-form">
+        <div className="bg-white rounded-3xl border border-[#EBE7DF] p-6 sm:p-10 shadow-sm space-y-10">
+          
+          <Section n={1} title="Data Diri" desc="Pastikan email & WhatsApp aktif, invoice dikirim ke sana.">
+            <Field label="Nama Lengkap">
+              <Input data-testid="input-full-name" required value={f.full_name} onChange={set("full_name")} placeholder="Nama sesuai ijazah" className="h-11 rounded-xl bg-[#F8F6F0]/50 border-[#EBE7DF]" />
+            </Field>
+            <Field label="Email">
+              <Input data-testid="input-email" type="email" required value={f.email} onChange={set("email")} placeholder="nama@email.com" className="h-11 rounded-xl bg-[#F8F6F0]/50 border-[#EBE7DF]" />
+            </Field>
+            <Field label="Instagram" icon={Instagram}>
+              <Input data-testid="input-instagram" required value={f.instagram} onChange={set("instagram")} placeholder="@username" className="h-11 rounded-xl bg-[#F8F6F0]/50 border-[#EBE7DF]" />
+            </Field>
+            <Field label="WhatsApp" icon={Phone}>
+              <Input data-testid="input-whatsapp" required value={f.whatsapp} onChange={set("whatsapp")} placeholder="08xxxxxxxxxx" className="h-11 rounded-xl bg-[#F8F6F0]/50 border-[#EBE7DF]" />
+            </Field>
+            <Field label="Universitas" icon={GraduationCap}>
+              <Input data-testid="input-university" required value={f.university} onChange={set("university")} placeholder="Nama universitas" className="h-11 rounded-xl bg-[#F8F6F0]/50 border-[#EBE7DF]" />
+            </Field>
+            <Field label="Program Studi">
+              <Input data-testid="input-study" required value={f.study} onChange={set("study")} placeholder="Jurusan / prodi" className="h-11 rounded-xl bg-[#F8F6F0]/50 border-[#EBE7DF]" />
+            </Field>
+          </Section>
 
-        <Section n={2} title="Detail Sesi Foto" desc="Pilih paket, tanggal, lokasi, dan jam sesi kamu.">
-          <div className="sm:col-span-2">
-            <Label className="label-xs mb-3 block">Paket Foto</Label>
-            <div className="grid gap-3 sm:grid-cols-3" data-testid="package-list">
-              {(Array.isArray(packages) ? packages : []).map((p) => {
-                const active = f.package_id === p.package_id;
+          <Section n={2} title="Detail Sesi Foto" desc="Pilih paket, tanggal, lokasi, dan jam sesi kamu.">
+            <div className="sm:col-span-2">
+              <Label className="text-xs uppercase tracking-wider text-[#666666] font-medium mb-3 block">Paket Foto</Label>
+              <div className="grid gap-3 sm:grid-cols-3" data-testid="package-list">
+                {(Array.isArray(packages) ? packages : []).map((p) => {
+                  const active = f.package_id === p.package_id;
 
-                return (
-                  <button
-                    type="button"
-                    key={p.package_id}
-                    data-testid={`package-option-${p.package_id}`}
-                    onClick={() => setF((s) => ({ ...s, package_id: p.package_id }))}
-                    className={`text-left rounded-lg border p-4 transition-colors duration-200 ${
-                      active ? "border-moss-800 bg-moss-50" : "border-moss-900/10 bg-white hover:border-moss-600/40"
+                  return (
+                    <button
+                      type="button"
+                      key={p.package_id}
+                      data-testid={`package-option-${p.package_id}`}
+                      onClick={() => setF((s) => ({ ...s, package_id: p.package_id }))}
+                      className={`text-left rounded-2xl border p-4 transition-all duration-200 ${
+                        active ? "border-[#BEAF9D] bg-[#F8F6F0] ring-1 ring-[#BEAF9D] shadow-sm" : "border-[#EBE7DF] bg-white hover:border-[#BEAF9D]/50"
+                      }`}
+                    >
+                      <p className="font-serif font-semibold text-[#2C2A29]">{p.name}</p>
+                      <p className="font-serif text-lg font-bold text-[#2C2A29] mt-1">{rupiah(p.price)}</p>
+                      <p className="text-xs text-[#666666] mt-2 leading-relaxed">{p.description}</p>
+                      <p className="text-[11px] text-[#BEAF9D] font-semibold mt-3">DP {rupiah(p.dp_amount || Math.round(p.price * 0.3))}</p>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <Field label="Tanggal Foto" icon={CalendarDays}>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button type="button" variant="outline" data-testid="date-picker-trigger" className="h-11 w-full justify-start rounded-xl border-[#EBE7DF] bg-[#F8F6F0]/50 font-normal hover:bg-[#F8F6F0]">
+                    {date ? format(date, "d MMMM yyyy", { locale: idLocale }) : "Pilih tanggal"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0 rounded-2xl border-[#EBE7DF]" align="start">
+                  <Calendar mode="single" selected={date} onSelect={setDate} initialFocus />
+                </PopoverContent>
+              </Popover>
+            </Field>
+
+            <Field label="Lokasi Foto" icon={MapPin}>
+              <Input data-testid="input-location" required value={f.location} onChange={set("location")} placeholder="Contoh: Kampus UI Depok" className="h-11 rounded-xl bg-[#F8F6F0]/50 border-[#EBE7DF]" />
+            </Field>
+            <Field label="Jam Mulai" icon={Clock}>
+              <Input data-testid="input-start-time" type="time" required value={f.start_time} onChange={set("start_time")} className="h-11 rounded-xl bg-[#F8F6F0]/50 border-[#EBE7DF]" />
+            </Field>
+            <Field label="Jam Selesai" icon={Clock}>
+              <Input data-testid="input-end-time" type="time" required value={f.end_time} onChange={set("end_time")} className="h-11 rounded-xl bg-[#F8F6F0]/50 border-[#EBE7DF]" />
+            </Field>
+            <Field label="Catatan (opsional)" full>
+              <Textarea data-testid="input-notes" value={f.notes} onChange={set("notes")} placeholder="Konsep foto, request khusus, dll." rows={3} className="rounded-xl bg-[#F8F6F0]/50 border-[#EBE7DF]" />
+            </Field>
+          </Section>
+
+          <Section n={3} title="Pembayaran & Bukti Transfer" desc="Pilih DP atau langsung lunas, lalu upload bukti transfernya.">
+            <div className="sm:col-span-2">
+              <RadioGroup value={f.payment_type} onValueChange={(v) => setF((s) => ({ ...s, payment_type: v }))} className="grid gap-3 sm:grid-cols-2">
+                {[["dp", "Bayar DP", "Sisa dilunasi saat hari-H"], ["full", "Full Payment", "Langsung lunas, bebas pikiran"]].map(([v, t, d]) => (
+                  <label
+                    key={v}
+                    data-testid={`payment-option-${v}`}
+                    className={`flex items-start gap-3 rounded-2xl border p-4 cursor-pointer transition-all duration-200 ${
+                      f.payment_type === v ? "border-[#BEAF9D] bg-[#F8F6F0] shadow-sm" : "border-[#EBE7DF] bg-white hover:border-[#BEAF9D]/50"
                     }`}
                   >
-                    <p className="font-semibold">{p.name}</p>
-                    <p className="font-display text-lg font-bold text-moss-800 mt-1">{rupiah(p.price)}</p>
-                    <p className="text-xs text-muted-foreground mt-2 leading-relaxed">{p.description}</p>
-                    <p className="text-[11px] text-amberx font-semibold mt-2">DP {rupiah(p.dp_amount || Math.round(p.price * 0.3))}</p>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+                    <RadioGroupItem value={v} className="mt-1 text-[#BEAF9D]" />
+                    <span>
+                      <span className="block font-semibold text-sm text-[#2C2A29]">{t}</span>
+                      <span className="block text-xs text-[#666666] mt-0.5">{d}</span>
+                    </span>
+                  </label>
+                ))}
+              </RadioGroup>
 
-          <Field label="Tanggal Foto" icon={CalendarDays}>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button type="button" variant="outline" data-testid="date-picker-trigger" className="h-11 w-full justify-start rounded-md border-moss-900/20 font-normal hover:bg-moss-50">
-                  {date ? format(date, "d MMMM yyyy", { locale: idLocale }) : "Pilih tanggal"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar mode="single" selected={date} onSelect={setDate} initialFocus />
-              </PopoverContent>
-            </Popover>
-          </Field>
-
-          <Field label="Lokasi Foto" icon={MapPin}>
-            <Input data-testid="input-location" required value={f.location} onChange={set("location")} placeholder="Contoh: Kampus UI Depok" className="h-11" />
-          </Field>
-          <Field label="Jam Mulai" icon={Clock}>
-            <Input data-testid="input-start-time" type="time" required value={f.start_time} onChange={set("start_time")} className="h-11" />
-          </Field>
-          <Field label="Jam Selesai" icon={Clock}>
-            <Input data-testid="input-end-time" type="time" required value={f.end_time} onChange={set("end_time")} className="h-11" />
-          </Field>
-          <Field label="Catatan (opsional)" full>
-            <Textarea data-testid="input-notes" value={f.notes} onChange={set("notes")} placeholder="Konsep foto, request khusus, dll." rows={3} />
-          </Field>
-        </Section>
-
-        <Section n={3} title="Pembayaran & Bukti Transfer" desc="Pilih DP atau langsung lunas, lalu upload bukti transfernya.">
-          <div className="sm:col-span-2">
-            <RadioGroup value={f.payment_type} onValueChange={(v) => setF((s) => ({ ...s, payment_type: v }))} className="grid gap-3 sm:grid-cols-2">
-              {[["dp", "Bayar DP", "Sisa dilunasi saat hari-H"], ["full", "Full Payment", "Langsung lunas, bebas pikiran"]].map(([v, t, d]) => (
-                <label
-                  key={v}
-                  data-testid={`payment-option-${v}`}
-                  className={`flex items-start gap-3 rounded-lg border p-4 cursor-pointer transition-colors duration-200 ${
-                    f.payment_type === v ? "border-moss-800 bg-moss-50" : "border-moss-900/10 bg-white hover:border-moss-600/40"
-                  }`}
-                >
-                  <RadioGroupItem value={v} className="mt-1" />
-                  <span>
-                    <span className="block font-semibold text-sm">{t}</span>
-                    <span className="block text-xs text-muted-foreground mt-0.5">{d}</span>
-                  </span>
-                </label>
-              ))}
-            </RadioGroup>
-
-            <div className="mt-4 flex items-center justify-between rounded-md border border-dashed border-moss-800/30 bg-moss-50/50 px-4 py-3">
-              <span className="label-xs">Jumlah yang ditransfer</span>
-              <span className="font-display text-xl font-bold text-moss-800" data-testid="amount-to-pay">{rupiah(amount)}</span>
-            </div>
-          </div>
-
-          <div className="sm:col-span-2">
-            <Label className="label-xs mb-2 block">Bukti Transfer</Label>
-            {file ? (
-              <div className="flex items-center gap-3 rounded-lg border border-moss-900/10 bg-white p-4" data-testid="proof-file-selected">
-                <FileImage className="h-5 w-5 text-moss-800 shrink-0" />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium">{file.name}</p>
-                  <p className="text-xs text-muted-foreground">{(file.size / 1024).toFixed(0)} KB</p>
-                </div>
-                <button type="button" data-testid="remove-proof-button" onClick={() => setFile(null)} className="text-neutral-400 hover:text-destructive transition-colors">
-                  <X className="h-4 w-4" />
-                </button>
+              <div className="mt-4 flex items-center justify-between rounded-2xl border border-dashed border-[#BEAF9D]/40 bg-[#F8F6F0] px-5 py-4">
+                <span className="text-xs uppercase tracking-wider text-[#666666] font-medium">Jumlah yang ditransfer</span>
+                <span className="font-serif text-xl font-bold text-[#2C2A29]" data-testid="amount-to-pay">{rupiah(amount)}</span>
               </div>
-            ) : (
-              <label
-                data-testid="proof-upload-zone"
-                className="flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-moss-900/15 bg-white py-10 cursor-pointer hover:border-moss-800/40 hover:bg-moss-50/40 transition-colors"
-              >
-                <Upload className="h-6 w-6 text-moss-800" />
-                <span className="text-sm font-semibold">Upload bukti transfer</span>
-                <span className="text-xs text-muted-foreground">JPG, PNG, WEBP atau PDF · maks 6MB</span>
-                <input
-                  data-testid="proof-file-input"
-                  type="file"
-                  accept="image/*,application/pdf"
-                  className="hidden"
-                  onChange={(e) => setFile(e.target.files?.[0] || null)}
-                />
-              </label>
-            )}
-          </div>
-        </Section>
+            </div>
 
-        <Button
-          type="submit"
-          disabled={submitting}
-          data-testid="submit-booking-button"
-          className="mt-12 w-full h-14 rounded-full bg-moss-800 hover:bg-moss-900 hover:text-white text-white text-base font-semibold transition-colors"
-        >
-          {submitting ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Mengirim...</> : <>Kirim Booking <ArrowRight className="ml-2 h-5 w-5" /></>}
-        </Button>
-        <p className="mt-4 text-center text-xs text-muted-foreground flex items-center justify-center gap-1">
-          Setelah submit kamu akan diarahkan ke WhatsApp admin <ExternalLink className="h-3 w-3" />
-        </p>
+            <div className="sm:col-span-2">
+              <Label className="text-xs uppercase tracking-wider text-[#666666] font-medium mb-2 block">Bukti Transfer</Label>
+              {file ? (
+                <div className="flex items-center gap-3 rounded-2xl border border-[#EBE7DF] bg-[#F8F6F0] p-4" data-testid="proof-file-selected">
+                  <FileImage className="h-5 w-5 text-[#BEAF9D] shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-[#2C2A29]">{file.name}</p>
+                    <p className="text-xs text-[#666666]">{(file.size / 1024).toFixed(0)} KB</p>
+                  </div>
+                  <button type="button" data-testid="remove-proof-button" onClick={() => setFile(null)} className="text-[#666666] hover:text-destructive transition-colors">
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              ) : (
+                <label
+                  data-testid="proof-upload-zone"
+                  className="flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-[#EBE7DF] bg-[#F8F6F0]/40 py-10 cursor-pointer hover:border-[#BEAF9D] hover:bg-[#F8F6F0] transition-colors"
+                >
+                  <Upload className="h-6 w-6 text-[#BEAF9D]" />
+                  <span className="text-sm font-medium text-[#2C2A29]">Upload bukti transfer</span>
+                  <span className="text-xs text-[#666666]">JPG, PNG, WEBP atau PDF · maks 6MB</span>
+                  <input
+                    data-testid="proof-file-input"
+                    type="file"
+                    accept="image/*,application/pdf"
+                    className="hidden"
+                    onChange={(e) => setFile(e.target.files?.[0] || null)}
+                  />
+                </label>
+              )}
+            </div>
+          </Section>
+
+          <Button
+            type="submit"
+            disabled={submitting}
+            data-testid="submit-booking-button"
+            className="w-full h-14 rounded-2xl bg-[#BEAF9D] hover:bg-[#A89987] text-white text-sm uppercase tracking-wider font-semibold transition-all shadow-sm"
+          >
+            {submitting ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Mengirim...</> : <>Kirim Booking <ArrowRight className="ml-2 h-5 w-5" /></>}
+          </Button>
+          <p className="text-center text-xs text-[#666666] flex items-center justify-center gap-1">
+            Setelah submit kamu akan diarahkan ke WhatsApp admin <ExternalLink className="h-3 w-3" />
+          </p>
+
+        </div>
       </form>
 
-      <footer className="border-t border-moss-900/10 py-8 text-center text-xs text-muted-foreground">
-        Radeya Graduation · Graduation Photo Outdoor · WA 0821-1251-570
+      <footer className="border-t border-[#EBE7DF] py-8 text-center text-xs text-[#666666]">
+        Radeyaphoto · Graduation Photo Outdoor
       </footer>
     </div>
   );
