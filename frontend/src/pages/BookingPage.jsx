@@ -167,10 +167,10 @@ export default function BookingPage() {
         <div className="relative z-10 max-w-xl mx-auto">
           <p className="text-xs uppercase tracking-[0.25em] text-[#BEAF9D] font-medium">Limited Slots Available</p>
           <h1 className="mt-3 text-3xl sm:text-5xl font-serif font-normal tracking-tight leading-tight">
-            Abadikan hari kelulusanmu.
+            Preserve Your Milestone.
           </h1>
           <p className="mt-4 text-[#EBE7DF]/80 text-sm max-w-md mx-auto leading-relaxed">
-            Pilih paket, transfer ke rekening tertera, upload bukti transfer, lalu konfirmasi via WhatsApp.
+            Select a package, complete the transfer, upload your receipt, and confirm via WhatsApp.
           </p>
         </div>
       </div>
