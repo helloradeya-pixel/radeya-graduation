@@ -1,10 +1,11 @@
 fastapi
 uvicorn
 motor
-pydantic
+pydantic[email]
+email-validator
+python-multipart
+passlib
+bcrypt
 httpx
 requests
 python-dotenv
-passlib
-bcrypt
-python-multipart
