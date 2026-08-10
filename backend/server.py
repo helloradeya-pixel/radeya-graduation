@@ -12,7 +12,7 @@ from fastapi import FastAPI, APIRouter, HTTPException, UploadFile, File, Form, H
 from fastapi.responses import Response as FastResponse
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
-from pydantic import BaseModel, Field, EmailStr
+from pydantic import BaseModel, Field
 from passlib.context import CryptContext
 
 ROOT_DIR = Path(__file__).parent
@@ -27,7 +27,7 @@ db = client[os.environ['DB_NAME']]
 # Menggunakan redirect_slashes=True untuk mencegah error 405 pada serverless Vercel
 app = FastAPI(redirect_slashes=True)
 
-# Tambahan route root favicon untuk mengatasi error 500 dari browser
+# Tambahan route root favicon untuk mengatasi error dari browser
 @app.get("/favicon.ico", include_in_schema=False)
 async def root_favicon():
     return Response(status_code=204)
@@ -111,7 +111,7 @@ class User(BaseModel):
     picture: Optional[str] = None
 
 class LoginPayload(BaseModel):
-    email: EmailStr
+    email: str  # Menggunakan str biasa agar tidak error import email-validator di Vercel
     password: str
 
 class PackageIn(BaseModel):
@@ -318,7 +318,7 @@ async def next_invoice_number() -> str:
 
 @api_router.post("/bookings")
 async def create_booking(
-    full_name: str = Form(...), email: EmailStr = Form(...), instagram: str = Form(...),
+    full_name: str = Form(...), email: str = Form(...), instagram: str = Form(...),
     whatsapp: str = Form(...), university: str = Form(...), study: str = Form(...),
     package_id: str = Form(...), shoot_date: str = Form(...), location: str = Form(...),
     start_time: str = Form(...), end_time: str = Form(...),
