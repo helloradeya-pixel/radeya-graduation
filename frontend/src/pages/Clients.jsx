@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { Search, Mail, Eye, Trash2 } from "lucide-react";
-import { AdminLayout } from "../components/AdminLayout";
+import { AdminLayout } from "../../components/AdminLayout";
 import { api, rupiah, fmtDate } from "../lib/api";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
