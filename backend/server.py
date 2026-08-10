@@ -24,7 +24,8 @@ logger = logging.getLogger(__name__)
 client = AsyncIOMotorClient(os.environ['MONGO_URL'])
 db = client[os.environ['DB_NAME']]
 
-app = FastAPI()
+# Menggunakan redirect_slashes=True untuk mencegah error 405 pada serverless Vercel
+app = FastAPI(redirect_slashes=True)
 
 app.add_middleware(
     CORSMiddleware,
