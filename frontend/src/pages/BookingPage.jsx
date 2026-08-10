@@ -5,7 +5,7 @@ import { id as idLocale } from "date-fns/locale";
 import { toast } from "sonner";
 import {
   Camera, CalendarDays, MapPin, Clock, Upload, CheckCircle2, ArrowRight,
-  Instagram, Phone, GraduationCap, FileImage, ExternalLink, X,
+  Instagram, Phone, GraduationCap, FileImage, ExternalLink, X, Loader2,
 } from "lucide-react";
 
 import { Button } from "../components/ui/button";
