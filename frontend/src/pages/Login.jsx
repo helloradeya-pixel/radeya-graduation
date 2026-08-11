@@ -32,10 +32,15 @@ export default function Login() {
         body: JSON.stringify({ email, password }),
       });
 
-      const data = await response.json();
+       const data = await response.json();
 
       if (!response.ok) {
         throw new Error(data.detail || "Gagal masuk. Periksa kembali email dan password.");
+      }
+
+      // SIMPAN TOKEN KE LOCALSTORAGE SEBAGAI CADANGAN
+      if (data.session_token) {
+        localStorage.setItem("session_token", data.session_token);
       }
 
       if (checkUser) {
@@ -43,6 +48,7 @@ export default function Login() {
       }
 
       navigate("/dashboard", { replace: true });
+
     } catch (err) {
       setErrorMsg(err.message);
       setIsSubmitting(false);
