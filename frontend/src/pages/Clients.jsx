@@ -19,6 +19,7 @@ export default function Clients() {
   const [editPho, setEditPho] = useState("");
   const [editStatus, setEditStatus] = useState("");
   const [editPaid, setEditPaid] = useState("");
+  const [editPaymentType, setEditPaymentType] = useState("dp"); // <-- Tambahan state jenis pembayaran
 
   const loadData = useCallback(async () => {
     try {
@@ -45,6 +46,7 @@ export default function Clients() {
     setEditPho(b.photographer_id || "none");
     setEditStatus(b.status);
     setEditPaid(String(b.amount_paid));
+    setEditPaymentType(b.payment_type || "dp"); // <-- Load status pembayaran saat modal dibuka
   };
 
   const saveDetail = async () => {
@@ -53,6 +55,7 @@ export default function Clients() {
         status: editStatus,
         photographer_id: editPho === "none" ? null : editPho,
         amount_paid: parseFloat(editPaid) || 0,
+        payment_type: editPaymentType, // <-- Kirim status pembayaran ke backend
       });
       toast.success("Booking berhasil diperbarui");
       setSelected(null);
@@ -82,6 +85,12 @@ export default function Clients() {
     } catch {
       toast.error("Gagal menghapus");
     }
+  };
+
+  const copyInvoiceLink = (id) => {
+    const link = `${window.location.origin}/invoice/${id}`;
+    navigator.clipboard.writeText(link);
+    toast.success("Link invoice berhasil disalin!");
   };
 
   const safeBookings = Array.isArray(bookings) ? bookings : [];
@@ -182,6 +191,13 @@ export default function Clients() {
                   <td className="p-3.5 text-right">
                     <div className="flex items-center justify-end gap-2">
                       <button
+                        title="Salin Link Invoice"
+                        onClick={() => copyInvoiceLink(b.booking_id)}
+                        className="p-1.5 rounded-md hover:bg-moss-100 text-moss-800 text-xs font-semibold underline"
+                      >
+                        Copy Link
+                      </button>
+                      <button
                         title="Lihat Bukti Transfer"
                         onClick={() => window.open(`${process.env.REACT_APP_BACKEND_URL}/api/files/${b.proof_file_id}`, "_blank")}
                         className="p-1.5 rounded-md hover:bg-moss-100 text-moss-800"
@@ -235,6 +251,18 @@ export default function Clients() {
                 </Select>
               </div>
 
+              {/* Tambahan Dropdown Status Pembayaran */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold">Status Pembayaran</label>
+                <Select onValueChange={setEditPaymentType} value={editPaymentType}>
+                  <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="dp">DP (Down Payment)</SelectItem>
+                    <SelectItem value="full">Full (Lunas)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div className="space-y-1.5">
                 <label className="text-xs font-bold">Tugaskan Fotografer</label>
                 <Select onValueChange={setEditPho} value={editPho}>
@@ -252,7 +280,19 @@ export default function Clients() {
 
               <div className="space-y-1.5">
                 <label className="text-xs font-bold">Jumlah Dibayar (Rp)</label>
-                <Input type="number" value={editPaid} onChange={(e) => setEditPaid(e.target.value)} className="bg-white" />
+                <Input 
+                  type="number" 
+                  value={editPaid} 
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setEditPaid(val);
+                    // Otomatis ubah jenis pembayaran jadi full jika nominal sama/lebih dari harga paket
+                    if (Number(val) >= Number(selected.package_price)) {
+                      setEditPaymentType("full");
+                    }
+                  }} 
+                  className="bg-white" 
+                />
               </div>
 
               <div className="flex items-center justify-between pt-2">
