@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { api, rupiah, fmtDate } from "../lib/api";
 import { Button } from "../components/ui/button";
@@ -13,7 +13,7 @@ export default function InvoicePage() {
   const [file, setFile] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const loadInvoice = async () => {
+  const loadInvoice = useCallback(async () => {
     try {
       const { data } = await api.get(`/bookings/${id}/invoice`);
       setInvoice(data.booking);
@@ -23,11 +23,11 @@ export default function InvoicePage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
 
   useEffect(() => {
     loadInvoice();
-  }, [id]);
+  }, [loadInvoice]);
 
   const handleSubmitPelunasan = async (e) => {
     e.preventDefault();
