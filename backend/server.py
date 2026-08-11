@@ -378,8 +378,14 @@ async def create_booking(
     return doc
 
 @api_router.get("/bookings")
-async def list_bookings(request: Request, status: Optional[str] = None, payment_type: Optional[str] = None,
-                        photographer_id: Optional[str] = None, q: Optional[str] = None):
+async def list_bookings(
+    request: Request, 
+    status: Optional[str] = None, 
+    payment_type: Optional[str] = None,
+    photographer_id: Optional[str] = None, 
+    month: Optional[str] = None, 
+    q: Optional[str] = None
+):
     await get_current_user(request)
     query = {}
     if status and status != "all":
@@ -388,9 +394,14 @@ async def list_bookings(request: Request, status: Optional[str] = None, payment_
         query["payment_type"] = payment_type
     if photographer_id and photographer_id != "all":
         query["photographer_id"] = photographer_id
+    
+    if month and month != "all":
+        query["shoot_date"] = {"$regex": f"^{month}"}
+
     if q:
         query["$or"] = [{"full_name": {"$regex": q, "$options": "i"}}, {"email": {"$regex": q, "$options": "i"}},
                         {"university": {"$regex": q, "$options": "i"}}, {"invoice_number": {"$regex": q, "$options": "i"}}]
+    
     docs = await db.bookings.find(query, {"_id": 0}).sort("created_at", -1).to_list(1000)
     for d in docs:
         d["gcal_link"] = gcal_link(d)
