@@ -3,6 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { Camera, ArrowRight, ShieldCheck, Lock, Mail, AlertCircle } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { useAuth } from "../context/AuthContext";
+import { api } from "../path-to-your-api-file"; // Sesuaikan dengan path file konfigurasi axios Anda
 import loginBg from "../assets/ADS00060.jpg";
 
 export default function Login() {
@@ -24,33 +25,25 @@ export default function Login() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch("https://radeya-graduation-backend.vercel.app/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        mode: "cors",
-        body: JSON.stringify({ email, password }),
-      });
+      // Menggunakan instance api (Axios) agar otomatis terhubung ke baseURL /api
+      const response = await api.post("/auth/login", { email, password });
 
-       const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.detail || "Gagal masuk. Periksa kembali email dan password.");
-      }
-
-      // SIMPAN TOKEN KE LOCALSTORAGE SEBAGAI CADANGAN
-      if (data.session_token) {
-        localStorage.setItem("session_token", data.session_token);
+      // 1. SIMPAN SESSION TOKEN KE LOCALSTORAGE 
+      // Agar tertangkap oleh Axios Interceptor Anda pada request selanjutnya
+      if (response.data && response.data.session_token) {
+        localStorage.setItem("session_token", response.data.session_token);
       }
 
       if (checkUser) {
-        checkUser().catch(() => {});
+        await checkUser().catch(() => {});
       }
 
+      // 2. PINDAH KE HALAMAN DASHBOARD
       navigate("/dashboard", { replace: true });
 
     } catch (err) {
-      setErrorMsg(err.message);
+      const message = err.response?.data?.detail || err.message || "Gagal masuk. Periksa kembali email dan password.";
+      setErrorMsg(message);
       setIsSubmitting(false);
     }
   };
