@@ -190,6 +190,7 @@ async def login_password(body: LoginPayload, response: Response):
     response.set_cookie("session_token", st, httponly=True, secure=True, samesite="none", path="/", max_age=7 * 24 * 3600)
     return {"user_id": user["user_id"], "email": user["email"], "name": user["name"], "session_token": st}
 
+
 @api_router.get("/auth/me", response_model=User)
 async def auth_me(request: Request):
     return await get_current_user(request)
