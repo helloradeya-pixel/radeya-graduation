@@ -148,9 +148,14 @@ class BookingUpdate(BaseModel):
     status: Optional[Literal["pending", "confirmed", "completed", "cancelled"]] = None
     photographer_id: Optional[str] = None
     amount_paid: Optional[float] = None
+    payment_type: Optional[Literal["dp", "full"]] = None
     photographer_fee: Optional[float] = None
     photographer_paid: Optional[bool] = None
     notes: Optional[str] = None
+
+class ClientPaymentConfirm(BaseModel):
+    amount_paid: float
+    proof_file_id: str
 
 def now_iso():
     return datetime.now(timezone.utc).isoformat()
@@ -345,13 +350,17 @@ async def create_booking(
     if not pkg:
         raise HTTPException(400, "Paket tidak ditemukan")
     booking_id = f"bk_{uuid.uuid4().hex[:12]}"
+    
+    # Otomatis pastikan payment_type sesuai jika amount_paid >= harga paket
+    actual_payment_type = "full" if float(amount_paid) >= pkg["price"] else payment_type
+    
     doc = {
         "booking_id": booking_id, "invoice_number": await next_invoice_number(),
         "full_name": full_name, "email": str(email), "instagram": instagram, "whatsapp": whatsapp,
         "university": university, "study": study,
         "package_id": package_id, "package_name": pkg["name"], "package_price": pkg["price"],
         "shoot_date": shoot_date, "location": location, "start_time": start_time, "end_time": end_time,
-        "payment_type": payment_type, "amount_paid": float(amount_paid),
+        "payment_type": actual_payment_type, "amount_paid": float(amount_paid),
         "balance_due": max(pkg["price"] - float(amount_paid), 0),
         "proof_file_id": proof_file_id, "notes": notes,
         "status": "pending", "photographer_id": None, "photographer_name": None,
@@ -364,7 +373,7 @@ async def create_booking(
     msg = (f"*BOOKING FOTO GRADUATION*\n\nNama: {full_name}\nEmail: {email}\nIG: {instagram}\nWA: {whatsapp}\n"
            f"Universitas: {university}\nProdi: {study}\n\nPaket: {pkg['name']} (Rp {pkg['price']:,.0f})\n"
            f"Tanggal: {shoot_date}\nJam: {start_time} - {end_time}\nLokasi: {location}\n\n"
-           f"Pembayaran: {'DP' if payment_type == 'dp' else 'Full Payment'} - Rp {float(amount_paid):,.0f}\n"
+           f"Pembayaran: {'DP' if actual_payment_type == 'dp' else 'Full Payment'} - Rp {float(amount_paid):,.0f}\n"
            f"No. Invoice: {doc['invoice_number']}\n\nBukti transfer sudah saya upload. Mohon konfirmasi booking saya. Terima kasih!")
     doc["whatsapp_link"] = f"https://wa.me/{ADMIN_WHATSAPP}?text={quote(msg)}"
     return doc
@@ -389,8 +398,8 @@ async def list_bookings(request: Request, status: Optional[str] = None, payment_
     return docs
 
 @api_router.get("/bookings/{booking_id}")
-async def get_booking(booking_id: str, request: Request):
-    await get_current_user(request)
+async def get_booking(booking_id: str):
+    # Endpoint ini dibuka tanpa get_current_user agar halaman invoice publik klien bisa membacanya tanpa login admin
     d = await db.bookings.find_one({"booking_id": booking_id}, {"_id": 0})
     if not d:
         raise HTTPException(404, "Booking tidak ditemukan")
@@ -403,18 +412,61 @@ async def update_booking(booking_id: str, body: BookingUpdate, request: Request)
     cur = await db.bookings.find_one({"booking_id": booking_id}, {"_id": 0})
     if not cur:
         raise HTTPException(404, "Booking tidak ditemukan")
+    
     upd = {k: v for k, v in body.model_dump().items() if v is not None}
+    
     if "photographer_id" in upd:
-        pho = await db.photographers.find_one({"photographer_id": upd["photographer_id"]}, {"_id": 0})
-        upd["photographer_name"] = pho["name"] if pho else None
-        if pho and not body.photographer_fee:
-            upd["photographer_fee"] = pho.get("fee_per_session", 0)
+        if upd["photographer_id"] is None:
+            upd["photographer_name"] = None
+            upd["photographer_fee"] = 0.0
+        else:
+            pho = await db.photographers.find_one({"photographer_id": upd["photographer_id"]}, {"_id": 0})
+            upd["photographer_name"] = pho["name"] if pho else None
+            if pho and not body.photographer_fee:
+                upd["photographer_fee"] = pho.get("fee_per_session", 0)
+                
     if "amount_paid" in upd:
-        upd["balance_due"] = max(cur["package_price"] - upd["amount_paid"], 0)
+        package_price = cur.get("package_price", 0)
+        paid_amount = upd["amount_paid"]
+        upd["balance_due"] = max(package_price - paid_amount, 0)
+        
+        # Jika payment_type tidak dikirim eksplisit, atur otomatis berdasarkan nominal bayar
+        if "payment_type" not in upd:
+            upd["payment_type"] = "full" if paid_amount >= package_price else "dp"
+
+    if "payment_type" in upd and "amount_paid" not in upd:
+        # Jika payment_type diubah secara manual lewat dropdown admin
+        pass
+
     await db.bookings.update_one({"booking_id": booking_id}, {"$set": upd})
     d = await db.bookings.find_one({"booking_id": booking_id}, {"_id": 0})
     d["gcal_link"] = gcal_link(d)
     return d
+
+@api_router.post("/bookings/{booking_id}/confirm-payment")
+async def client_confirm_payment(booking_id: str, body: ClientPaymentConfirm):
+    # Endpoint publik khusus klien melakukan pelunasan mandiri via link invoice
+    cur = await db.bookings.find_one({"booking_id": booking_id}, {"_id": 0})
+    if not cur:
+        raise HTTPException(404, "Booking tidak ditemukan")
+    
+    package_price = cur.get("package_price", 0)
+    paid_amount = body.amount_paid
+    
+    balance = max(package_price - paid_amount, 0)
+    payment_type = "full" if paid_amount >= package_price else "dp"
+    
+    upd = {
+        "amount_paid": paid_amount,
+        "balance_due": balance,
+        "payment_type": payment_type,
+        "proof_file_id": body.proof_file_id,
+        "status": "confirmed"
+    }
+    
+    await db.bookings.update_one({"booking_id": booking_id}, {"$set": upd})
+    updated_doc = await db.bookings.find_one({"booking_id": booking_id}, {"_id": 0})
+    return {"ok": True, "message": "Konfirmasi pelunasan berhasil!", "booking": updated_doc}
 
 @api_router.delete("/bookings/{booking_id}")
 async def delete_booking(booking_id: str, request: Request):
@@ -456,8 +508,8 @@ def invoice_html(b: dict) -> str:
 Hubungi admin di WhatsApp {ADMIN_WHATSAPP} untuk pertanyaan lebih lanjut.</p></div>"""
 
 @api_router.get("/bookings/{booking_id}/invoice")
-async def get_invoice(booking_id: str, request: Request):
-    await get_current_user(request)
+async def get_invoice(booking_id: str):
+    # Dibuka untuk publik agar klien dapat melihat rincian tagihan via link invoice
     b = await db.bookings.find_one({"booking_id": booking_id}, {"_id": 0})
     if not b:
         raise HTTPException(404, "Booking tidak ditemukan")
