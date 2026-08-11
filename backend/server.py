@@ -7,6 +7,7 @@ from typing import List, Optional, Literal
 
 import httpx
 import requests
+import bcrypt
 from dotenv import load_dotenv
 from fastapi import FastAPI, APIRouter, HTTPException, UploadFile, File, Form, Header, Query, Request, Response
 from fastapi.responses import Response as FastResponse
@@ -547,7 +548,11 @@ async def startup():
             await db.photographers.insert_one({"photographer_id": f"pho_{uuid.uuid4().hex[:10]}", "name": n, "phone": "", "fee_per_session": f, "active": True})
     
     admin_exists = await db.users.find_one({"email": ADMIN_EMAIL})
-    hashed_pw = pwd_context.hash(ADMIN_PASSWORD_DEFAULT)
+    
+    # Perbaikan hashing langsung dengan bcrypt agar aman di Vercel Python 3.12
+    pwd_bytes = ADMIN_PASSWORD_DEFAULT.encode('utf-8')[:72]
+    hashed_pw = bcrypt.hashpw(pwd_bytes, bcrypt.gensalt()).decode('utf-8')
+
     if not admin_exists:
         await db.users.insert_one({
             "user_id": f"user_{uuid.uuid4().hex[:12]}",
