@@ -172,9 +172,14 @@ async def login_password(body: LoginPayload, response: Response):
     if not user:
         raise HTTPException(status_code=401, detail="Akun admin belum diinisialisasi.")
     
-    if not pwd_context.verify(body.password, user["password_hash"]):
+    try:
+        password_bytes = body.password.encode('utf-8')[:72]
+        stored_hash_bytes = user["password_hash"].encode('utf-8')
+        if not bcrypt.checkpw(password_bytes, stored_hash_bytes):
+            raise HTTPException(status_code=401, detail="Password salah.")
+    except Exception:
         raise HTTPException(status_code=401, detail="Password salah.")
-    
+
     st = f"tok_{uuid.uuid4().hex}"
     await db.user_sessions.insert_one({
         "user_id": user["user_id"],
