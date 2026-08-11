@@ -187,7 +187,7 @@ async def login_password(body: LoginPayload, response: Response):
         "expires_at": (datetime.now(timezone.utc) + timedelta(days=7)).isoformat(),
         "created_at": now_iso()
     })
-    response.set_cookie("session_token", st, httponly=True, secure=True, samesite="lax", path="/", max_age=7 * 24 * 3600)
+    response.set_cookie("session_token", st, httponly=True, secure=True, samesite="none", path="/", max_age=7 * 24 * 3600)
     return {"user_id": user["user_id"], "email": user["email"], "name": user["name"], "session_token": st}
 
 @api_router.get("/auth/me", response_model=User)
