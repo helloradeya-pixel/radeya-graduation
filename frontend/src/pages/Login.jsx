@@ -38,11 +38,13 @@ export default function Login() {
         throw new Error(data.detail || "Gagal masuk. Periksa kembali email dan password.");
       }
 
-      if (checkUser) await checkUser();
+      if (checkUser) {
+        checkUser().catch(() => {});
+      }
+
       navigate("/dashboard", { replace: true });
     } catch (err) {
       setErrorMsg(err.message);
-    } finally {
       setIsSubmitting(false);
     }
   };
