@@ -15,16 +15,24 @@ export default function Clients() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [paymentFilter, setPaymentFilter] = useState("all");
+  const [monthFilter, setMonthFilter] = useState("all"); // <-- State Filter Bulan/Tahun
   const [selected, setSelected] = useState(null);
   const [editPho, setEditPho] = useState("");
   const [editStatus, setEditStatus] = useState("");
   const [editPaid, setEditPaid] = useState("");
-  const [editPaymentType, setEditPaymentType] = useState("dp"); // <-- Tambahan state jenis pembayaran
+  const [editPaymentType, setEditPaymentType] = useState("dp");
 
   const loadData = useCallback(async () => {
     try {
       const [{ data: b }, { data: p }] = await Promise.all([
-        api.get("/bookings", { params: { status: statusFilter, payment_type: paymentFilter, q: search || undefined } }),
+        api.get("/bookings", { 
+          params: { 
+            status: statusFilter, 
+            payment_type: paymentFilter, 
+            month: monthFilter, // <-- Kirim parameter month ke backend
+            q: search || undefined 
+          } 
+        }),
         api.get("/photographers"),
       ]);
       
@@ -35,7 +43,7 @@ export default function Clients() {
     } finally {
       setLoading(false);
     }
-  }, [statusFilter, paymentFilter, search]);
+  }, [statusFilter, paymentFilter, monthFilter, search]);
 
   useEffect(() => {
     loadData();
@@ -46,7 +54,7 @@ export default function Clients() {
     setEditPho(b.photographer_id || "none");
     setEditStatus(b.status);
     setEditPaid(String(b.amount_paid));
-    setEditPaymentType(b.payment_type || "dp"); // <-- Load status pembayaran saat modal dibuka
+    setEditPaymentType(b.payment_type || "dp");
   };
 
   const saveDetail = async () => {
@@ -55,7 +63,7 @@ export default function Clients() {
         status: editStatus,
         photographer_id: editPho === "none" ? null : editPho,
         amount_paid: parseFloat(editPaid) || 0,
-        payment_type: editPaymentType, // <-- Kirim status pembayaran ke backend
+        payment_type: editPaymentType,
       });
       toast.success("Booking berhasil diperbarui");
       setSelected(null);
@@ -99,7 +107,7 @@ export default function Clients() {
   return (
     <AdminLayout title="Database Client" subtitle="Kelola jadwal, fotografer, dan kirim invoice">
       <div className="flex flex-col sm:flex-row gap-3 mb-6 items-center justify-between" data-testid="client-filters">
-        <div className="relative w-full sm:w-72">
+        <div className="relative w-full sm:w-64">
           <Search className="absolute h-4 w-4 left-3 top-3 text-muted-foreground" />
           <Input
             placeholder="Cari nama, email, univ..."
@@ -108,9 +116,30 @@ export default function Clients() {
             className="pl-9 bg-white"
           />
         </div>
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <Select onValueChange={setStatusFilter} value={statusFilter}>
+        
+        {/* Barisan Filter Dropdown */}
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+          {/* Filter Bulan & Tahun */}
+          <Select onValueChange={setMonthFilter} value={monthFilter}>
             <SelectTrigger className="w-[140px] bg-white">
+              <SelectValue placeholder="Bulan / Tahun" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Semua Waktu</SelectItem>
+              <SelectItem value="2026-08">Agustus 2026</SelectItem>
+              <SelectItem value="2026-07">Juli 2026</SelectItem>
+              <SelectItem value="2026-06">Juni 2026</SelectItem>
+              <SelectItem value="2026-05">Mei 2026</SelectItem>
+              <SelectItem value="2026-04">April 2026</SelectItem>
+              <SelectItem value="2026-03">Maret 2026</SelectItem>
+              <SelectItem value="2026-02">Februari 2026</SelectItem>
+              <SelectItem value="2026-01">Januari 2026</SelectItem>
+              {/* Anda bisa menambah tahun/bulan lain sesuai kebutuhan */}
+            </SelectContent>
+          </Select>
+
+          <Select onValueChange={setStatusFilter} value={statusFilter}>
+            <SelectTrigger className="w-[130px] bg-white">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
@@ -123,7 +152,7 @@ export default function Clients() {
           </Select>
 
           <Select onValueChange={setPaymentFilter} value={paymentFilter}>
-            <SelectTrigger className="w-[140px] bg-white">
+            <SelectTrigger className="w-[130px] bg-white">
               <SelectValue placeholder="Pembayaran" />
             </SelectTrigger>
             <SelectContent>
@@ -251,7 +280,6 @@ export default function Clients() {
                 </Select>
               </div>
 
-              {/* Tambahan Dropdown Status Pembayaran */}
               <div className="space-y-1.5">
                 <label className="text-xs font-bold">Status Pembayaran</label>
                 <Select onValueChange={setEditPaymentType} value={editPaymentType}>
@@ -286,7 +314,6 @@ export default function Clients() {
                   onChange={(e) => {
                     const val = e.target.value;
                     setEditPaid(val);
-                    // Otomatis ubah jenis pembayaran jadi full jika nominal sama/lebih dari harga paket
                     if (Number(val) >= Number(selected.package_price)) {
                       setEditPaymentType("full");
                     }
