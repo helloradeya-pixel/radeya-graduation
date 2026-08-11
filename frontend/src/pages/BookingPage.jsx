@@ -217,7 +217,7 @@ export default function BookingPage() {
                 <option value="" disabled>-- Pilih paket sesuai pricelist WhatsApp --</option>
                 {(Array.isArray(packages) ? packages : []).map((p) => (
                   <option key={p.package_id} value={p.package_id}>
-                    {p.name} — {rupiah(p.price)} ({p.description})
+                    {p.name} — {rupiah(p.price)} {p.description ? `(${p.description})` : ""}
                   </option>
                 ))}
               </select>
@@ -227,7 +227,7 @@ export default function BookingPage() {
                 <div className="mt-3 p-4 rounded-xl bg-[#F8F6F0] border border-[#EBE7DF] text-xs text-[#666666] flex justify-between items-center">
                   <div>
                     <span className="font-semibold text-[#2C2A29]">{pkg.name}</span>
-                    <p className="mt-0.5">{pkg.description}</p>
+                    {pkg.description && <p className="mt-0.5">{pkg.description}</p>}
                   </div>
                   <div className="text-right">
                     <span className="font-semibold text-[#2C2A29] text-sm">{rupiah(pkg.price)}</span>
