@@ -351,7 +351,6 @@ async def create_booking(
         raise HTTPException(400, "Paket tidak ditemukan")
     booking_id = f"bk_{uuid.uuid4().hex[:12]}"
     
-    # Otomatis pastikan payment_type sesuai jika amount_paid >= harga paket
     actual_payment_type = "full" if float(amount_paid) >= pkg["price"] else payment_type
     
     doc = {
@@ -399,7 +398,6 @@ async def list_bookings(request: Request, status: Optional[str] = None, payment_
 
 @api_router.get("/bookings/{booking_id}")
 async def get_booking(booking_id: str):
-    # Endpoint ini dibuka tanpa get_current_user agar halaman invoice publik klien bisa membacanya tanpa login admin
     d = await db.bookings.find_one({"booking_id": booking_id}, {"_id": 0})
     if not d:
         raise HTTPException(404, "Booking tidak ditemukan")
@@ -430,13 +428,8 @@ async def update_booking(booking_id: str, body: BookingUpdate, request: Request)
         paid_amount = upd["amount_paid"]
         upd["balance_due"] = max(package_price - paid_amount, 0)
         
-        # Jika payment_type tidak dikirim eksplisit, atur otomatis berdasarkan nominal bayar
         if "payment_type" not in upd:
             upd["payment_type"] = "full" if paid_amount >= package_price else "dp"
-
-    if "payment_type" in upd and "amount_paid" not in upd:
-        # Jika payment_type diubah secara manual lewat dropdown admin
-        pass
 
     await db.bookings.update_one({"booking_id": booking_id}, {"$set": upd})
     d = await db.bookings.find_one({"booking_id": booking_id}, {"_id": 0})
@@ -445,7 +438,6 @@ async def update_booking(booking_id: str, body: BookingUpdate, request: Request)
 
 @api_router.post("/bookings/{booking_id}/confirm-payment")
 async def client_confirm_payment(booking_id: str, body: ClientPaymentConfirm):
-    # Endpoint publik khusus klien melakukan pelunasan mandiri via link invoice
     cur = await db.bookings.find_one({"booking_id": booking_id}, {"_id": 0})
     if not cur:
         raise HTTPException(404, "Booking tidak ditemukan")
@@ -509,7 +501,7 @@ Hubungi admin di WhatsApp {ADMIN_WHATSAPP} untuk pertanyaan lebih lanjut.</p></d
 
 @api_router.get("/bookings/{booking_id}/invoice")
 async def get_invoice(booking_id: str):
-    # Dibuka untuk publik agar klien dapat melihat rincian tagihan via link invoice
+    # PERBAIKAN UTAMA: HAPUS await get_current_user(request) agar halaman invoice publik klien bisa terbuka tanpa token admin
     b = await db.bookings.find_one({"booking_id": booking_id}, {"_id": 0})
     if not b:
         raise HTTPException(404, "Booking tidak ditemukan")
