@@ -86,18 +86,33 @@ def get_object(path: str):
     resp.raise_for_status()
     return resp.content, resp.headers.get("Content-Type", "application/octet-stream")
 
-EMAIL_BASE_URL = "https://integrations.emergentagent.com"
-EMAIL_KEY = os.environ.get("EMERGENT_EMAIL_KEY")
+RESEND_API_KEY = os.environ.get("RESEND_API_KEY")
 EMAIL_FROM_NAME = os.environ.get("EMAIL_FROM_NAME", "Radeyaphoto Studio")
 
 async def send_email(to: str, subject: str, html: str, reply_to: Optional[str] = None):
-    payload = {"to": [to], "subject": subject, "html": html, "from_name": EMAIL_FROM_NAME}
+    url = "https://api.resend.com/emails"
+    headers = {
+        "Authorization": f"Bearer {RESEND_API_KEY}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "from": f"{EMAIL_FROM_NAME} <onboarding@resend.dev>",
+        "to": [to],
+        "subject": subject,
+        "html": html
+    }
     if reply_to:
-        payload["contact_email"] = reply_to
+        payload["reply_to"] = reply_to
+
     async with httpx.AsyncClient(timeout=30) as c:
-        resp = await c.post(f"{EMAIL_BASE_URL}/api/v1/email/send", headers={"X-Email-Key": EMAIL_KEY}, json=payload)
-    resp.raise_for_status()
+        resp = await c.post(url, headers=headers, json=payload)
+    
+    if resp.status_code >= 400:
+        logger.error(f"Resend API Error: {resp.text}")
+        raise HTTPException(status_code=502, detail=f"Gagal mengirim email: {resp.text}")
+    
     return resp.json().get("id")
+
 
 class User(BaseModel):
     user_id: str
