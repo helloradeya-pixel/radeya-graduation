@@ -9,6 +9,7 @@ import AuthCallback from "./pages/AuthCallback";
 import Dashboard from "./pages/Dashboard";
 import Clients from "./pages/Clients";
 import Settings from "./pages/Settings";
+import InvoicePage from "./pages/InvoicePage"; // <-- Tambahan import halaman invoice publik
 
 function AppRouter() {
   const location = useLocation();
@@ -18,6 +19,11 @@ function AppRouter() {
     <Routes>
       <Route path="/" element={<BookingPage />} />
       <Route path="/login" element={<Login />} />
+      
+      {/* Rute publik untuk client melihat invoice dan konfirmasi pelunasan mandiri */}
+      <Route path="/invoice/:id" element={<InvoicePage />} />
+
+      {/* Rute admin yang dilindungi */}
       <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
       <Route path="/clients" element={<ProtectedRoute><Clients /></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
