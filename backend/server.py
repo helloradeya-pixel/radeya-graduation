@@ -532,9 +532,15 @@ async def send_invoice(booking_id: str, request: Request):
     return {"ok": True, "email_id": eid, "sent_to": b["email"]}
 
 @api_router.get("/analytics/summary")
-async def analytics(request: Request):
+async def analytics(request: Request, month: Optional[str] = Query(None)):
     await get_current_user(request)
-    bookings = await db.bookings.find({"status": {"$ne": "cancelled"}}, {"_id": 0}).to_list(5000)
+    
+    query = {"status": {"$ne": "cancelled"}}
+    if month and month != "all":
+        query["shoot_date"] = {"$regex": f"^{month}"}
+        
+    bookings = await db.bookings.find(query, {"_id": 0}).to_list(5000)
+    
     dp_income = sum(b["amount_paid"] for b in bookings if b["payment_type"] == "dp")
     full_income = sum(b["amount_paid"] for b in bookings if b["payment_type"] == "full")
     total_income = dp_income + full_income
