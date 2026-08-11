@@ -201,30 +201,40 @@ export default function BookingPage() {
           </Section>
 
           <Section n={2} title="Detail Sesi Foto" desc="Pilih paket, tanggal, lokasi, dan jam sesi kamu.">
+            
+            {/* DROPDOWN PILIHAN PAKET FOTO */}
             <div className="sm:col-span-2">
-              <Label className="text-xs uppercase tracking-wider text-[#666666] font-medium mb-3 block">Paket Foto</Label>
-              <div className="grid gap-3 sm:grid-cols-3" data-testid="package-list">
-                {(Array.isArray(packages) ? packages : []).map((p) => {
-                  const active = f.package_id === p.package_id;
+              <Label className="text-xs uppercase tracking-wider text-[#666666] font-medium mb-2 block">
+                Pilih Paket Foto
+              </Label>
+              <select
+                data-testid="package-select"
+                required
+                value={f.package_id}
+                onChange={(e) => setF((s) => ({ ...s, package_id: e.target.value }))}
+                className="w-full h-12 px-4 rounded-xl bg-[#F8F6F0]/50 border border-[#EBE7DF] text-[#2C2A29] text-sm focus:outline-none focus:border-[#BEAF9D]"
+              >
+                <option value="" disabled>-- Pilih paket sesuai pricelist WhatsApp --</option>
+                {(Array.isArray(packages) ? packages : []).map((p) => (
+                  <option key={p.package_id} value={p.package_id}>
+                    {p.name} — {rupiah(p.price)} ({p.description})
+                  </option>
+                ))}
+              </select>
 
-                  return (
-                    <button
-                      type="button"
-                      key={p.package_id}
-                      data-testid={`package-option-${p.package_id}`}
-                      onClick={() => setF((s) => ({ ...s, package_id: p.package_id }))}
-                      className={`text-left rounded-2xl border p-4 transition-all duration-200 ${
-                        active ? "border-[#BEAF9D] bg-[#F8F6F0] ring-1 ring-[#BEAF9D] shadow-sm" : "border-[#EBE7DF] bg-white hover:border-[#BEAF9D]/50"
-                      }`}
-                    >
-                      <p className="font-serif font-semibold text-[#2C2A29]">{p.name}</p>
-                      <p className="font-serif text-lg font-bold text-[#2C2A29] mt-1">{rupiah(p.price)}</p>
-                      <p className="text-xs text-[#666666] mt-2 leading-relaxed">{p.description}</p>
-                      <p className="text-[11px] text-[#BEAF9D] font-semibold mt-3">DP {rupiah(p.dp_amount || Math.round(p.price * 0.3))}</p>
-                    </button>
-                  );
-                })}
-              </div>
+              {/* Menampilkan ringkasan info paket yang sedang dipilih */}
+              {pkg && (
+                <div className="mt-3 p-4 rounded-xl bg-[#F8F6F0] border border-[#EBE7DF] text-xs text-[#666666] flex justify-between items-center">
+                  <div>
+                    <span className="font-semibold text-[#2C2A29]">{pkg.name}</span>
+                    <p className="mt-0.5">{pkg.description}</p>
+                  </div>
+                  <div className="text-right">
+                    <span className="font-semibold text-[#2C2A29] text-sm">{rupiah(pkg.price)}</span>
+                    <p className="text-[11px] text-[#BEAF9D] font-medium">Min. DP: {rupiah(pkg.dp_amount || Math.round(pkg.price * 0.3))}</p>
+                  </div>
+                </div>
+              )}
             </div>
 
             <Field label="Tanggal Foto" icon={CalendarDays}>
