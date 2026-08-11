@@ -3,7 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { Camera, ArrowRight, ShieldCheck, Lock, Mail, AlertCircle } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { useAuth } from "../context/AuthContext";
-import { api } from "../path-to-your-api-file"; // Sesuaikan dengan path file konfigurasi axios Anda
+import { api } from "../lib/api"; // <-- Diperbaiki ke path yang benar
 import loginBg from "../assets/ADS00060.jpg";
 
 export default function Login() {
@@ -25,11 +25,8 @@ export default function Login() {
     setIsSubmitting(true);
 
     try {
-      // Menggunakan instance api (Axios) agar otomatis terhubung ke baseURL /api
       const response = await api.post("/auth/login", { email, password });
 
-      // 1. SIMPAN SESSION TOKEN KE LOCALSTORAGE 
-      // Agar tertangkap oleh Axios Interceptor Anda pada request selanjutnya
       if (response.data && response.data.session_token) {
         localStorage.setItem("session_token", response.data.session_token);
       }
@@ -38,7 +35,6 @@ export default function Login() {
         await checkUser().catch(() => {});
       }
 
-      // 2. PINDAH KE HALAMAN DASHBOARD
       navigate("/dashboard", { replace: true });
 
     } catch (err) {
