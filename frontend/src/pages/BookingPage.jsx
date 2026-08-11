@@ -131,11 +131,7 @@ export default function BookingPage() {
               Konfirmasi via WhatsApp <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </a>
-          <a href={result.gcal_link} target="_blank" rel="noreferrer" data-testid="add-to-gcal-button">
-            <Button variant="outline" className="mt-3 w-full h-11 rounded-2xl border-[#BEAF9D] text-[#2C2A29] hover:bg-[#F8F6F0]">
-              <CalendarDays className="mr-2 h-4 w-4 text-[#BEAF9D]" /> Tambahkan ke Google Calendar
-            </Button>
-          </a>
+          
           <button
             onClick={() => { setResult(null); setFile(null); setDate(undefined); }}
             data-testid="new-booking-button"
