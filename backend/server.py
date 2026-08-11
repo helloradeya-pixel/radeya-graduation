@@ -501,7 +501,6 @@ Hubungi admin di WhatsApp {ADMIN_WHATSAPP} untuk pertanyaan lebih lanjut.</p></d
 
 @api_router.get("/bookings/{booking_id}/invoice")
 async def get_invoice(booking_id: str):
-    # PERBAIKAN UTAMA: HAPUS await get_current_user(request) agar halaman invoice publik klien bisa terbuka tanpa token admin
     b = await db.bookings.find_one({"booking_id": booking_id}, {"_id": 0})
     if not b:
         raise HTTPException(404, "Booking tidak ditemukan")
