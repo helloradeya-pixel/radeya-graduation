@@ -33,16 +33,10 @@ app = FastAPI(redirect_slashes=True)
 async def root_favicon():
     return Response(status_code=204)
 
-# Konfigurasi CORS eksplisit untuk mendukung kredensial (cookies)
-origins = [
-    "https://radeya-graduation-booking.vercel.app",
-    "http://localhost:3000",
-    "http://localhost:5173"
-]
-
+# Konfigurasi CORS fleksibel untuk semua domain Vercel dan lokal
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=["*"],
@@ -549,7 +543,6 @@ async def startup():
     
     admin_exists = await db.users.find_one({"email": ADMIN_EMAIL})
     
-    # Perbaikan hashing langsung dengan bcrypt agar aman di Vercel Python 3.12
     pwd_bytes = ADMIN_PASSWORD_DEFAULT.encode('utf-8')[:72]
     hashed_pw = bcrypt.hashpw(pwd_bytes, bcrypt.gensalt()).decode('utf-8')
 
