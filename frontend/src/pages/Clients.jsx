@@ -15,12 +15,13 @@ export default function Clients() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [paymentFilter, setPaymentFilter] = useState("all");
-  const [monthFilter, setMonthFilter] = useState("all"); // <-- State Filter Bulan/Tahun
+  const [monthFilter, setMonthFilter] = useState("all");
   const [selected, setSelected] = useState(null);
   const [editPho, setEditPho] = useState("");
   const [editStatus, setEditStatus] = useState("");
   const [editPaid, setEditPaid] = useState("");
   const [editPaymentType, setEditPaymentType] = useState("dp");
+  const [editPhoPaid, setEditPhoPaid] = useState(false); // <-- State status bayar fee fotografer
 
   const loadData = useCallback(async () => {
     try {
@@ -29,7 +30,7 @@ export default function Clients() {
           params: { 
             status: statusFilter, 
             payment_type: paymentFilter, 
-            month: monthFilter, // <-- Kirim parameter month ke backend
+            month: monthFilter, 
             q: search || undefined 
           } 
         }),
@@ -55,6 +56,7 @@ export default function Clients() {
     setEditStatus(b.status);
     setEditPaid(String(b.amount_paid));
     setEditPaymentType(b.payment_type || "dp");
+    setEditPhoPaid(b.photographer_paid || false); // <-- Load status bayar fee FG saat modal dibuka
   };
 
   const saveDetail = async () => {
@@ -64,6 +66,7 @@ export default function Clients() {
         photographer_id: editPho === "none" ? null : editPho,
         amount_paid: parseFloat(editPaid) || 0,
         payment_type: editPaymentType,
+        photographer_paid: editPhoPaid, // <-- Simpan status bayar fee FG ke backend
       });
       toast.success("Booking berhasil diperbarui");
       setSelected(null);
@@ -117,9 +120,7 @@ export default function Clients() {
           />
         </div>
         
-        {/* Barisan Filter Dropdown */}
         <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-          {/* Filter Bulan & Tahun */}
           <Select onValueChange={setMonthFilter} value={monthFilter}>
             <SelectTrigger className="w-[140px] bg-white">
               <SelectValue placeholder="Bulan / Tahun" />
@@ -134,7 +135,6 @@ export default function Clients() {
               <SelectItem value="2026-03">Maret 2026</SelectItem>
               <SelectItem value="2026-02">Februari 2026</SelectItem>
               <SelectItem value="2026-01">Januari 2026</SelectItem>
-              {/* Anda bisa menambah tahun/bulan lain sesuai kebutuhan */}
             </SelectContent>
           </Select>
 
@@ -199,7 +199,7 @@ export default function Clients() {
                   <td className="p-3.5">
                     {b.photographer_name ? (
                       <span className="inline-flex items-center gap-1.5 font-medium text-xs bg-moss-50 text-moss-800 px-2.5 py-1 rounded-full">
-                        {b.photographer_name}
+                        {b.photographer_name} {b.photographer_paid && "✓"}
                       </span>
                     ) : (
                       <span className="text-xs text-amberx font-semibold">Belum ditugaskan</span>
@@ -304,6 +304,20 @@ export default function Clients() {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+
+              {/* Checkbox Status Pembayaran Fee Fotografer */}
+              <div className="flex items-center space-x-2 pt-1">
+                <input
+                  type="checkbox"
+                  id="phoPaid"
+                  checked={editPhoPaid}
+                  onChange={(e) => setEditPhoPaid(e.target.checked)}
+                  className="h-4 w-4 rounded border-gray-300 text-moss-800 focus:ring-moss-800 cursor-pointer"
+                />
+                <label htmlFor="phoPaid" className="text-xs font-bold cursor-pointer">
+                  Fee Fotografer Sudah Dibayar (Lunas)
+                </label>
               </div>
 
               <div className="space-y-1.5">
