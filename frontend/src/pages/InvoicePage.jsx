@@ -15,9 +15,10 @@ export default function InvoicePage() {
 
   const loadInvoice = useCallback(async () => {
     try {
-      const { data } = await api.get(`/bookings/${id}/invoice`);
-      setInvoice(data.booking);
-      setAmountPaid(data.booking.amount_paid);
+      // Menggunakan endpoint /bookings/{id} agar langsung menerima objek data booking
+      const { data } = await api.get(`/bookings/${id}`);
+      setInvoice(data);
+      setAmountPaid(data.amount_paid);
     } catch {
       toast.error("Invoice tidak ditemukan");
     } finally {
