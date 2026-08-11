@@ -8,6 +8,16 @@ export const API = `${backendUrl}/api`;
 
 export const api = axios.create({ baseURL: API, withCredentials: true });
 
+// TAMBAHKAN INTERCEPTOR INI AGAR TOKEN SELALU DIKIRIM DI HEADER
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem("session_token");
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+
 export const rupiah = (v) =>
   "Rp " + Number(v || 0).toLocaleString("id-ID", { maximumFractionDigits: 0 });
 
