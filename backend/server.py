@@ -458,13 +458,20 @@ async def client_confirm_payment(booking_id: str, body: ClientPaymentConfirm):
         raise HTTPException(404, "Booking tidak ditemukan")
     
     package_price = cur.get("package_price", 0)
-    paid_amount = body.amount_paid
     
-    balance = max(package_price - paid_amount, 0)
-    payment_type = "full" if paid_amount >= package_price else "dp"
+    # Akumulasikan pembayaran sebelumnya dengan nominal baru yang diisi klien
+    previous_paid = float(cur.get("amount_paid", 0))
+    new_input_amount = float(body.amount_paid)
+    
+    total_paid = previous_paid + new_input_amount
+    if total_paid > package_price:
+        total_paid = package_price
+        
+    balance = max(package_price - total_paid, 0)
+    payment_type = "full" if balance <= 0 else "dp"
     
     upd = {
-        "amount_paid": paid_amount,
+        "amount_paid": total_paid,
         "balance_due": balance,
         "payment_type": payment_type,
         "proof_file_id": body.proof_file_id,
