@@ -3,6 +3,7 @@ import { AdminLayout } from "../components/AdminLayout";
 import { api, rupiah } from "../lib/api";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { toast } from "sonner";
+import { TrendingUp, Wallet, Users, Calendar, DollarSign, ArrowUpRight } from "lucide-react";
 
 export default function Dashboard() {
   const [data, setData] = useState(null);
@@ -28,11 +29,12 @@ export default function Dashboard() {
   }, [loadAnalytics]);
 
   return (
-    <AdminLayout title="Ringkasan" subtitle="Pantau pendapatan, DP, dan fee fotografer">
+    <AdminLayout title="Ringkasan Finansial" subtitle="Analisis pendapatan vendor dan cost fee fotografer profesional">
+      {/* Filter Bulan */}
       <div className="mb-6 flex justify-end">
         <Select onValueChange={setMonthFilter} value={monthFilter}>
-          <SelectTrigger className="w-[180px] bg-white">
-            <SelectValue placeholder="Pilih Bulan" />
+          <SelectTrigger className="w-[200px] bg-white rounded-xl border-moss-900/10">
+            <SelectValue placeholder="Pilih Periode" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Semua Waktu</SelectItem>
@@ -49,41 +51,115 @@ export default function Dashboard() {
       </div>
 
       {loading ? (
-        <p className="text-center p-10">Memuat data...</p>
+        <div className="flex justify-center items-center p-20">
+          <div className="h-8 w-8 rounded-full border-2 border-moss-800 border-t-transparent animate-spin" />
+        </div>
       ) : data ? (
         <div className="space-y-6">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div className="bg-white p-4 rounded-lg border border-moss-900/10">
-              <p className="text-xs text-muted-foreground">Total Omzet</p>
-              <p className="text-lg font-bold text-moss-900">{rupiah(data.total_income)}</p>
+          
+          {/* 1. KARTU METRIK UTAMA VENDOR */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            
+            <div className="bg-white p-5 rounded-2xl border border-moss-900/10 shadow-sm relative overflow-hidden">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Total Pendapatan</p>
+                <div className="p-2 rounded-xl bg-green-50 text-green-700"><TrendingUp className="h-4 w-4" /></div>
+              </div>
+              <p className="text-2xl font-bold text-moss-900 mt-3">{rupiah(data.total_income)}</p>
+              <p className="text-[11px] text-muted-foreground mt-1">Akumulasi DP & Pelunasan klien</p>
             </div>
-            <div className="bg-white p-4 rounded-lg border border-moss-900/10">
-              <p className="text-xs text-muted-foreground">Outstanding</p>
-              <p className="text-lg font-bold text-amberx">{rupiah(data.outstanding)}</p>
+
+            <div className="bg-white p-5 rounded-2xl border border-moss-900/10 shadow-sm relative overflow-hidden">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Outstanding / Piutang</p>
+                <div className="p-2 rounded-xl bg-amber-50 text-amber-700"><Wallet className="h-4 w-4" /></div>
+              </div>
+              <p className="text-2xl font-bold text-amber-600 mt-3">{rupiah(data.outstanding)}</p>
+              <p className="text-[11px] text-muted-foreground mt-1">Sisa tagihan belum dibayar klien</p>
             </div>
+
+            <div className="bg-white p-5 rounded-2xl border border-moss-900/10 shadow-sm relative overflow-hidden">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Cost Fee Fotografer</p>
+                <div className="p-2 rounded-xl bg-rose-50 text-rose-700"><Users className="h-4 w-4" /></div>
+              </div>
+              <p className="text-2xl font-bold text-rose-600 mt-3">{rupiah(data.photographer_fee_total)}</p>
+              <p className="text-[11px] text-rose-700 mt-1">Belum lunas dibayar: {rupiah(data.photographer_fee_unpaid)}</p>
+            </div>
+
+            <div className="bg-white p-5 rounded-2xl border border-moss-900/10 shadow-sm relative overflow-hidden bg-gradient-to-br from-moss-900 to-moss-950 text-white">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold uppercase tracking-wider text-[#BEAF9D]">Net Profit (Bersih)</p>
+                <div className="p-2 rounded-xl bg-white/10 text-[#BEAF9D]"><DollarSign className="h-4 w-4" /></div>
+              </div>
+              <p className="text-2xl font-bold mt-3 text-white">{rupiah(data.net_profit)}</p>
+              <p className="text-[11px] text-[#BEAF9D] mt-1">Pendapatan bersih dikurangi fee FG</p>
+            </div>
+
           </div>
 
-          <div className="bg-white p-6 rounded-lg border border-moss-900/10">
-            <h3 className="font-bold text-moss-900 mb-4">Pendapatan & Fee per Fotografer</h3>
+          {/* 2. ANALISIS PENDAPATAN PER BULAN */}
+          <div className="bg-white p-6 rounded-2xl border border-moss-900/10 shadow-sm">
+            <h3 className="font-bold text-moss-900 text-base mb-4 flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-moss-700" /> Tren Pendapatan Vendor Per Bulan
+            </h3>
+            {data.monthly && data.monthly.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-muted-foreground border-b border-neutral-100">
+                      <th className="pb-3 font-semibold">Bulan</th>
+                      <th className="pb-3 font-semibold">Jumlah Booking</th>
+                      <th className="pb-3 font-semibold">Pemasukan DP</th>
+                      <th className="pb-3 font-semibold">Pemasukan Pelunasan</th>
+                      <th className="pb-3 font-semibold text-right">Total Pendapatan Bulanan</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.monthly.map((m) => {
+                      const totalBulan = m.dp + m.full;
+                      return (
+                        <tr key={m.month} className="border-b border-neutral-50 last:border-0 hover:bg-neutral-50/50">
+                          <td className="py-3.5 font-semibold text-moss-900">{m.month}</td>
+                          <td className="py-3.5">{m.bookings} Sesi</td>
+                          <td className="py-3.5">{rupiah(m.dp)}</td>
+                          <td className="py-3.5">{rupiah(m.full)}</td>
+                          <td className="py-3.5 text-right font-bold text-green-700">{rupiah(totalBulan)}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground py-6 text-center">Belum ada data transaksi bulanan.</p>
+            )}
+          </div>
+
+          {/* 3. TABEL COST & PERFORMA FOTOGRAFER */}
+          <div className="bg-white p-6 rounded-2xl border border-moss-900/10 shadow-sm">
+            <h3 className="font-bold text-moss-900 text-base mb-1 flex items-center gap-2">
+              <Users className="h-4 w-4 text-moss-700" /> Rincian Cost & Beban Fee Fotografer
+            </h3>
+            <p className="text-xs text-muted-foreground mb-4">Pantau jumlah sesi tugas dan kewajiban pembayaran fee ke masing-masing fotografer.</p>
+            
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-left text-muted-foreground border-b">
-                    <th className="pb-2">Nama</th>
-                    <th className="pb-2">Sesi</th>
-                    <th className="pb-2">Omzet</th>
-                    <th className="pb-2">Fee</th>
-                    <th className="pb-2">Blm Dibayar</th>
+                  <tr className="text-left text-muted-foreground border-b border-neutral-100">
+                    <th className="pb-3 font-semibold">Nama Fotografer</th>
+                    <th className="pb-3 font-semibold">Total Tugas Sesi</th>
+                    <th className="pb-3 font-semibold">Total Fee (Cost Vendor)</th>
+                    <th className="pb-3 font-semibold text-right">Fee Belum Dibayar (Hutang Vendor)</th>
                   </tr>
                 </thead>
                 <tbody>
                   {data.per_photographer.map((p) => (
-                    <tr key={p.name} className="border-b last:border-0">
-                      <td className="py-3 font-semibold">{p.name}</td>
-                      <td className="py-3">{p.sessions}</td>
-                      <td className="py-3">{rupiah(p.revenue)}</td>
-                      <td className="py-3">{rupiah(p.fee)}</td>
-                      <td className={`py-3 font-bold ${p.fee_unpaid > 0 ? 'text-amberx' : 'text-green-600'}`}>
+                    <tr key={p.name} className="border-b border-neutral-50 last:border-0 hover:bg-neutral-50/50">
+                      <td className="py-3.5 font-semibold text-moss-900">{p.name}</td>
+                      <td className="py-3.5">{p.sessions} Sesi</td>
+                      <td className="py-3.5 font-medium">{rupiah(p.fee)}</td>
+                      <td className={`py-3.5 text-right font-bold ${p.fee_unpaid > 0 ? 'text-rose-600' : 'text-green-600'}`}>
                         {rupiah(p.fee_unpaid)}
                       </td>
                     </tr>
@@ -92,6 +168,7 @@ export default function Dashboard() {
               </table>
             </div>
           </div>
+
         </div>
       ) : null}
     </AdminLayout>
