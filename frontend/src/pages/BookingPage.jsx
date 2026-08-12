@@ -33,7 +33,7 @@ const Section = ({ n, title, desc, children }) => (
 );
 
 const Field = ({ label, icon: Icon, children, full }) => (
-  <div className={full ? "sm:col-span-2" : ""}>
+  <div className={full ? "sm:col-span-2 min-w-0" : "min-w-0"}>
     <Label className="text-xs uppercase tracking-wider text-[#666666] font-medium flex items-center gap-1.5 mb-2">
       {Icon && <Icon className="h-3.5 w-3.5 text-[#BEAF9D]" />} {label}
     </Label>
@@ -97,11 +97,11 @@ export default function BookingPage() {
 
   if (result)
     return (
-      <div className="min-h-screen bg-[#F8F6F0] text-[#2C2A29] px-4 py-16 flex items-center justify-center font-sans">
+      <div className="min-h-screen bg-[#F8F6F0] text-[#2C2A29] px-4 py-16 flex items-center justify-center font-sans overflow-x-hidden">
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mx-auto max-w-lg rounded-3xl border border-[#EBE7DF] bg-white p-8 shadow-sm"
+          className="mx-auto max-w-lg w-full rounded-3xl border border-[#EBE7DF] bg-white p-8 shadow-sm"
           data-testid="booking-success"
         >
           <div className="h-12 w-12 rounded-full bg-[#BEAF9D]/20 flex items-center justify-center">
@@ -144,7 +144,7 @@ export default function BookingPage() {
     );
 
   return (
-    <div className="min-h-screen bg-[#F8F6F0] text-[#2C2A29] font-sans pb-16">
+    <div className="min-h-screen bg-[#F8F6F0] text-[#2C2A29] font-sans pb-16 overflow-x-hidden">
       <header className="sticky top-0 z-40 border-b border-[#EBE7DF] bg-[#F8F6F0]/90 backdrop-blur-xl">
         <div className="mx-auto max-w-4xl px-4 sm:px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2.5 text-[#2C2A29]">
@@ -172,34 +172,34 @@ export default function BookingPage() {
       </div>
 
       {/* Main Form Container */}
-      <form onSubmit={submit} className="mx-auto max-w-4xl px-4 sm:px-6 py-10" data-testid="booking-form">
-        <div className="bg-white rounded-3xl border border-[#EBE7DF] p-6 sm:p-10 shadow-sm space-y-10">
+      <form onSubmit={submit} className="mx-auto max-w-4xl px-4 sm:px-6 py-10 w-full" data-testid="booking-form">
+        <div className="bg-white rounded-3xl border border-[#EBE7DF] p-6 sm:p-10 shadow-sm space-y-10 w-full max-w-full">
           
           <Section n={1} title="Data Diri" desc="Pastikan email & WhatsApp aktif, invoice dikirim ke sana.">
             <Field label="Nama Lengkap">
-              <Input data-testid="input-full-name" required value={f.full_name} onChange={set("full_name")} placeholder="Nama sesuai ijazah" className="h-11 rounded-xl bg-[#F8F6F0]/50 border-[#EBE7DF]" />
+              <Input data-testid="input-full-name" required value={f.full_name} onChange={set("full_name")} placeholder="Nama sesuai ijazah" className="h-11 rounded-xl bg-[#F8F6F0]/50 border-[#EBE7DF] w-full" />
             </Field>
             <Field label="Email">
-              <Input data-testid="input-email" type="email" required value={f.email} onChange={set("email")} placeholder="nama@email.com" className="h-11 rounded-xl bg-[#F8F6F0]/50 border-[#EBE7DF]" />
+              <Input data-testid="input-email" type="email" required value={f.email} onChange={set("email")} placeholder="nama@email.com" className="h-11 rounded-xl bg-[#F8F6F0]/50 border-[#EBE7DF] w-full" />
             </Field>
             <Field label="Instagram" icon={Instagram}>
-              <Input data-testid="input-instagram" required value={f.instagram} onChange={set("instagram")} placeholder="@username" className="h-11 rounded-xl bg-[#F8F6F0]/50 border-[#EBE7DF]" />
+              <Input data-testid="input-instagram" required value={f.instagram} onChange={set("instagram")} placeholder="@username" className="h-11 rounded-xl bg-[#F8F6F0]/50 border-[#EBE7DF] w-full" />
             </Field>
             <Field label="WhatsApp" icon={Phone}>
-              <Input data-testid="input-whatsapp" required value={f.whatsapp} onChange={set("whatsapp")} placeholder="08xxxxxxxxxx" className="h-11 rounded-xl bg-[#F8F6F0]/50 border-[#EBE7DF]" />
+              <Input data-testid="input-whatsapp" required value={f.whatsapp} onChange={set("whatsapp")} placeholder="08xxxxxxxxxx" className="h-11 rounded-xl bg-[#F8F6F0]/50 border-[#EBE7DF] w-full" />
             </Field>
             <Field label="Universitas" icon={GraduationCap}>
-              <Input data-testid="input-university" required value={f.university} onChange={set("university")} placeholder="Nama universitas" className="h-11 rounded-xl bg-[#F8F6F0]/50 border-[#EBE7DF]" />
+              <Input data-testid="input-university" required value={f.university} onChange={set("university")} placeholder="Nama universitas" className="h-11 rounded-xl bg-[#F8F6F0]/50 border-[#EBE7DF] w-full" />
             </Field>
             <Field label="Program Studi">
-              <Input data-testid="input-study" required value={f.study} onChange={set("study")} placeholder="Jurusan / prodi" className="h-11 rounded-xl bg-[#F8F6F0]/50 border-[#EBE7DF]" />
+              <Input data-testid="input-study" required value={f.study} onChange={set("study")} placeholder="Jurusan / prodi" className="h-11 rounded-xl bg-[#F8F6F0]/50 border-[#EBE7DF] w-full" />
             </Field>
           </Section>
 
           <Section n={2} title="Detail Sesi Foto" desc="Pilih paket, tanggal, lokasi, dan jam sesi kamu.">
             
             {/* DROPDOWN PILIHAN PAKET FOTO */}
-            <div className="sm:col-span-2">
+            <div className="sm:col-span-2 min-w-0">
               <Label className="text-xs uppercase tracking-wider text-[#666666] font-medium mb-2 block">
                 Pilih Paket Foto
               </Label>
@@ -208,7 +208,7 @@ export default function BookingPage() {
                 required
                 value={f.package_id}
                 onChange={(e) => setF((s) => ({ ...s, package_id: e.target.value }))}
-                className="w-full h-12 px-4 rounded-xl bg-[#F8F6F0]/50 border border-[#EBE7DF] text-[#2C2A29] text-sm focus:outline-none focus:border-[#BEAF9D]"
+                className="w-full max-w-full h-12 px-4 rounded-xl bg-[#F8F6F0]/50 border border-[#EBE7DF] text-[#2C2A29] text-sm focus:outline-none focus:border-[#BEAF9D]"
               >
                 <option value="" disabled>-- Pilih paket sesuai pricelist WhatsApp --</option>
                 {(Array.isArray(packages) ? packages : []).map((p) => (
@@ -247,22 +247,22 @@ export default function BookingPage() {
             </Field>
 
             <Field label="Lokasi Foto" icon={MapPin}>
-              <Input data-testid="input-location" required value={f.location} onChange={set("location")} placeholder="Contoh: Kampus UI Depok" className="h-11 rounded-xl bg-[#F8F6F0]/50 border-[#EBE7DF]" />
+              <Input data-testid="input-location" required value={f.location} onChange={set("location")} placeholder="Contoh: Kampus UI Depok" className="h-11 rounded-xl bg-[#F8F6F0]/50 border-[#EBE7DF] w-full" />
             </Field>
             <Field label="Jam Mulai" icon={Clock}>
-              <Input data-testid="input-start-time" type="time" required value={f.start_time} onChange={set("start_time")} className="h-11 rounded-xl bg-[#F8F6F0]/50 border-[#EBE7DF]" />
+              <Input data-testid="input-start-time" type="time" required value={f.start_time} onChange={set("start_time")} className="h-11 rounded-xl bg-[#F8F6F0]/50 border-[#EBE7DF] w-full" />
             </Field>
             <Field label="Jam Selesai" icon={Clock}>
-              <Input data-testid="input-end-time" type="time" required value={f.end_time} onChange={set("end_time")} className="h-11 rounded-xl bg-[#F8F6F0]/50 border-[#EBE7DF]" />
+              <Input data-testid="input-end-time" type="time" required value={f.end_time} onChange={set("end_time")} className="h-11 rounded-xl bg-[#F8F6F0]/50 border-[#EBE7DF] w-full" />
             </Field>
             <Field label="Catatan (opsional)" full>
-              <Textarea data-testid="input-notes" value={f.notes} onChange={set("notes")} placeholder="Konsep foto, request khusus, dll." rows={3} className="rounded-xl bg-[#F8F6F0]/50 border-[#EBE7DF]" />
+              <Textarea data-testid="input-notes" value={f.notes} onChange={set("notes")} placeholder="Konsep foto, request khusus, dll." rows={3} className="rounded-xl bg-[#F8F6F0]/50 border-[#EBE7DF] w-full" />
             </Field>
           </Section>
 
           <Section n={3} title="Pembayaran & Rekening" desc="Lakukan transfer ke rekening di bawah sebelum upload bukti bayar.">
             {/* Kotak Informasi Rekening Bank */}
-            <div className="sm:col-span-2 rounded-2xl bg-[#F8F6F0] p-5 border border-[#EBE7DF] space-y-3">
+            <div className="sm:col-span-2 rounded-2xl bg-[#F8F6F0] p-5 border border-[#EBE7DF] space-y-3 min-w-0">
               <div className="flex items-center gap-2 text-[#2C2A29] font-serif font-semibold text-sm">
                 <CreditCard className="h-4 w-4 text-[#BEAF9D]" />
                 <span>Silakan Transfer Pembayaran Ke:</span>
@@ -278,7 +278,7 @@ export default function BookingPage() {
               </div>
             </div>
 
-            <div className="sm:col-span-2">
+            <div className="sm:col-span-2 min-w-0">
               <RadioGroup value={f.payment_type} onValueChange={(v) => setF((s) => ({ ...s, payment_type: v }))} className="grid gap-3 sm:grid-cols-2">
                 {[["dp", "Bayar DP", "Pelunasan paling telat H-1"], ["full", "Full Payment", "Langsung lunas, bebas pikiran"]].map(([v, t, d]) => (
                   <label
@@ -289,7 +289,7 @@ export default function BookingPage() {
                     }`}
                   >
                     <RadioGroupItem value={v} className="mt-1 text-[#BEAF9D]" />
-                    <span>
+                    <span className="min-w-0">
                       <span className="block font-semibold text-sm text-[#2C2A29]">{t}</span>
                       <span className="block text-xs text-[#666666] mt-0.5">{d}</span>
                     </span>
@@ -303,7 +303,7 @@ export default function BookingPage() {
               </div>
             </div>
 
-            <div className="sm:col-span-2">
+            <div className="sm:col-span-2 min-w-0">
               <Label className="text-xs uppercase tracking-wider text-[#666666] font-medium mb-2 block">Bukti Transfer</Label>
               {file ? (
                 <div className="flex items-center gap-3 rounded-2xl border border-[#EBE7DF] bg-[#F8F6F0] p-4" data-testid="proof-file-selected">
