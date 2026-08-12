@@ -13,6 +13,15 @@ export const AdminLayout = ({ children, title, subtitle }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
+  // Fungsi handleLogout yang memastikan token terhapus & halaman dimuat ulang
+  const handleLogout = () => {
+    localStorage.removeItem("session_token");
+    if (typeof logout === "function") {
+      logout();
+    }
+    window.location.href = "/login";
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <aside className="hidden lg:flex fixed inset-y-0 left-0 w-64 flex-col border-r border-moss-900/10 bg-white/70 backdrop-blur-xl px-5 py-7">
@@ -58,7 +67,7 @@ export const AdminLayout = ({ children, title, subtitle }) => {
           </div>
           <button
             data-testid="logout-button"
-            onClick={logout}
+            onClick={handleLogout}
             className="flex w-full items-center gap-2 px-3 text-xs font-semibold text-neutral-500 hover:text-destructive transition-colors"
           >
             <LogOut className="h-3.5 w-3.5" /> Keluar
@@ -73,7 +82,7 @@ export const AdminLayout = ({ children, title, subtitle }) => {
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight leading-tight">{title}</h1>
             {subtitle && <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>}
           </div>
-          <button onClick={logout} data-testid="logout-button-mobile" className="lg:hidden text-neutral-500">
+          <button onClick={handleLogout} data-testid="logout-button-mobile" className="lg:hidden text-neutral-500">
             <LogOut className="h-5 w-5" />
           </button>
         </header>
