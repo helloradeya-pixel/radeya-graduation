@@ -416,7 +416,6 @@ async def get_booking(booking_id: str):
     if not d:
         raise HTTPException(404, "Booking tidak ditemukan")
     
-    # Hitung ulang balance_due berdasarkan (package_price + extra_charge - amount_paid)
     pkg_price = float(d.get("package_price", 0))
     extra = float(d.get("extra_charge", 0))
     paid = float(d.get("amount_paid", 0))
@@ -442,10 +441,10 @@ async def update_booking(booking_id: str, body: BookingUpdate, request: Request)
         else:
             pho = await db.photographers.find_one({"photographer_id": upd["photographer_id"]}, {"_id": 0})
             upd["photographer_name"] = pho["name"] if pho else None
-            if pho and not body.photographer_fee:
+            # Jika admin tidak memberikan fee manual, ambil default fotografer
+            if pho and "photographer_fee" not in upd:
                 upd["photographer_fee"] = pho.get("fee_per_session", 0)
                 
-    # Recalculate balance_due jika ada perubahan extra_charge, package_price, atau amount_paid
     package_price = float(cur.get("package_price", 0))
     extra_charge = float(upd.get("extra_charge", cur.get("extra_charge", 0)))
     paid_amount = float(upd.get("amount_paid", cur.get("amount_paid", 0)))
