@@ -6,7 +6,7 @@ import { Input } from "../components/ui/input";
 import { toast } from "sonner";
 
 export default function InvoicePage() {
-  const { id } = useParams(); // Mengambil booking_id dari URL
+  const { id } = useParams();
   const [invoice, setInvoice] = useState(null);
   const [loading, setLoading] = useState(true);
   const [amountPaid, setAmountPaid] = useState("");
@@ -15,10 +15,8 @@ export default function InvoicePage() {
 
   const loadInvoice = useCallback(async () => {
     try {
-      // Menggunakan endpoint /bookings/{id} agar langsung menerima objek data booking
       const { data } = await api.get(`/bookings/${id}`);
       setInvoice(data);
-      // Secara otomatis mengisi form dengan sisa tagihan (balance_due) agar klien lebih mudah
       setAmountPaid(data.balance_due > 0 ? data.balance_due : "");
     } catch {
       toast.error("Invoice tidak ditemukan");
@@ -40,13 +38,11 @@ export default function InvoicePage() {
 
     setSubmitting(true);
     try {
-      // 1. Upload file bukti transfer
       const formData = new FormData();
       formData.append("file", file);
       const uploadRes = await api.post("/upload/proof", formData);
       const proofFileId = uploadRes.data.file_id;
 
-      // 2. Kirim konfirmasi pelunasan
       await api.post(`/bookings/${id}/confirm-payment`, {
         amount_paid: parseFloat(amountPaid),
         proof_file_id: proofFileId,
@@ -65,6 +61,10 @@ export default function InvoicePage() {
   if (loading) return <div className="p-10 text-center">Memuat invoice...</div>;
   if (!invoice) return <div className="p-10 text-center">Invoice tidak valid.</div>;
 
+  const packagePrice = parseFloat(invoice.package_price || 0);
+  const extraCharge = parseFloat(invoice.extra_charge || 0);
+  const totalKeseluruhan = packagePrice + extraCharge;
+
   return (
     <div className="max-w-xl mx-auto p-6 bg-white rounded-lg shadow-md my-10 border border-moss-900/10 font-sans text-[#2C2A29]">
       <div className="flex justify-between items-center border-b pb-4 mb-4">
@@ -73,21 +73,40 @@ export default function InvoicePage() {
           <p className="text-xs text-muted-foreground">{invoice.invoice_number}</p>
         </div>
         <div className="text-right">
-          <span className={`text-xs px-2.5 py-1 rounded font-semibold uppercase ${invoice.payment_type === 'full' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}`}>
-            {invoice.payment_type === 'full' ? 'Lunas (Full)' : 'DP / Belum Lunas'}
+          <span className={`text-xs px-2.5 py-1 rounded font-semibold uppercase ${invoice.balance_due <= 0 ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}`}>
+            {invoice.balance_due <= 0 ? 'Lunas (Full)' : 'DP / Belum Lunas'}
           </span>
         </div>
       </div>
 
       <div className="space-y-2 text-sm mb-6">
         <p><span className="font-semibold">Nama Klien:</span> {invoice.full_name}</p>
-        <p><span className="font-semibold">Paket:</span> {invoice.package_name} ({rupiah(invoice.package_price)})</p>
+        <p><span className="font-semibold">Paket:</span> {invoice.package_name} ({rupiah(packagePrice)})</p>
         <p><span className="font-semibold">Jadwal:</span> {fmtDate(invoice.shoot_date)} ({invoice.start_time} - {invoice.end_time})</p>
         <p><span className="font-semibold">Lokasi:</span> {invoice.location}</p>
         <hr className="my-2" />
-        <p><span className="font-semibold">Total Harga:</span> {rupiah(invoice.package_price)}</p>
-        <p><span className="font-semibold">Sudah Dibayar:</span> {rupiah(invoice.amount_paid)}</p>
-        <p className="text-amberx font-bold"><span className="font-semibold">Sisa Tagihan:</span> {rupiah(invoice.balance_due)}</p>
+        <div className="flex justify-between">
+          <span>Harga Paket:</span>
+          <span className="font-medium">{rupiah(packagePrice)}</span>
+        </div>
+        {extraCharge > 0 && (
+          <div className="flex justify-between text-amber-700">
+            <span>Extra Time / Biaya Tambahan {invoice.extra_note ? `(${invoice.extra_note})` : ''}:</span>
+            <span className="font-medium">+{rupiah(extraCharge)}</span>
+          </div>
+        )}
+        <div className="flex justify-between font-bold border-t pt-2">
+          <span>Total Keseluruhan:</span>
+          <span>{rupiah(totalKeseluruhan)}</span>
+        </div>
+        <div className="flex justify-between text-muted-foreground">
+          <span>Sudah Dibayar:</span>
+          <span>{rupiah(invoice.amount_paid)}</span>
+        </div>
+        <div className="flex justify-between text-amber-700 font-bold text-base border-t pt-2">
+          <span>Sisa Tagihan:</span>
+          <span>{rupiah(invoice.balance_due)}</span>
+        </div>
       </div>
 
       {invoice.balance_due > 0 ? (
