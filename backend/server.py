@@ -93,7 +93,7 @@ async def send_email(to: str, subject: str, html: str, reply_to: Optional[str] =
         "Content-Type": "application/json"
     }
     payload = {
-        "from": f"{EMAIL_FROM_NAME} <onboarding@resend.dev>",
+        "from": f"{EMAIL_FROM_NAME} <admin@radeyaphoto.my.id>",
         "to": [to],
         "subject": subject,
         "html": html
