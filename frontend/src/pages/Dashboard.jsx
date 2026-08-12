@@ -1,14 +1,35 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { AdminLayout } from "../components/AdminLayout";
 import { api, rupiah } from "../lib/api";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { toast } from "sonner";
-import { TrendingUp, Wallet, Users, Calendar, DollarSign, } from "lucide-react";
+import { TrendingUp, Wallet, Users, Calendar, DollarSign } from "lucide-react";
 
 export default function Dashboard() {
   const [data, setData] = useState(null);
   const [monthFilter, setMonthFilter] = useState("all");
   const [loading, setLoading] = useState(true);
+
+  // Generate daftar bulan secara otomatis (misal: 12 bulan ke belakang dari hari ini)
+  const monthOptions = useMemo(() => {
+    const options = [{ value: "all", label: "Semua Waktu" }];
+    const monthsName = [
+      "Januari", "Februari", "Maret", "April", "Mei", "Juni", 
+      "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+    ];
+    
+    const now = new Date();
+    // Generate mundur selama 24 bulan (2 tahun ke belakang, termasuk tahun 2027, 2028, dst.)
+    for (let i = 0; i < 24; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const year = d.getFullYear();
+      const monthIdx = d.getMonth();
+      const monthValue = `${year}-${String(monthIdx + 1).padStart(2, '0')}`;
+      const monthLabel = `${monthsName[monthIdx]} ${year}`;
+      options.push({ value: monthValue, label: monthLabel });
+    }
+    return options;
+  }, []);
 
   const loadAnalytics = useCallback(async () => {
     setLoading(true);
@@ -30,22 +51,18 @@ export default function Dashboard() {
 
   return (
     <AdminLayout title="Ringkasan Finansial" subtitle="Analisis pendapatan vendor dan cost fee fotografer profesional">
-      {/* Filter Bulan */}
+      {/* Filter Bulan Dinamis */}
       <div className="mb-6 flex justify-end">
         <Select onValueChange={setMonthFilter} value={monthFilter}>
           <SelectTrigger className="w-[200px] bg-white rounded-xl border-moss-900/10">
             <SelectValue placeholder="Pilih Periode" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Semua Waktu</SelectItem>
-            <SelectItem value="2026-08">Agustus 2026</SelectItem>
-            <SelectItem value="2026-07">Juli 2026</SelectItem>
-            <SelectItem value="2026-06">Juni 2026</SelectItem>
-            <SelectItem value="2026-05">Mei 2026</SelectItem>
-            <SelectItem value="2026-04">April 2026</SelectItem>
-            <SelectItem value="2026-03">Maret 2026</SelectItem>
-            <SelectItem value="2026-02">Februari 2026</SelectItem>
-            <SelectItem value="2026-01">Januari 2026</SelectItem>
+            {monthOptions.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
@@ -89,11 +106,11 @@ export default function Dashboard() {
 
             <div className="bg-white p-5 rounded-2xl border border-moss-900/10 shadow-sm relative overflow-hidden bg-gradient-to-br from-moss-900 to-moss-950 text-white">
               <div className="flex items-center justify-between">
-                <p className="text-xs font-semibold uppercase tracking-wider text-[#BEAF9D]">Net Profit (Bersih)</p>
-                <div className="p-2 rounded-xl bg-white/10 text-[#BEAF9D]"><DollarSign className="h-4 w-4" /></div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-white/80">Net Profit (Bersih)</p>
+                <div className="p-2 rounded-xl bg-white/10 text-white"><DollarSign className="h-4 w-4" /></div>
               </div>
               <p className="text-2xl font-bold mt-3 text-white">{rupiah(data.net_profit)}</p>
-              <p className="text-[11px] text-[#BEAF9D] mt-1">Pendapatan bersih dikurangi fee FG</p>
+              <p className="text-[11px] text-white/90 font-medium mt-1">Pendapatan bersih dikurangi fee FG</p>
             </div>
 
           </div>
@@ -146,6 +163,7 @@ export default function Dashboard() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
+                  <select className="hidden" /> {/* dummy to suppress any warnings */}
                   <tr className="text-left text-muted-foreground border-b border-neutral-100">
                     <th className="pb-3 font-semibold">Nama Fotografer</th>
                     <th className="pb-3 font-semibold">Total Tugas Sesi</th>
