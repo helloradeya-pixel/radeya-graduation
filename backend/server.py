@@ -25,15 +25,12 @@ logger = logging.getLogger(__name__)
 client = AsyncIOMotorClient(os.environ['MONGO_URL'])
 db = client[os.environ['DB_NAME']]
 
-# Menggunakan redirect_slashes=True untuk mencegah error 405 pada serverless Vercel
 app = FastAPI(redirect_slashes=True)
 
-# Tambahan route root favicon untuk mengatasi error dari browser
 @app.get("/favicon.ico", include_in_schema=False)
 async def root_favicon():
     return Response(status_code=204)
 
-# Konfigurasi CORS fleksibel untuk semua domain Vercel dan lokal
 app.add_middleware(
     CORSMiddleware,
     allow_origin_regex=r"https://.*\.vercel\.app",
@@ -113,7 +110,6 @@ async def send_email(to: str, subject: str, html: str, reply_to: Optional[str] =
     
     return resp.json().get("id")
 
-
 class User(BaseModel):
     user_id: str
     email: str
@@ -152,6 +148,8 @@ class BookingUpdate(BaseModel):
     photographer_fee: Optional[float] = None
     photographer_paid: Optional[bool] = None
     notes: Optional[str] = None
+    extra_charge: Optional[float] = None
+    extra_note: Optional[str] = None
 
 class ClientPaymentConfirm(BaseModel):
     amount_paid: float
@@ -209,7 +207,6 @@ async def login_password(body: LoginPayload, response: Response):
     })
     response.set_cookie("session_token", st, httponly=True, secure=True, samesite="none", path="/", max_age=7 * 24 * 3600)
     return {"user_id": user["user_id"], "email": user["email"], "name": user["name"], "session_token": st}
-
 
 @api_router.get("/auth/me", response_model=User)
 async def auth_me(request: Request):
@@ -330,6 +327,7 @@ def gcal_link(b: dict) -> str:
         f"WhatsApp: {wa_url}\n"
         f"Instagram: {ig_url}\n\n"
         f"Paket: {b['package_name']} (Rp {b.get('package_price', 0):,.0f})\n"
+        f"Extra Charge: Rp {b.get('extra_charge', 0):,.0f}\n"
         f"Catatan Klien: {b.get('notes', '-')}\n\n"
         f"Fotografer: {b.get('photographer_name') or 'Belum Ditugaskan'}"
     )
@@ -362,6 +360,7 @@ async def create_booking(
         "full_name": full_name, "email": str(email), "instagram": instagram, "whatsapp": whatsapp,
         "university": university, "study": study,
         "package_id": package_id, "package_name": pkg["name"], "package_price": pkg["price"],
+        "extra_charge": 0.0, "extra_note": "",
         "shoot_date": shoot_date, "location": location, "start_time": start_time, "end_time": end_time,
         "payment_type": actual_payment_type, "amount_paid": float(amount_paid),
         "balance_due": max(pkg["price"] - float(amount_paid), 0),
@@ -416,6 +415,14 @@ async def get_booking(booking_id: str):
     d = await db.bookings.find_one({"booking_id": booking_id}, {"_id": 0})
     if not d:
         raise HTTPException(404, "Booking tidak ditemukan")
+    
+    # Hitung ulang balance_due berdasarkan (package_price + extra_charge - amount_paid)
+    pkg_price = float(d.get("package_price", 0))
+    extra = float(d.get("extra_charge", 0))
+    paid = float(d.get("amount_paid", 0))
+    total_tagihan = pkg_price + extra
+    d["balance_due"] = max(total_tagihan - paid, 0)
+    
     d["gcal_link"] = gcal_link(d)
     return d
 
@@ -438,16 +445,20 @@ async def update_booking(booking_id: str, body: BookingUpdate, request: Request)
             if pho and not body.photographer_fee:
                 upd["photographer_fee"] = pho.get("fee_per_session", 0)
                 
-    if "amount_paid" in upd:
-        package_price = cur.get("package_price", 0)
-        paid_amount = upd["amount_paid"]
-        upd["balance_due"] = max(package_price - paid_amount, 0)
-        
-        if "payment_type" not in upd:
-            upd["payment_type"] = "full" if paid_amount >= package_price else "dp"
+    # Recalculate balance_due jika ada perubahan extra_charge, package_price, atau amount_paid
+    package_price = float(cur.get("package_price", 0))
+    extra_charge = float(upd.get("extra_charge", cur.get("extra_charge", 0)))
+    paid_amount = float(upd.get("amount_paid", cur.get("amount_paid", 0)))
+    
+    total_tagihan = package_price + extra_charge
+    upd["balance_due"] = max(total_tagihan - paid_amount, 0)
+    
+    if "payment_type" not in upd:
+        upd["payment_type"] = "full" if paid_amount >= total_tagihan else "dp"
 
     await db.bookings.update_one({"booking_id": booking_id}, {"$set": upd})
     d = await db.bookings.find_one({"booking_id": booking_id}, {"_id": 0})
+    d["balance_due"] = max((float(d.get("package_price", 0)) + float(d.get("extra_charge", 0))) - float(d.get("amount_paid", 0)), 0)
     d["gcal_link"] = gcal_link(d)
     return d
 
@@ -457,17 +468,18 @@ async def client_confirm_payment(booking_id: str, body: ClientPaymentConfirm):
     if not cur:
         raise HTTPException(404, "Booking tidak ditemukan")
     
-    package_price = cur.get("package_price", 0)
+    package_price = float(cur.get("package_price", 0))
+    extra_charge = float(cur.get("extra_charge", 0))
+    total_tagihan = package_price + extra_charge
     
-    # Akumulasikan pembayaran sebelumnya dengan nominal baru yang diisi klien
     previous_paid = float(cur.get("amount_paid", 0))
     new_input_amount = float(body.amount_paid)
     
     total_paid = previous_paid + new_input_amount
-    if total_paid > package_price:
-        total_paid = package_price
+    if total_paid > total_tagihan:
+        total_paid = total_tagihan
         
-    balance = max(package_price - total_paid, 0)
+    balance = max(total_tagihan - total_paid, 0)
     payment_type = "full" if balance <= 0 else "dp"
     
     upd = {
@@ -480,6 +492,7 @@ async def client_confirm_payment(booking_id: str, body: ClientPaymentConfirm):
     
     await db.bookings.update_one({"booking_id": booking_id}, {"$set": upd})
     updated_doc = await db.bookings.find_one({"booking_id": booking_id}, {"_id": 0})
+    updated_doc["balance_due"] = balance
     return {"ok": True, "message": "Konfirmasi pelunasan berhasil!", "booking": updated_doc}
 
 @api_router.delete("/bookings/{booking_id}")
@@ -492,10 +505,20 @@ def rupiah(v) -> str:
     return f"Rp {float(v or 0):,.0f}".replace(",", ".")
 
 def invoice_html(b: dict) -> str:
+    pkg_price = float(b.get('package_price', 0))
+    extra = float(b.get('extra_charge', 0))
+    total_tagihan = pkg_price + extra
+    
+    extra_row = f"""<tr><td style="padding:8px 0;border-bottom:1px solid #eee">Extra Time / Biaya Tambahan<br>
+    <span style="color:#71717a;font-size:12px">{b.get('extra_note', 'Tambahan waktu sesi')}</span></td>
+    <td align="right" style="padding:8px 0;border-bottom:1px solid #eee">{rupiah(extra)}</td></tr>""" if extra > 0 else ""
+
     rows = f"""
     <tr><td style="padding:8px 0;border-bottom:1px solid #eee">{b['package_name']}<br>
     <span style="color:#71717a;font-size:12px">{b['shoot_date']} · {b['start_time']}-{b['end_time']} · {b['location']}</span></td>
-    <td align="right" style="padding:8px 0;border-bottom:1px solid #eee">{rupiah(b['package_price'])}</td></tr>"""
+    <td align="right" style="padding:8px 0;border-bottom:1px solid #eee">{rupiah(pkg_price)}</td></tr>
+    {extra_row}"""
+    
     return f"""<div style="font-family:Arial,Helvetica,sans-serif;max-width:640px;margin:0 auto;background:#fdfbf7;padding:24px">
 <table width="100%" cellpadding="0" cellspacing="0"><tr>
 <td><div style="font-size:22px;font-weight:bold;color:#065f46">{EMAIL_FROM_NAME}</div>
@@ -513,8 +536,8 @@ def invoice_html(b: dict) -> str:
 <tr><td style="font-size:11px;letter-spacing:1px;color:#71717a;padding-bottom:6px">DESKRIPSI</td>
 <td align="right" style="font-size:11px;letter-spacing:1px;color:#71717a;padding-bottom:6px">JUMLAH</td></tr>
 {rows}
-<tr><td style="padding-top:10px">Total Paket</td><td align="right" style="padding-top:10px">{rupiah(b['package_price'])}</td></tr>
-<tr><td>Sudah Dibayar ({'DP' if b['payment_type'] == 'dp' else 'Full Payment'})</td><td align="right">- {rupiah(b['amount_paid'])}</td></tr>
+<tr><td style="padding-top:10px">Total Keseluruhan</td><td align="right" style="padding-top:10px">{rupiah(total_tagihan)}</td></tr>
+<tr><td>Sudah Dibayar</td><td align="right">- {rupiah(b['amount_paid'])}</td></tr>
 <tr><td style="padding-top:10px;font-weight:bold;border-top:2px solid #065f46">Sisa Pembayaran</td>
 <td align="right" style="padding-top:10px;font-weight:bold;border-top:2px solid #065f46">{rupiah(b.get('balance_due', 0))}</td></tr>
 </table>
@@ -526,6 +549,7 @@ async def get_invoice(booking_id: str):
     b = await db.bookings.find_one({"booking_id": booking_id}, {"_id": 0})
     if not b:
         raise HTTPException(404, "Booking tidak ditemukan")
+    b["balance_due"] = max((float(b.get("package_price", 0)) + float(b.get("extra_charge", 0))) - float(b.get("amount_paid", 0)), 0)
     return {"invoice_number": b["invoice_number"], "html": invoice_html(b), "booking": b}
 
 @api_router.post("/bookings/{booking_id}/send-invoice")
@@ -534,6 +558,7 @@ async def send_invoice(booking_id: str, request: Request):
     b = await db.bookings.find_one({"booking_id": booking_id}, {"_id": 0})
     if not b:
         raise HTTPException(404, "Booking tidak ditemukan")
+    b["balance_due"] = max((float(b.get("package_price", 0)) + float(b.get("extra_charge", 0))) - float(b.get("amount_paid", 0)), 0)
     try:
         eid = await send_email(b["email"], f"Invoice {b['invoice_number']} — Booking Foto Graduation", invoice_html(b))
     except Exception as e:
@@ -555,7 +580,7 @@ async def analytics(request: Request, month: Optional[str] = Query(None)):
     dp_income = sum(b["amount_paid"] for b in bookings if b["payment_type"] == "dp")
     full_income = sum(b["amount_paid"] for b in bookings if b["payment_type"] == "full")
     total_income = dp_income + full_income
-    outstanding = sum(b.get("balance_due", 0) for b in bookings)
+    outstanding = sum(max((float(b.get("package_price", 0)) + float(b.get("extra_charge", 0))) - float(b.get("amount_paid", 0)), 0) for b in bookings)
     fee_total = sum(b.get("photographer_fee", 0) for b in bookings)
     fee_unpaid = sum(b.get("photographer_fee", 0) for b in bookings if not b.get("photographer_paid"))
 
@@ -590,6 +615,7 @@ async def analytics(request: Request, month: Optional[str] = Query(None)):
 
     upcoming = sorted([b for b in bookings if b.get("shoot_date", "") >= datetime.now(timezone.utc).strftime("%Y-%m-%d")], key=lambda x: (x["shoot_date"], x["start_time"]))[:5]
     for u in upcoming:
+        u["balance_due"] = max((float(u.get("package_price", 0)) + float(u.get("extra_charge", 0))) - float(u.get("amount_paid", 0)), 0)
         u["gcal_link"] = gcal_link(u)
 
     return {
