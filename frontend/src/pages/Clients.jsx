@@ -22,7 +22,9 @@ export default function Clients() {
   const [editPaid, setEditPaid] = useState("");
   const [editPaymentType, setEditPaymentType] = useState("dp");
   const [editPhoPaid, setEditPhoPaid] = useState(false);
-  const [editPhoFee, setEditPhoFee] = useState(""); // <-- State untuk fee fotografer per sesi
+  const [editPhoFee, setEditPhoFee] = useState("");
+  const [editExtraCharge, setEditExtraCharge] = useState(""); // <-- State Extra Charge
+  const [editExtraNote, setEditExtraNote] = useState("");     // <-- State Catatan Extra
 
   const loadData = useCallback(async () => {
     try {
@@ -58,7 +60,9 @@ export default function Clients() {
     setEditPaid(String(b.amount_paid));
     setEditPaymentType(b.payment_type || "dp");
     setEditPhoPaid(b.photographer_paid || false);
-    setEditPhoFee(b.photographer_fee !== undefined && b.photographer_fee !== null ? String(b.photographer_fee) : ""); // <-- Load fee sesi saat ini
+    setEditPhoFee(b.photographer_fee !== undefined && b.photographer_fee !== null ? String(b.photographer_fee) : "");
+    setEditExtraCharge(b.extra_charge ? String(b.extra_charge) : ""); // <-- Load extra charge
+    setEditExtraNote(b.extra_note || "");                              // <-- Load extra note
   };
 
   const saveDetail = async () => {
@@ -69,7 +73,9 @@ export default function Clients() {
         amount_paid: parseFloat(editPaid) || 0,
         payment_type: editPaymentType,
         photographer_paid: editPhoPaid,
-        photographer_fee: parseFloat(editPhoFee) || 0, // <-- Kirim fee fotografer kustom ke backend
+        photographer_fee: parseFloat(editPhoFee) || 0,
+        extra_charge: parseFloat(editExtraCharge) || 0, // <-- Simpan extra charge
+        extra_note: editExtraNote,                     // <-- Simpan catatan extra
       });
       toast.success("Booking berhasil diperbarui");
       setSelected(null);
@@ -259,7 +265,7 @@ export default function Clients() {
       </div>
 
       <Dialog open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Detail & Pengaturan Booking</DialogTitle>
           </DialogHeader>
@@ -297,6 +303,30 @@ export default function Clients() {
                 </Select>
               </div>
 
+              {/* Input Extra Charge (Tambahan Biaya/Waktu Ekstra) */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold">Extra Charge / Biaya Lain (Rp)</label>
+                  <Input 
+                    type="number" 
+                    value={editExtraCharge} 
+                    onChange={(e) => setEditExtraCharge(e.target.value)} 
+                    placeholder="Misal: 200000" 
+                    className="bg-white" 
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold">Keterangan Extra</label>
+                  <Input 
+                    type="text" 
+                    value={editExtraNote} 
+                    onChange={(e) => setEditExtraNote(e.target.value)} 
+                    placeholder="Misal: Extra Time 30 Menit" 
+                    className="bg-white" 
+                  />
+                </div>
+              </div>
+
               <div className="space-y-1.5">
                 <label className="text-xs font-bold">Tugaskan Fotografer</label>
                 <Select 
@@ -325,7 +355,7 @@ export default function Clients() {
 
               {/* Input Fee Fotografer Kustom per Sesi */}
               <div className="space-y-1.5">
-                <label className="text-xs font-bold">Fee Sesi Ini (Rp)</label>
+                <label className="text-xs font-bold">Fee Fotografer Sesi Ini (Rp)</label>
                 <Input 
                   type="number" 
                   value={editPhoFee} 
@@ -353,7 +383,7 @@ export default function Clients() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-bold">Jumlah Dibayar (Rp)</label>
+                <label className="text-xs font-bold">Jumlah Total Sudah Dibayar (Rp)</label>
                 <Input 
                   type="number" 
                   value={editPaid} 
@@ -361,7 +391,7 @@ export default function Clients() {
                     const val = e.target.value;
                     setEditPaid(val);
                     const pkgPrice = Number(selected.package_price || 0);
-                    const extra = Number(selected.extra_charge || 0);
+                    const extra = Number(editExtraCharge || selected.extra_charge || 0);
                     if (Number(val) >= (pkgPrice + extra)) {
                       setEditPaymentType("full");
                     }
