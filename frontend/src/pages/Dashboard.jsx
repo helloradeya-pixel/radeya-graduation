@@ -3,7 +3,7 @@ import { AdminLayout } from "../components/AdminLayout";
 import { api, rupiah } from "../lib/api";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { toast } from "sonner";
-import { TrendingUp, Wallet, Users, Calendar, DollarSign, ArrowUpRight } from "lucide-react";
+import { TrendingUp, Wallet, Users, Calendar, DollarSign, } from "lucide-react";
 
 export default function Dashboard() {
   const [data, setData] = useState(null);
