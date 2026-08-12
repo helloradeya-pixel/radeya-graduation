@@ -18,7 +18,8 @@ export default function InvoicePage() {
       // Menggunakan endpoint /bookings/{id} agar langsung menerima objek data booking
       const { data } = await api.get(`/bookings/${id}`);
       setInvoice(data);
-      setAmountPaid(data.amount_paid);
+      // Secara otomatis mengisi form dengan sisa tagihan (balance_due) agar klien lebih mudah
+      setAmountPaid(data.balance_due > 0 ? data.balance_due : "");
     } catch {
       toast.error("Invoice tidak ditemukan");
     } finally {
@@ -53,6 +54,7 @@ export default function InvoicePage() {
 
       toast.success("Konfirmasi pelunasan berhasil dikirim!");
       loadInvoice();
+      setFile(null);
     } catch {
       toast.error("Gagal mengirim konfirmasi pelunasan");
     } finally {
@@ -64,7 +66,7 @@ export default function InvoicePage() {
   if (!invoice) return <div className="p-10 text-center">Invoice tidak valid.</div>;
 
   return (
-    <div className="max-w-xl mx-auto p-6 bg-white rounded-lg shadow-md my-10 border border-moss-900/10">
+    <div className="max-w-xl mx-auto p-6 bg-white rounded-lg shadow-md my-10 border border-moss-900/10 font-sans text-[#2C2A29]">
       <div className="flex justify-between items-center border-b pb-4 mb-4">
         <div>
           <h1 className="text-xl font-bold text-moss-900">Radeyaphoto Invoice</h1>
@@ -92,17 +94,21 @@ export default function InvoicePage() {
         <form onSubmit={handleSubmitPelunasan} className="space-y-4 border-t pt-4">
           <h3 className="font-semibold text-sm">Konfirmasi Pelunasan / Pembayaran</h3>
           <div>
-            <label className="text-xs font-medium">Total Jumlah yang Sudah Dibayar (Rp)</label>
+            <label className="block text-xs font-medium mb-1">Nominal Pembayaran / Pelunasan (Rp)</label>
             <Input
               type="number"
               value={amountPaid}
               onChange={(e) => setAmountPaid(e.target.value)}
               className="mt-1 bg-white"
+              placeholder="Masukkan nominal yang ditransfer"
               required
             />
+            <p className="text-[11px] text-muted-foreground mt-1">
+              Masukkan nominal uang yang Anda transfer untuk membayar sisa tagihan.
+            </p>
           </div>
           <div>
-            <label className="text-xs font-medium">Upload Bukti Transfer (Foto/PDF)</label>
+            <label className="block text-xs font-medium mb-1">Upload Bukti Transfer (Foto/PDF)</label>
             <input
               type="file"
               onChange={(e) => setFile(e.target.files[0])}
@@ -110,7 +116,7 @@ export default function InvoicePage() {
               required
             />
           </div>
-          <Button type="submit" disabled={submitting} className="w-full bg-moss-800 text-white">
+          <Button type="submit" disabled={submitting} className="w-full bg-moss-800 hover:bg-moss-900 text-white">
             {submitting ? "Mengirim..." : "Kirim Konfirmasi Pelunasan"}
           </Button>
         </form>
