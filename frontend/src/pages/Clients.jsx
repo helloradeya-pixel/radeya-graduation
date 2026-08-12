@@ -21,7 +21,8 @@ export default function Clients() {
   const [editStatus, setEditStatus] = useState("");
   const [editPaid, setEditPaid] = useState("");
   const [editPaymentType, setEditPaymentType] = useState("dp");
-  const [editPhoPaid, setEditPhoPaid] = useState(false); // <-- State status bayar fee fotografer
+  const [editPhoPaid, setEditPhoPaid] = useState(false);
+  const [editPhoFee, setEditPhoFee] = useState(""); // <-- State untuk fee fotografer per sesi
 
   const loadData = useCallback(async () => {
     try {
@@ -56,7 +57,8 @@ export default function Clients() {
     setEditStatus(b.status);
     setEditPaid(String(b.amount_paid));
     setEditPaymentType(b.payment_type || "dp");
-    setEditPhoPaid(b.photographer_paid || false); // <-- Load status bayar fee FG saat modal dibuka
+    setEditPhoPaid(b.photographer_paid || false);
+    setEditPhoFee(b.photographer_fee !== undefined && b.photographer_fee !== null ? String(b.photographer_fee) : ""); // <-- Load fee sesi saat ini
   };
 
   const saveDetail = async () => {
@@ -66,7 +68,8 @@ export default function Clients() {
         photographer_id: editPho === "none" ? null : editPho,
         amount_paid: parseFloat(editPaid) || 0,
         payment_type: editPaymentType,
-        photographer_paid: editPhoPaid, // <-- Simpan status bayar fee FG ke backend
+        photographer_paid: editPhoPaid,
+        photographer_fee: parseFloat(editPhoFee) || 0, // <-- Kirim fee fotografer kustom ke backend
       });
       toast.success("Booking berhasil diperbarui");
       setSelected(null);
@@ -198,9 +201,12 @@ export default function Clients() {
                   </td>
                   <td className="p-3.5">
                     {b.photographer_name ? (
-                      <span className="inline-flex items-center gap-1.5 font-medium text-xs bg-moss-50 text-moss-800 px-2.5 py-1 rounded-full">
-                        {b.photographer_name} {b.photographer_paid && "✓"}
-                      </span>
+                      <div>
+                        <span className="inline-flex items-center gap-1.5 font-medium text-xs bg-moss-50 text-moss-800 px-2.5 py-1 rounded-full">
+                          {b.photographer_name} {b.photographer_paid && "✓"}
+                        </span>
+                        <p className="text-[11px] text-muted-foreground mt-0.5">Fee: {rupiah(b.photographer_fee)}</p>
+                      </div>
                     ) : (
                       <span className="text-xs text-amberx font-semibold">Belum ditugaskan</span>
                     )}
@@ -293,17 +299,43 @@ export default function Clients() {
 
               <div className="space-y-1.5">
                 <label className="text-xs font-bold">Tugaskan Fotografer</label>
-                <Select onValueChange={setEditPho} value={editPho}>
+                <Select 
+                  onValueChange={(val) => {
+                    setEditPho(val);
+                    if (val !== "none") {
+                      const found = safePhotographers.find(p => p.photographer_id === val);
+                      if (found) {
+                        setEditPhoFee(String(found.fee_per_session || 0));
+                      }
+                    }
+                  }} 
+                  value={editPho}
+                >
                   <SelectTrigger className="bg-white"><SelectValue placeholder="Pilih fotografer" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">— Belum Ditugaskan —</SelectItem>
                     {safePhotographers.map((p) => (
                       <SelectItem key={p.photographer_id} value={p.photographer_id}>
-                        {p.name} (Fee: {rupiah(p.fee_per_session)})
+                        {p.name} (Default Fee: {rupiah(p.fee_per_session)})
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+
+              {/* Input Fee Fotografer Kustom per Sesi */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold">Fee Sesi Ini (Rp)</label>
+                <Input 
+                  type="number" 
+                  value={editPhoFee} 
+                  onChange={(e) => setEditPhoFee(e.target.value)} 
+                  placeholder="Masukkan nominal fee fotografer sesi ini" 
+                  className="bg-white" 
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  Dapat diubah manual (misal dinaikkan jadi 700000 untuk paket group dengan banyak anggota).
+                </p>
               </div>
 
               {/* Checkbox Status Pembayaran Fee Fotografer */}
@@ -328,7 +360,9 @@ export default function Clients() {
                   onChange={(e) => {
                     const val = e.target.value;
                     setEditPaid(val);
-                    if (Number(val) >= Number(selected.package_price)) {
+                    const pkgPrice = Number(selected.package_price || 0);
+                    const extra = Number(selected.extra_charge || 0);
+                    if (Number(val) >= (pkgPrice + extra)) {
                       setEditPaymentType("full");
                     }
                   }} 
