@@ -46,6 +46,10 @@ ADMIN_WHATSAPP = os.environ.get("ADMIN_WHATSAPP", "628211251570")
 ADMIN_EMAIL = "hello.radeya@gmail.com"
 ADMIN_PASSWORD_DEFAULT = os.environ.get("ADMIN_PASSWORD", "braggart666")
 
+# Konfigurasi Notion
+NOTION_API_KEY = os.environ.get("NOTION_API_KEY")
+NOTION_DATABASE_ID = os.environ.get("NOTION_DATABASE_ID")
+
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 STORAGE_BASE = (os.environ.get("INTEGRATION_PROXY_URL") or "").strip() or "https://integrations.emergentagent.com"
@@ -109,6 +113,59 @@ async def send_email(to: str, subject: str, html: str, reply_to: Optional[str] =
         raise HTTPException(status_code=502, detail=f"Gagal mengirim email: {resp.text}")
     
     return resp.json().get("id")
+
+# Fungsi Kirim ke Notion
+async def send_to_notion(booking_data: dict, pkg_name: str):
+    if not NOTION_API_KEY or not NOTION_DATABASE_ID:
+        logger.warning("Notion API Key atau Database ID belum disetel.")
+        return
+        
+    url = "https://api.notion.com/v1/pages"
+    headers = {
+        "Authorization": f"Bearer {NOTION_API_KEY}",
+        "Content-Type": "application/json",
+        "Notion-Version": "2022-06-28"
+    }
+    
+    payload = {
+        "parent": {"database_id": NOTION_DATABASE_ID},
+        "properties": {
+            "Nama": {
+                "title": [{"text": {"content": booking_data["full_name"]}}]
+            },
+            "Invoice": {
+                "rich_text": [{"text": {"content": booking_data["invoice_number"]}}]
+            },
+            "WhatsApp": {
+                "rich_text": [{"text": {"content": booking_data["whatsapp"]}}]
+            },
+            "Instagram": {
+                "rich_text": [{"text": {"content": booking_data["instagram"]}}]
+            },
+            "Kampus": {
+                "rich_text": [{"text": {"content": booking_data["university"]}}]
+            },
+            "Paket": {
+                "select": {"name": pkg_name}
+            },
+            "Tanggal": {
+                "date": {"start": booking_data["shoot_date"]}
+            },
+            "Jumlah Bayar": {
+                "number": float(booking_data["amount_paid"])
+            }
+        }
+    }
+
+    async with httpx.AsyncClient(timeout=30) as client:
+        try:
+            resp = await client.post(url, headers=headers, json=payload)
+            if resp.status_code >= 400:
+                logger.error(f"Notion API Error: {resp.text}")
+            else:
+                logger.info("Berhasil mengirim data booking ke Notion!")
+        except Exception as e:
+            logger.error(f"Gagal koneksi ke Notion: {e}")
 
 class User(BaseModel):
     user_id: str
@@ -395,6 +452,13 @@ async def create_booking(
     except Exception as e:
         logger.error(f"Gagal kirim ke spreadsheet: {e}")
     # -----------------------------------------------
+
+    # --- KIRIM DATA OTOMATIS KE NOTION ---
+    try:
+        await send_to_notion(doc, pkg["name"])
+    except Exception as e:
+        logger.error(f"Gagal kirim ke Notion: {e}")
+    # -------------------------------------
 
     doc["gcal_link"] = gcal_link(doc)
     from urllib.parse import quote
