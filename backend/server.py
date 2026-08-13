@@ -370,6 +370,32 @@ async def create_booking(
         "invoice_sent": False, "created_at": now_iso(),
     }
     await db.bookings.insert_one(dict(doc))
+    
+    # --- KIRIM DATA OTOMATIS KE GOOGLE SPREADSHEET ---
+    try:
+        sheet_url = "https://script.google.com/macros/s/AKfycbzeRuDOGTgYNquypvAqPuvSoLKx1JRcCkDrVjohYdWmEo3dtKD5X46ruMkYV4d7VIHU/exec"
+        sheet_payload = {
+            "invoice_number": doc['invoice_number'],
+            "full_name": full_name,
+            "email": str(email),
+            "instagram": instagram,
+            "whatsapp": whatsapp,
+            "university": university,
+            "study": study,
+            "package_name": pkg['name'],
+            "shoot_date": shoot_date,
+            "time_slot": f"{start_time} - {end_time}",
+            "location": location,
+            "payment_type": "DP" if actual_payment_type == "dp" else "Full Payment",
+            "amount_paid": float(amount_paid),
+            "notes": notes if notes else "-",
+            "status": "pending"
+        }
+        requests.post(sheet_url, json=sheet_payload, timeout=5)
+    except Exception as e:
+        logger.error(f"Gagal kirim ke spreadsheet: {e}")
+    # -----------------------------------------------
+
     doc["gcal_link"] = gcal_link(doc)
     from urllib.parse import quote
     
