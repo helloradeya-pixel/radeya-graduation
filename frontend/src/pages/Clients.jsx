@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { Search, Mail, Eye, Trash2 } from "lucide-react";
+import { Search, Mail, Eye, Trash2, MessageSquare } from "lucide-react";
 import { AdminLayout } from "../components/AdminLayout";
 import { api, rupiah, fmtDate } from "../lib/api";
 import { Button } from "../components/ui/button";
@@ -107,10 +107,24 @@ export default function Clients() {
     }
   };
 
-  const copyInvoiceLink = (id) => {
-    const link = `${window.location.origin}/invoice/${id}`;
-    navigator.clipboard.writeText(link);
-    toast.success("Link invoice berhasil disalin!");
+  // Fungsi untuk mengirim reminder via WhatsApp ke klien
+  const handleSendReminder = (booking) => {
+    let waNumber = (booking.whatsapp || "").replace(/\D/g, "");
+    if (waNumber.startsWith("0")) {
+      waNumber = "62" + waNumber.slice(1);
+    }
+
+    const invoiceUrl = `https://booking.radeyaphoto.my.id/invoice/${booking.booking_id}`;
+    const balanceDueText = booking.balance_due > 0 ? `Rp ${(booking.balance_due || 0).toLocaleString("id-ID")}` : "LUNAS";
+    
+    const message = `Halo Kak *${booking.full_name}*, terima kasih telah mempercayakan momen kelulusanmu di Radeyaphoto.\n\n` +
+      `Berikut adalah rincian tagihan / sisa pelunasan untuk No. Invoice *${booking.invoice_number}*:\n` +
+      `- Paket: ${booking.package_name}\n` +
+      `- Sisa Tagihan: *${balanceDueText}*\n\n` +
+      `Silakan cek detail lengkap dan upload bukti pelunasan melalui tautan berikut:\n${invoiceUrl}\n\n` +
+      `Mohon konfirmasinya ya Kak. Terima kasih!`;
+
+    window.open(`https://wa.me/${waNumber}?text=${encodeURIComponent(message)}`, "_blank");
   };
 
   const safeBookings = Array.isArray(bookings) ? bookings : [];
@@ -231,13 +245,14 @@ export default function Clients() {
                   </td>
                   <td className="p-3.5 text-right">
                     <div className="flex items-center justify-end gap-2">
-                      <button
-                        title="Salin Link Invoice"
-                        onClick={() => copyInvoiceLink(b.booking_id)}
-                        className="p-1.5 rounded-md hover:bg-moss-100 text-moss-800 text-xs font-semibold underline"
+                      <Button
+                        title="Kirim Reminder WA ke Klien"
+                        onClick={() => handleSendReminder(b)}
+                        size="sm"
+                        className="h-7 bg-emerald-600 hover:bg-emerald-700 text-white text-xs gap-1 px-2.5"
                       >
-                        Copy Link
-                      </button>
+                        <MessageSquare className="h-3.5 w-3.5" /> Kirim WA
+                      </Button>
                       <button
                         title="Lihat Bukti Transfer"
                         onClick={() => window.open(`${process.env.REACT_APP_BACKEND_URL}/api/files/${b.proof_file_id}`, "_blank")}
@@ -246,7 +261,7 @@ export default function Clients() {
                         <Eye className="h-4 w-4" />
                       </button>
                       <button
-                        title="Kirim Invoice"
+                        title="Kirim Invoice via Email"
                         onClick={() => sendInvoice(b.booking_id)}
                         className="p-1.5 rounded-md hover:bg-moss-100 text-moss-800"
                       >
