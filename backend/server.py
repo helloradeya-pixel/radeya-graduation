@@ -33,7 +33,7 @@ async def root_favicon():
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origin_regex=r"https://.*\.vercel\.app",
+    allow_origin_regex=r"https://.*\.?(vercel\.app|radeyaphoto\.my\.id)",
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=["*"],
@@ -373,7 +373,7 @@ async def create_booking(
     doc["gcal_link"] = gcal_link(doc)
     from urllib.parse import quote
     
-    invoice_web_url = f"https://radeyaphoto.my.id/invoice/{booking_id}"
+    invoice_web_url = f"https://booking.radeyaphoto.my.id/invoice/{booking_id}"
     
     msg = (f"*BOOKING FOTO GRADUATION*\n\nNama: {full_name}\nEmail: {email}\nIG: {instagram}\nWA: {whatsapp}\n"
            f"Universitas: {university}\nProdi: {study}\n\nPaket: {pkg['name']} (Rp {pkg['price']:,.0f})\n"
