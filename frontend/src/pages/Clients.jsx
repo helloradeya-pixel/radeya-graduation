@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { Search, Mail, Eye, Trash2, MessageSquare } from "lucide-react";
 import { AdminLayout } from "../components/AdminLayout";
 import { api, rupiah, fmtDate } from "../lib/api";
@@ -23,8 +23,28 @@ export default function Clients() {
   const [editPaymentType, setEditPaymentType] = useState("dp");
   const [editPhoPaid, setEditPhoPaid] = useState(false);
   const [editPhoFee, setEditPhoFee] = useState("");
-  const [editExtraCharge, setEditExtraCharge] = useState(""); // <-- State Extra Charge
-  const [editExtraNote, setEditExtraNote] = useState("");     // <-- State Catatan Extra
+  const [editExtraCharge, setEditExtraCharge] = useState("");
+  const [editExtraNote, setEditExtraNote] = useState("");
+
+  // Membuat daftar bulan secara otomatis (Fleksibel dari tahun 2025 sampai 2030)
+  const monthOptions = useMemo(() => {
+    const monthsName = [
+      "Januari", "Februari", "Maret", "April", "Mei", "Juni", 
+      "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+    ];
+    
+    let options = [];
+    // Rentang tahun dari 2025 hingga 2030 (bisa disesuaikan jika butuh lebih lama)
+    for (let year = 2030; year >= 2025; year--) {
+      for (let month = 12; month >= 1; month--) {
+        const mStr = String(month).padStart(2, '0');
+        const value = `${year}-${mStr}`;
+        const label = `${monthsName[month - 1]} ${year}`;
+        options.push({ value, label });
+      }
+    }
+    return options;
+  }, []);
 
   const loadData = useCallback(async () => {
     try {
@@ -61,8 +81,8 @@ export default function Clients() {
     setEditPaymentType(b.payment_type || "dp");
     setEditPhoPaid(b.photographer_paid || false);
     setEditPhoFee(b.photographer_fee !== undefined && b.photographer_fee !== null ? String(b.photographer_fee) : "");
-    setEditExtraCharge(b.extra_charge ? String(b.extra_charge) : ""); // <-- Load extra charge
-    setEditExtraNote(b.extra_note || "");                              // <-- Load extra note
+    setEditExtraCharge(b.extra_charge ? String(b.extra_charge) : "");
+    setEditExtraNote(b.extra_note || "");
   };
 
   const saveDetail = async () => {
@@ -74,8 +94,8 @@ export default function Clients() {
         payment_type: editPaymentType,
         photographer_paid: editPhoPaid,
         photographer_fee: parseFloat(editPhoFee) || 0,
-        extra_charge: parseFloat(editExtraCharge) || 0, // <-- Simpan extra charge
-        extra_note: editExtraNote,                     // <-- Simpan catatan extra
+        extra_charge: parseFloat(editExtraCharge) || 0,
+        extra_note: editExtraNote,
       });
       toast.success("Booking berhasil diperbarui");
       setSelected(null);
@@ -107,7 +127,6 @@ export default function Clients() {
     }
   };
 
-  // Fungsi untuk mengirim reminder via WhatsApp ke klien
   const handleSendReminder = (booking) => {
     let waNumber = (booking.whatsapp || "").replace(/\D/g, "");
     if (waNumber.startsWith("0")) {
@@ -144,20 +163,18 @@ export default function Clients() {
         </div>
         
         <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+          {/* Filter Bulan & Tahun Otomatis / Fleksibel */}
           <Select onValueChange={setMonthFilter} value={monthFilter}>
-            <SelectTrigger className="w-[140px] bg-white">
+            <SelectTrigger className="w-[160px] bg-white">
               <SelectValue placeholder="Bulan / Tahun" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="max-h-60">
               <SelectItem value="all">Semua Waktu</SelectItem>
-              <SelectItem value="2026-08">Agustus 2026</SelectItem>
-              <SelectItem value="2026-07">Juli 2026</SelectItem>
-              <SelectItem value="2026-06">Juni 2026</SelectItem>
-              <SelectItem value="2026-05">Mei 2026</SelectItem>
-              <SelectItem value="2026-04">April 2026</SelectItem>
-              <SelectItem value="2026-03">Maret 2026</SelectItem>
-              <SelectItem value="2026-02">Februari 2026</SelectItem>
-              <SelectItem value="2026-01">Januari 2026</SelectItem>
+              {monthOptions.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
 
@@ -318,7 +335,6 @@ export default function Clients() {
                 </Select>
               </div>
 
-              {/* Input Extra Charge (Tambahan Biaya/Waktu Ekstra) */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold">Extra Charge / Biaya Lain (Rp)</label>
@@ -368,7 +384,6 @@ export default function Clients() {
                 </Select>
               </div>
 
-              {/* Input Fee Fotografer Kustom per Sesi */}
               <div className="space-y-1.5">
                 <label className="text-xs font-bold">Fee Fotografer Sesi Ini (Rp)</label>
                 <Input 
@@ -378,12 +393,8 @@ export default function Clients() {
                   placeholder="Masukkan nominal fee fotografer sesi ini" 
                   className="bg-white" 
                 />
-                <p className="text-[11px] text-muted-foreground">
-                  Dapat diubah manual (misal dinaikkan jadi 700000 untuk paket group dengan banyak anggota).
-                </p>
               </div>
 
-              {/* Checkbox Status Pembayaran Fee Fotografer */}
               <div className="flex items-center space-x-2 pt-1">
                 <input
                   type="checkbox"
