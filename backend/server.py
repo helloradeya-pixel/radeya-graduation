@@ -372,11 +372,16 @@ async def create_booking(
     await db.bookings.insert_one(dict(doc))
     doc["gcal_link"] = gcal_link(doc)
     from urllib.parse import quote
+    
+    invoice_web_url = f"https://radeyaphoto.my.id/invoice/{booking_id}"
+    
     msg = (f"*BOOKING FOTO GRADUATION*\n\nNama: {full_name}\nEmail: {email}\nIG: {instagram}\nWA: {whatsapp}\n"
            f"Universitas: {university}\nProdi: {study}\n\nPaket: {pkg['name']} (Rp {pkg['price']:,.0f})\n"
            f"Tanggal: {shoot_date}\nJam: {start_time} - {end_time}\nLokasi: {location}\n\n"
            f"Pembayaran: {'DP' if actual_payment_type == 'dp' else 'Full Payment'} - Rp {float(amount_paid):,.0f}\n"
-           f"No. Invoice: {doc['invoice_number']}\n\nBukti transfer sudah saya upload. Mohon konfirmasi booking saya. Terima kasih!")
+           f"No. Invoice: {doc['invoice_number']}\n\n"
+           f"📄 *Link Invoice:* {invoice_web_url}\n\n"
+           f"Bukti transfer sudah saya upload. Mohon konfirmasi booking saya. Terima kasih!")
     doc["whatsapp_link"] = f"https://wa.me/{ADMIN_WHATSAPP}?text={quote(msg)}"
     return doc
 
