@@ -428,7 +428,8 @@ async def create_booking(
     }
     await db.bookings.insert_one(dict(doc))
     
-    # --- KIRIM DATA OTOMATIS KE GOOGLE SPREADSHEET ---
+       # --- KIRIM DATA OTOMATIS KE GOOGLE SPREADSHEET ---
+    sheet_synced = False
     try:
         sheet_url = "https://script.google.com/macros/s/AKfycbzeRuDOGTgYNquypvAqPuvSoLKx1JRcCkDrVjohYdWmEo3dtKD5X46ruMkYV4d7VIHU/exec"
         sheet_payload = {
@@ -448,9 +449,20 @@ async def create_booking(
             "notes": notes if notes else "-",
             "status": "pending"
         }
-        requests.post(sheet_url, json=sheet_payload, timeout=5)
+        async with httpx.AsyncClient(timeout=8) as sheet_client:
+            resp = await sheet_client.post(sheet_url, json=sheet_payload)
+            if resp.status_code < 400:
+                sheet_synced = True
+            else:
+                logger.error(f"Sheet API error {resp.status_code}: {resp.text}")
     except Exception as e:
         logger.error(f"Gagal kirim ke spreadsheet: {e}")
+
+    await db.bookings.update_one(
+        {"booking_id": booking_id},
+        {"$set": {"sheet_synced": sheet_synced}}
+    )
+    doc["sheet_synced"] = sheet_synced
     # -----------------------------------------------
 
     # --- KIRIM DATA OTOMATIS KE NOTION ---
