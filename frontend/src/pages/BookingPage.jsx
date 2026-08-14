@@ -183,7 +183,7 @@ export default function BookingPage() {
               <Input data-testid="input-email" type="email" required value={f.email} onChange={set("email")} placeholder="nama@email.com" className="h-11 rounded-xl bg-[#F8F6F0]/50 border-[#EBE7DF] w-full" />
             </Field>
             <Field label="Instagram" icon={Instagram}>
-              <Input data-testid="input-instagram" required value={f.instagram} onChange={set("instagram")} placeholder="@username" className="h-11 rounded-xl bg-[#F8F6F0]/50 border-[#EBE7DF] w-full" />
+              <Input data-testid="input-instagram" required value={f.instagram} onChange={set("instagram")} placeholder="username" className="h-11 rounded-xl bg-[#F8F6F0]/50 border-[#EBE7DF] w-full" />
             </Field>
             <Field label="WhatsApp" icon={Phone}>
               <Input data-testid="input-whatsapp" required value={f.whatsapp} onChange={set("whatsapp")} placeholder="08xxxxxxxxxx" className="h-11 rounded-xl bg-[#F8F6F0]/50 border-[#EBE7DF] w-full" />
