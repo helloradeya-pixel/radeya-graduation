@@ -42,6 +42,11 @@ export default function Clients() {
   const [editExtraCharge, setEditExtraCharge] = useState("");
   const [editExtraNote, setEditExtraNote] = useState("");
 
+  // State untuk Edit Jadwal (Reschedule)
+  const [editShootDate, setEditShootDate] = useState("");
+  const [editStartTime, setEditStartTime] = useState("");
+  const [editEndTime, setEditEndTime] = useState("");
+
   const monthOptions = useMemo(() => {
     const monthsName = [
       "Januari", "Februari", "Maret", "April", "Mei", "Juni", 
@@ -95,6 +100,11 @@ export default function Clients() {
     setEditPhoFee(b.photographer_fee !== undefined && b.photographer_fee !== null ? String(b.photographer_fee) : "");
     setEditExtraCharge(b.extra_charge ? String(b.extra_charge) : "");
     setEditExtraNote(b.extra_note || "");
+    
+    // Set state edit jadwal
+    setEditShootDate(b.shoot_date || "");
+    setEditStartTime(b.start_time || "");
+    setEditEndTime(b.end_time || "");
   };
 
   const saveDetail = async () => {
@@ -108,8 +118,11 @@ export default function Clients() {
         photographer_fee: parseFloat(editPhoFee) || 0,
         extra_charge: parseFloat(editExtraCharge) || 0,
         extra_note: editExtraNote,
+        shoot_date: editShootDate,
+        start_time: editStartTime,
+        end_time: editEndTime,
       });
-      toast.success("Booking berhasil diperbarui");
+      toast.success("Booking dan jadwal berhasil diperbarui");
       setSelected(null);
       loadData();
     } catch {
@@ -381,8 +394,44 @@ export default function Clients() {
                 <p><span className="font-bold">Client:</span> {selected.full_name} ({selected.whatsapp})</p>
                 <p><span className="font-bold">Kampus:</span> {selected.university} — {selected.study}</p>
                 <p><span className="font-bold">Paket:</span> {selected.package_name} ({rupiah(selected.package_price)})</p>
-                <p><span className="font-bold">Jadwal:</span> {fmtDate(selected.shoot_date)} ({selected.start_time} - {selected.end_time})</p>
+                <p><span className="font-bold">Jadwal Asli:</span> {fmtDate(selected.shoot_date)} ({selected.start_time} - {selected.end_time})</p>
                 <p><span className="font-bold">Lokasi:</span> {selected.location}</p>
+              </div>
+
+              {/* INPUT EDIT JADWAL / RESCHEDULE */}
+              <div className="space-y-3 p-3 bg-neutral-50 rounded-lg border border-neutral-200">
+                <label className="text-xs font-bold text-moss-900 uppercase tracking-wider block">Ubah Jadwal Sesi Foto (Reschedule)</label>
+                
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium">Tanggal Foto</label>
+                  <Input 
+                    type="date" 
+                    value={editShootDate} 
+                    onChange={(e) => setEditShootDate(e.target.value)} 
+                    className="bg-white" 
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium">Jam Mulai</label>
+                    <Input 
+                      type="time" 
+                      value={editStartTime} 
+                      onChange={(e) => setEditStartTime(e.target.value)} 
+                      className="bg-white" 
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium">Jam Selesai</label>
+                    <Input 
+                      type="time" 
+                      value={editEndTime} 
+                      onChange={(e) => setEditEndTime(e.target.value)} 
+                      className="bg-white" 
+                    />
+                  </div>
+                </div>
               </div>
 
               <div className="space-y-1.5">
