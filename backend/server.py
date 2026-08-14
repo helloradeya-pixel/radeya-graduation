@@ -429,7 +429,7 @@ async def create_booking(
     }
     await db.bookings.insert_one(dict(doc))
     
-        # --- KIRIM DATA OTOMATIS KE GOOGLE SPREADSHEET & DRIVE ---
+            # --- KIRIM DATA OTOMATIS KE GOOGLE SPREADSHEET & DRIVE ---
     sheet_synced = False
     drive_link = ""
     try:
@@ -459,6 +459,11 @@ async def create_booking(
             if resp.status_code < 400 and "application/json" in content_type:
                 sheet_synced = True
                 res_data = resp.json()
+                
+                # --- TAMBAHKAN BARIS INI UNTUK MELIHAT ISI RESPON DI TERMINAL ---
+                logger.info(f"RESPON APPS SCRIPT: {res_data}")
+                # ----------------------------------------------------------------
+                
                 drive_link = res_data.get("drive_link", "")
             else:
                 logger.error(f"Sheet API error atau redirect terdeteksi ({resp.status_code}): {resp.text[:200]}")
@@ -472,6 +477,7 @@ async def create_booking(
     doc["sheet_synced"] = sheet_synced
     doc["drive_link"] = drive_link
     # -----------------------------------------------
+
 
     # --- KIRIM DATA OTOMATIS KE NOTION ---
     try:
