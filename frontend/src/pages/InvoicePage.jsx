@@ -142,7 +142,7 @@ export default function InvoicePage() {
               required
             />
           </div>
-          <Button type="submit" disabled={submitting} className="w-full bg-moss-800 hover:bg-moss-900 text-white">
+          <Button type="submit" disabled={submitting} className="w-full bg-[#065f46] hover:bg-[#044e38] text-white">
             {submitting ? "Mengirim..." : "Kirim Konfirmasi Pelunasan"}
           </Button>
         </form>
@@ -152,7 +152,7 @@ export default function InvoicePage() {
             Pembayaran Anda sudah LUNAS! Terima kasih.
           </div>
           <a href={waLink} target="_blank" rel="noreferrer">
-            <Button className="w-full h-12 rounded-xl bg-[#BEAF9D] hover:bg-[#A89987] text-white font-medium transition-all shadow-sm">
+            <Button className="w-full h-12 rounded-xl bg-[#065f46] hover:bg-[#044e38] text-white font-medium transition-all shadow-sm">
               Konfirmasi ke WhatsApp Admin <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </a>
