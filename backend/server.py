@@ -114,7 +114,7 @@ async def send_email(to: str, subject: str, html: str, reply_to: Optional[str] =
     
     return resp.json().get("id")
 
-# Fungsi Kirim ke Notion
+# Fungsi Kirim ke Notion (Create baru)
 async def send_to_notion(booking_data: dict, pkg_name: str, drive_link: str = ""):
     if not NOTION_API_KEY or not NOTION_DATABASE_ID:
         logger.warning("Notion API Key atau Database ID belum disetel.")
@@ -156,6 +156,37 @@ async def send_to_notion(booking_data: dict, pkg_name: str, drive_link: str = ""
         except Exception as e:
             logger.error(f"Gagal koneksi ke Notion: {e}")
 
+# Fungsi Update Data ke Notion
+async def update_notion_booking(booking_data: dict, pkg_name: str):
+    if not NOTION_API_KEY or not NOTION_DATABASE_ID:
+        return
+    url_query = f"https://api.notion.com/v1/databases/{NOTION_DATABASE_ID}/query"
+    url_patch = "https://api.notion.com/v1/pages/"
+    headers = {
+        "Authorization": f"Bearer {NOTION_API_KEY}",
+        "Content-Type": "application/json",
+        "Notion-Version": "2022-06-28"
+    }
+
+    async with httpx.AsyncClient() as client:
+        resp = await client.post(url_query, headers=headers, json={
+            "filter": {
+                "property": "Invoice",
+                "rich_text": {"equals": booking_data["invoice_number"]}
+            }
+        })
+        results = resp.json().get("results", [])
+        
+        properties = {
+            "Tanggal": {"date": {"start": booking_data["shoot_date"]}},
+            "Lokasi Foto": {"rich_text": [{"text": {"content": booking_data["location"]}}]}
+        }
+
+        if results:
+            await client.patch(f"{url_patch}{results[0]['id']}", headers=headers, json={"properties": properties})
+            logger.info(f"Notion data untuk {booking_data['invoice_number']} berhasil diupdate.")
+        else:
+            await send_to_notion(booking_data, pkg_name)
 
 class User(BaseModel):
     user_id: str
@@ -197,6 +228,9 @@ class BookingUpdate(BaseModel):
     notes: Optional[str] = None
     extra_charge: Optional[float] = None
     extra_note: Optional[str] = None
+    shoot_date: Optional[str] = None
+    start_time: Optional[str] = None
+    end_time: Optional[str] = None
 
 class ClientPaymentConfirm(BaseModel):
     amount_paid: float
@@ -554,8 +588,41 @@ async def update_booking(booking_id: str, body: BookingUpdate, request: Request)
     if "payment_type" not in upd:
         upd["payment_type"] = "full" if paid_amount >= total_tagihan else "dp"
 
+    # 1. Update ke MongoDB
     await db.bookings.update_one({"booking_id": booking_id}, {"$set": upd})
     d = await db.bookings.find_one({"booking_id": booking_id}, {"_id": 0})
+    
+    # 2. Sinkronisasi otomatis ke Google Sheets & Calendar (via Webhook Apps Script)
+    try:
+        sheet_url = "https://script.google.com/macros/s/AKfycbzeRuDOGTgYNquypvAqPuvSoLKx1JRcCkDrVjohYdWmEo3dtKD5X46ruMkYV4d7VIHU/exec"
+        payload = {
+            "invoice_number": d['invoice_number'],
+            "full_name": d['full_name'],
+            "email": d['email'],
+            "instagram": d['instagram'],
+            "whatsapp": d['whatsapp'],
+            "university": d['university'],
+            "study": d['study'],
+            "package_name": d['package_name'],
+            "shoot_date": d['shoot_date'],
+            "time_slot": f"{d['start_time']} - {d['end_time']}",
+            "location": d['location'],
+            "payment_type": "DP" if d['payment_type'] == 'dp' else "Full Payment",
+            "amount_paid": float(d['amount_paid']),
+            "notes": d.get('notes', '-'),
+            "status": d['status']
+        }
+        async with httpx.AsyncClient(timeout=15) as client:
+            await client.post(sheet_url, json=payload)
+    except Exception as e:
+        logger.error(f"Gagal sinkronisasi Sheets/Calendar saat update: {e}")
+
+    # 3. Sinkronisasi otomatis ke Notion (Update jika ada, buat baru jika belum)
+    try:
+        await update_notion_booking(d, d['package_name'])
+    except Exception as e:
+        logger.error(f"Gagal update Notion saat update booking: {e}")
+
     d["balance_due"] = max((float(d.get("package_price", 0)) + float(d.get("extra_charge", 0))) - float(d.get("amount_paid", 0)), 0)
     d["gcal_link"] = gcal_link(d)
     return d
