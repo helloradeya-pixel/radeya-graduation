@@ -151,8 +151,8 @@ async def send_to_notion(booking_data: dict, pkg_name: str):
             "Tanggal": {
                 "date": {"start": booking_data["shoot_date"]}
             },
-            "Jumlah Bayar": {
-                "number": float(booking_data["amount_paid"])
+            "Lokasi Foto": {
+                "rich_text": [{"text": {"content": booking_data["location"]}}]
             }
         }
     }
@@ -166,6 +166,7 @@ async def send_to_notion(booking_data: dict, pkg_name: str):
                 logger.info("Berhasil mengirim data booking ke Notion!")
         except Exception as e:
             logger.error(f"Gagal koneksi ke Notion: {e}")
+
 
 class User(BaseModel):
     user_id: str
