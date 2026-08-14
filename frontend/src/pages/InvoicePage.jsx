@@ -66,7 +66,6 @@ export default function InvoicePage() {
   const extraCharge = parseFloat(invoice.extra_charge || 0);
   const totalKeseluruhan = packagePrice + extraCharge;
 
-  // Nomor WhatsApp admin (sesuaikan jika ada konfigurasi lain)
   const adminWhatsApp = "628211251570";
   const waText = encodeURIComponent(
     `Halo Admin, saya sudah melunasi invoice ${invoice.invoice_number} atas nama ${invoice.full_name}. Mohon konfirmasinya ya, terima kasih!`
@@ -148,13 +147,13 @@ export default function InvoicePage() {
           </Button>
         </form>
       ) : (
-        <div className="space-y-4 border-t pt-4">
-          <div className="bg-green-50 p-4 rounded-md text-center text-green-800 font-semibold text-sm">
+        <div className="space-y-3 border-t pt-4">
+          <div className="bg-emerald-50/70 border border-emerald-200/60 p-4 rounded-xl text-center text-emerald-900 font-medium text-sm">
             Pembayaran Anda sudah LUNAS! Terima kasih.
           </div>
           <a href={waLink} target="_blank" rel="noreferrer">
-            <Button className="w-full h-12 rounded-xl bg-[#25D366] hover:bg-[#20ba5a] text-white font-medium transition-all shadow-sm">
-              Konfirmasi Pelunasan ke WhatsApp Admin <ArrowRight className="ml-2 h-4 w-4" />
+            <Button className="w-full h-12 rounded-xl bg-[#BEAF9D] hover:bg-[#A89987] text-white font-medium transition-all shadow-sm">
+              Konfirmasi ke WhatsApp Admin <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </a>
         </div>
