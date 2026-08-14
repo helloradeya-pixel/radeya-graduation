@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
-import { Search, Mail, Eye, Trash2, MessageSquare } from "lucide-react";
+import { Search, Mail, Eye, Trash2, MessageSquare, Table, Calendar as CalendarIcon } from "lucide-react";
 import { AdminLayout } from "../components/AdminLayout";
 import { api, rupiah, fmtDate } from "../lib/api";
 import { Button } from "../components/ui/button";
@@ -7,6 +7,18 @@ import { Input } from "../components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../components/ui/dialog";
 import { toast } from "sonner";
+
+// Import untuk React Big Calendar
+import { Calendar, dateFnsLocalizer } from "react-big-calendar";
+import format from "date-fns/format";
+import parse from "date-fns/parse";
+import startOfWeek from "date-fns/startOfWeek";
+import getDay from "date-fns/getDay";
+import idLocale from "date-fns/locale/id";
+import "react-big-calendar/lib/css/react-big-calendar.css";
+
+const locales = { "id": idLocale };
+const localizer = dateFnsLocalizer({ format, parse, startOfWeek, getDay, locales });
 
 export default function Clients() {
   const [bookings, setBookings] = useState([]);
@@ -16,6 +28,10 @@ export default function Clients() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [paymentFilter, setPaymentFilter] = useState("all");
   const [monthFilter, setMonthFilter] = useState("all");
+  
+  // State untuk Switch View (table / calendar)
+  const [viewMode, setViewMode] = useState("table");
+
   const [selected, setSelected] = useState(null);
   const [editPho, setEditPho] = useState("");
   const [editStatus, setEditStatus] = useState("");
@@ -26,15 +42,12 @@ export default function Clients() {
   const [editExtraCharge, setEditExtraCharge] = useState("");
   const [editExtraNote, setEditExtraNote] = useState("");
 
-  // Membuat daftar bulan secara otomatis (Fleksibel dari tahun 2025 sampai 2030)
   const monthOptions = useMemo(() => {
     const monthsName = [
       "Januari", "Februari", "Maret", "April", "Mei", "Juni", 
       "Juli", "Agustus", "September", "Oktober", "November", "Desember"
     ];
-    
     let options = [];
-    // Rentang tahun dari 2025 hingga 2030 (bisa disesuaikan jika butuh lebih lama)
     for (let year = 2030; year >= 2025; year--) {
       for (let month = 12; month >= 1; month--) {
         const mStr = String(month).padStart(2, '0');
@@ -59,7 +72,6 @@ export default function Clients() {
         }),
         api.get("/photographers"),
       ]);
-      
       setBookings(Array.isArray(b) ? b : (b?.data || b?.bookings || []));
       setPhotographers(Array.isArray(p) ? p : (p?.data || p?.photographers || []));
     } catch {
@@ -132,22 +144,32 @@ export default function Clients() {
     if (waNumber.startsWith("0")) {
       waNumber = "62" + waNumber.slice(1);
     }
-
     const invoiceUrl = `https://booking.radeyaphoto.my.id/invoice/${booking.booking_id}`;
     const balanceDueText = booking.balance_due > 0 ? `Rp ${(booking.balance_due || 0).toLocaleString("id-ID")}` : "LUNAS";
-    
     const message = `Halo Kak *${booking.full_name}*, terima kasih telah mempercayakan momen kelulusanmu di Radeyaphoto.\n\n` +
       `Berikut adalah rincian tagihan / sisa pelunasan untuk No. Invoice *${booking.invoice_number}*:\n` +
       `- Paket: ${booking.package_name}\n` +
       `- Sisa Tagihan: *${balanceDueText}*\n\n` +
       `Silakan cek detail lengkap dan upload bukti pelunasan melalui tautan berikut:\n${invoiceUrl}\n\n` +
       `Mohon konfirmasinya ya Kak. Terima kasih!`;
-
     window.open(`https://wa.me/${waNumber}?text=${encodeURIComponent(message)}`, "_blank");
   };
 
   const safeBookings = Array.isArray(bookings) ? bookings : [];
   const safePhotographers = Array.isArray(photographers) ? photographers : [];
+
+  // Mapping data bookings ke format Event Calendar
+  const calendarEvents = safeBookings.map((b) => {
+    const startTime = b.start_time || "10:00";
+    const endTime = b.end_time || "11:00";
+    return {
+      id: b.booking_id,
+      title: `${b.full_name} (${b.package_name})`,
+      start: new Date(`${b.shoot_date}T${startTime}:00`),
+      end: new Date(`${b.shoot_date}T${endTime}:00`),
+      resource: b,
+    };
+  });
 
   return (
     <AdminLayout title="Database Client" subtitle="Kelola jadwal, fotografer, dan kirim invoice">
@@ -163,23 +185,40 @@ export default function Clients() {
         </div>
         
         <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-          {/* Filter Bulan & Tahun Otomatis / Fleksibel */}
+          {/* Toggle View Mode (Tabel vs Kalender) */}
+          <div className="flex bg-white rounded-lg border border-moss-900/10 p-0.5">
+            <Button
+              variant={viewMode === "table" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setViewMode("table")}
+              className={`h-8 text-xs gap-1 ${viewMode === "table" ? "bg-moss-800 text-white" : ""}`}
+            >
+              <Table className="h-3.5 w-3.5" /> Tabel
+            </Button>
+            <Button
+              variant={viewMode === "calendar" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setViewMode("calendar")}
+              className={`h-8 text-xs gap-1 ${viewMode === "calendar" ? "bg-moss-800 text-white" : ""}`}
+            >
+              <CalendarIcon className="h-3.5 w-3.5" /> Kalender
+            </Button>
+          </div>
+
           <Select onValueChange={setMonthFilter} value={monthFilter}>
-            <SelectTrigger className="w-[160px] bg-white">
+            <SelectTrigger className="w-[150px] bg-white">
               <SelectValue placeholder="Bulan / Tahun" />
             </SelectTrigger>
             <SelectContent className="max-h-60">
               <SelectItem value="all">Semua Waktu</SelectItem>
               {monthOptions.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>
-                  {opt.label}
-                </SelectItem>
+                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
               ))}
             </SelectContent>
           </Select>
 
           <Select onValueChange={setStatusFilter} value={statusFilter}>
-            <SelectTrigger className="w-[130px] bg-white">
+            <SelectTrigger className="w-[120px] bg-white">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
@@ -192,11 +231,11 @@ export default function Clients() {
           </Select>
 
           <Select onValueChange={setPaymentFilter} value={paymentFilter}>
-            <SelectTrigger className="w-[130px] bg-white">
+            <SelectTrigger className="w-[120px] bg-white">
               <SelectValue placeholder="Pembayaran" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Semua Pembayaran</SelectItem>
+              <SelectItem value="all">Semua Bayar</SelectItem>
               <SelectItem value="dp">DP Saja</SelectItem>
               <SelectItem value="full">Full Payment</SelectItem>
             </SelectContent>
@@ -204,98 +243,126 @@ export default function Clients() {
         </div>
       </div>
 
-      <div className="rounded-lg border border-moss-900/10 bg-white overflow-hidden" data-testid="clients-table">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-[11px] uppercase tracking-wider text-muted-foreground border-b border-moss-900/10 bg-moss-50/50">
-                <th className="p-3.5">Invoice / Klien</th>
-                <th className="p-3.5">Paket & Jadwal</th>
-                <th className="p-3.5">Fotografer</th>
-                <th className="p-3.5">Pembayaran</th>
-                <th className="p-3.5">Status</th>
-                <th className="p-3.5 text-right">Aksi</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading && (
-                <tr><td colSpan={6} className="p-6 text-center text-muted-foreground">Memuat data...</td></tr>
-              )}
-              {!loading && safeBookings.length === 0 && (
-                <tr><td colSpan={6} className="p-6 text-center text-muted-foreground">Tidak ada client ditemukan.</td></tr>
-              )}
-              {safeBookings.map((b) => (
-                <tr key={b.booking_id} className="border-b border-moss-900/5 hover:bg-moss-50/30 transition-colors">
-                  <td className="p-3.5">
-                    <p className="font-bold text-moss-900">{b.full_name}</p>
-                    <p className="text-xs text-muted-foreground">{b.invoice_number} · {b.whatsapp}</p>
-                    <p className="text-xs text-muted-foreground">{b.university} ({b.study})</p>
-                  </td>
-                  <td className="p-3.5">
-                    <p className="font-semibold">{b.package_name}</p>
-                    <p className="text-xs text-muted-foreground">{fmtDate(b.shoot_date)} · {b.start_time}-{b.end_time}</p>
-                    <p className="text-xs text-muted-foreground truncate max-w-xs">{b.location}</p>
-                  </td>
-                  <td className="p-3.5">
-                    {b.photographer_name ? (
-                      <div>
-                        <span className="inline-flex items-center gap-1.5 font-medium text-xs bg-moss-50 text-moss-800 px-2.5 py-1 rounded-full">
-                          {b.photographer_name} {b.photographer_paid && "✓"}
-                        </span>
-                        <p className="text-[11px] text-muted-foreground mt-0.5">Fee: {rupiah(b.photographer_fee)}</p>
-                      </div>
-                    ) : (
-                      <span className="text-xs text-amberx font-semibold">Belum ditugaskan</span>
-                    )}
-                  </td>
-                  <td className="p-3.5">
-                    <span className="text-[10px] uppercase font-semibold px-2 py-0.5 rounded border border-moss-900/20">
-                      {b.payment_type}
-                    </span>
-                    <p className="text-xs mt-1 font-semibold">{rupiah(b.amount_paid)}</p>
-                    {b.balance_due > 0 && <p className="text-[11px] text-amberx">Kurang: {rupiah(b.balance_due)}</p>}
-                  </td>
-                  <td className="p-3.5">
-                    <span className="text-[10px] uppercase font-semibold px-2 py-0.5 rounded border border-moss-900/25">
-                      {b.status}
-                    </span>
-                  </td>
-                  <td className="p-3.5 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <Button
-                        title="Kirim Reminder WA ke Klien"
-                        onClick={() => handleSendReminder(b)}
-                        size="sm"
-                        className="h-7 bg-emerald-600 hover:bg-emerald-700 text-white text-xs gap-1 px-2.5"
-                      >
-                        <MessageSquare className="h-3.5 w-3.5" /> Kirim WA
-                      </Button>
-                      <button
-                        title="Lihat Bukti Transfer"
-                        onClick={() => window.open(`${process.env.REACT_APP_BACKEND_URL}/api/files/${b.proof_file_id}`, "_blank")}
-                        className="p-1.5 rounded-md hover:bg-moss-100 text-moss-800"
-                      >
-                        <Eye className="h-4 w-4" />
-                      </button>
-                      <button
-                        title="Kirim Invoice via Email"
-                        onClick={() => sendInvoice(b.booking_id)}
-                        className="p-1.5 rounded-md hover:bg-moss-100 text-moss-800"
-                      >
-                        <Mail className="h-4 w-4" />
-                      </button>
-                      <Button onClick={() => openDetail(b)} size="sm" variant="outline" className="h-7 text-xs">
-                        Kelola
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      {/* Render Berdasarkan View Mode */}
+      {viewMode === "calendar" ? (
+        <div className="bg-white p-6 rounded-lg border border-moss-900/10 shadow-sm" style={{ height: 650 }}>
+          <Calendar
+            localizer={localizer}
+            events={calendarEvents}
+            startAccessor="start"
+            endAccessor="end"
+            style={{ height: "100%" }}
+            messages={{
+              next: "Selanjutnya",
+              previous: "Sebelumnya",
+              today: "Hari Ini",
+              month: "Bulan",
+              week: "Minggu",
+              day: "Hari",
+              agenda: "Agenda",
+              date: "Tanggal",
+              time: "Waktu",
+              event: "Acara",
+              noEventsInRange: "Tidak ada jadwal di rentang waktu ini.",
+            }}
+            onSelectEvent={(event) => openDetail(event.resource)}
+          />
         </div>
-      </div>
+      ) : (
+        <div className="rounded-lg border border-moss-900/10 bg-white overflow-hidden" data-testid="clients-table">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-[11px] uppercase tracking-wider text-muted-foreground border-b border-moss-900/10 bg-moss-50/50">
+                  <th className="p-3.5">Invoice / Klien</th>
+                  <th className="p-3.5">Paket & Jadwal</th>
+                  <th className="p-3.5">Fotografer</th>
+                  <th className="p-3.5">Pembayaran</th>
+                  <th className="p-3.5">Status</th>
+                  <th className="p-3.5 text-right">Aksi</th>
+                </tr>
+              </thead>
+              <tbody>
+                {loading && (
+                  <tr><td colSpan={6} className="p-6 text-center text-muted-foreground">Memuat data...</td></tr>
+                )}
+                {!loading && safeBookings.length === 0 && (
+                  <tr><td colSpan={6} className="p-6 text-center text-muted-foreground">Tidak ada client ditemukan.</td></tr>
+                )}
+                {safeBookings.map((b) => (
+                  <tr key={b.booking_id} className="border-b border-moss-900/5 hover:bg-moss-50/30 transition-colors">
+                    <td className="p-3.5">
+                      <p className="font-bold text-moss-900">{b.full_name}</p>
+                      <p className="text-xs text-muted-foreground">{b.invoice_number} · {b.whatsapp}</p>
+                      <p className="text-xs text-muted-foreground">{b.university} ({b.study})</p>
+                    </td>
+                    <td className="p-3.5">
+                      <p className="font-semibold">{b.package_name}</p>
+                      <p className="text-xs text-muted-foreground">{fmtDate(b.shoot_date)} · {b.start_time}-{b.end_time}</p>
+                      <p className="text-xs text-muted-foreground truncate max-w-xs">{b.location}</p>
+                    </td>
+                    <td className="p-3.5">
+                      {b.photographer_name ? (
+                        <div>
+                          <span className="inline-flex items-center gap-1.5 font-medium text-xs bg-moss-50 text-moss-800 px-2.5 py-1 rounded-full">
+                            {b.photographer_name} {b.photographer_paid && "✓"}
+                          </span>
+                          <p className="text-[11px] text-muted-foreground mt-0.5">Fee: {rupiah(b.photographer_fee)}</p>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-amberx font-semibold">Belum ditugaskan</span>
+                      )}
+                    </td>
+                    <td className="p-3.5">
+                      <span className="text-[10px] uppercase font-semibold px-2 py-0.5 rounded border border-moss-900/20">
+                        {b.payment_type}
+                      </span>
+                      <p className="text-xs mt-1 font-semibold">{rupiah(b.amount_paid)}</p>
+                      {b.balance_due > 0 && <p className="text-[11px] text-amberx">Kurang: {rupiah(b.balance_due)}</p>}
+                    </td>
+                    <td className="p-3.5">
+                      <span className="text-[10px] uppercase font-semibold px-2 py-0.5 rounded border border-moss-900/25">
+                        {b.status}
+                      </span>
+                    </td>
+                    <td className="p-3.5 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <Button
+                          title="Kirim Reminder WA ke Klien"
+                          onClick={() => handleSendReminder(b)}
+                          size="sm"
+                          className="h-7 bg-emerald-600 hover:bg-emerald-700 text-white text-xs gap-1 px-2.5"
+                        >
+                          <MessageSquare className="h-3.5 w-3.5" /> Kirim WA
+                        </Button>
+                        <button
+                          title="Lihat Bukti Transfer"
+                          onClick={() => window.open(`${process.env.REACT_APP_BACKEND_URL}/api/files/${b.proof_file_id}`, "_blank")}
+                          className="p-1.5 rounded-md hover:bg-moss-100 text-moss-800"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </button>
+                        <button
+                          title="Kirim Invoice via Email"
+                          onClick={() => sendInvoice(b.booking_id)}
+                          className="p-1.5 rounded-md hover:bg-moss-100 text-moss-800"
+                        >
+                          <Mail className="h-4 w-4" />
+                        </button>
+                        <Button onClick={() => openDetail(b)} size="sm" variant="outline" className="h-7 text-xs">
+                          Kelola
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
+      {/* Dialog Detail / Edit Booking */}
       <Dialog open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
