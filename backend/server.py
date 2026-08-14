@@ -422,14 +422,15 @@ async def create_booking(
         "payment_type": actual_payment_type, "amount_paid": float(amount_paid),
         "balance_due": max(pkg["price"] - float(amount_paid), 0),
         "proof_file_id": proof_file_id, "notes": notes,
-        "status": "pending", "photographer_id": None, "photographer_name": None,
+        "drive_link": "", "status": "pending", "photographer_id": None, "photographer_name": None,
         "photographer_fee": 0.0, "photographer_paid": False,
         "invoice_sent": False, "created_at": now_iso(),
     }
     await db.bookings.insert_one(dict(doc))
     
-       # --- KIRIM DATA OTOMATIS KE GOOGLE SPREADSHEET ---
+    # --- KIRIM DATA OTOMATIS KE GOOGLE SPREADSHEET & DRIVE ---
     sheet_synced = False
+    drive_link = ""
     try:
         sheet_url = "https://script.google.com/macros/s/AKfycbzeRuDOGTgYNquypvAqPuvSoLKx1JRcCkDrVjohYdWmEo3dtKD5X46ruMkYV4d7VIHU/exec"
         sheet_payload = {
@@ -449,20 +450,23 @@ async def create_booking(
             "notes": notes if notes else "-",
             "status": "pending"
         }
-        async with httpx.AsyncClient(timeout=8) as sheet_client:
+        async with httpx.AsyncClient(timeout=10) as sheet_client:
             resp = await sheet_client.post(sheet_url, json=sheet_payload)
             if resp.status_code < 400:
                 sheet_synced = True
+                res_data = resp.json()
+                drive_link = res_data.get("drive_link", "")
             else:
                 logger.error(f"Sheet API error {resp.status_code}: {resp.text}")
     except Exception as e:
-        logger.error(f"Gagal kirim ke spreadsheet: {e}")
+        logger.error(f"Gagal kirim ke spreadsheet/drive: {e}")
 
     await db.bookings.update_one(
         {"booking_id": booking_id},
-        {"$set": {"sheet_synced": sheet_synced}}
+        {"$set": {"sheet_synced": sheet_synced, "drive_link": drive_link}}
     )
     doc["sheet_synced"] = sheet_synced
+    doc["drive_link"] = drive_link
     # -----------------------------------------------
 
     # --- KIRIM DATA OTOMATIS KE NOTION ---
