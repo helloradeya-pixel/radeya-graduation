@@ -4,6 +4,7 @@ import { api, rupiah, fmtDate } from "../lib/api";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { toast } from "sonner";
+import { ArrowRight } from "lucide-react";
 
 export default function InvoicePage() {
   const { id } = useParams();
@@ -64,6 +65,13 @@ export default function InvoicePage() {
   const packagePrice = parseFloat(invoice.package_price || 0);
   const extraCharge = parseFloat(invoice.extra_charge || 0);
   const totalKeseluruhan = packagePrice + extraCharge;
+
+  // Nomor WhatsApp admin (sesuaikan jika ada konfigurasi lain)
+  const adminWhatsApp = "628211251570";
+  const waText = encodeURIComponent(
+    `Halo Admin, saya sudah melunasi invoice ${invoice.invoice_number} atas nama ${invoice.full_name}. Mohon konfirmasinya ya, terima kasih!`
+  );
+  const waLink = `https://wa.me/${adminWhatsApp}?text=${waText}`;
 
   return (
     <div className="max-w-xl mx-auto p-6 bg-white rounded-lg shadow-md my-10 border border-moss-900/10 font-sans text-[#2C2A29]">
@@ -140,8 +148,15 @@ export default function InvoicePage() {
           </Button>
         </form>
       ) : (
-        <div className="bg-green-50 p-4 rounded-md text-center text-green-800 font-semibold text-sm">
-          Pembayaran Anda sudah LUNAS! Terima kasih.
+        <div className="space-y-4 border-t pt-4">
+          <div className="bg-green-50 p-4 rounded-md text-center text-green-800 font-semibold text-sm">
+            Pembayaran Anda sudah LUNAS! Terima kasih.
+          </div>
+          <a href={waLink} target="_blank" rel="noreferrer">
+            <Button className="w-full h-12 rounded-xl bg-[#25D366] hover:bg-[#20ba5a] text-white font-medium transition-all shadow-sm">
+              Konfirmasi Pelunasan ke WhatsApp Admin <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </a>
         </div>
       )}
     </div>
