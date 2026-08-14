@@ -4,6 +4,7 @@
   "private": true,
   "dependencies": {
     "react-scripts": "5.0.1",
+    "react-big-calendar": "^1.15.0",
     "@radix-ui/react-label": "^2.1.0",
     "@radix-ui/react-select": "^2.1.1",
     "@radix-ui/react-dialog": "^1.1.1",
