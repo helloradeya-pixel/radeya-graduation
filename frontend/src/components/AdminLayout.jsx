@@ -27,7 +27,7 @@ export const AdminLayout = ({ children, title, subtitle }) => {
       <aside className="hidden lg:flex fixed inset-y-0 left-0 w-64 flex-col border-r border-moss-900/10 bg-white/70 backdrop-blur-xl px-5 py-7">
         <div className="flex items-center gap-2 text-moss-800 px-2">
           <Camera className="h-5 w-5" />
-          <span className="font-display font-bold tracking-tight">GradFrame</span>
+          <span className="font-display font-bold tracking-tight">Radeyaphoto</span>
         </div>
         <nav className="mt-10 space-y-1">
           {nav.map((n) => (
