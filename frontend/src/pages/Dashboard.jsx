@@ -163,7 +163,6 @@ export default function Dashboard() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <select className="hidden" /> {/* dummy to suppress any warnings */}
                   <tr className="text-left text-muted-foreground border-b border-neutral-100">
                     <th className="pb-3 font-semibold">Nama Fotografer</th>
                     <th className="pb-3 font-semibold">Total Tugas Sesi</th>
