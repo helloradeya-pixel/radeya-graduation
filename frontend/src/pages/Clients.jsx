@@ -292,9 +292,16 @@ export default function Clients() {
                 {safeBookings.map((b) => (
                   <tr key={b.booking_id} className="border-b border-moss-900/5 hover:bg-moss-50/30 transition-colors">
                     <td className="p-3.5">
-                      <p className="font-bold text-moss-900">{b.full_name}</p>
-                      <p className="text-xs text-muted-foreground">{b.invoice_number} · {b.whatsapp}</p>
-                      <p className="text-xs text-muted-foreground">{b.university} ({b.study})</p>
+                      <div 
+                        onClick={() => openDetail(b)} 
+                        className="cursor-pointer group inline-block"
+                      >
+                        <p className="font-bold text-moss-900 group-hover:text-moss-700 underline transition-colors">
+                          {b.full_name}
+                        </p>
+                        <p className="text-xs text-muted-foreground">{b.invoice_number} · {b.whatsapp}</p>
+                        <p className="text-xs text-muted-foreground">{b.university} ({b.study})</p>
+                      </div>
                     </td>
                     <td className="p-3.5">
                       <p className="font-semibold">{b.package_name}</p>
