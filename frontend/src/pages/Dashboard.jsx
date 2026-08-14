@@ -10,7 +10,7 @@ export default function Dashboard() {
   const [monthFilter, setMonthFilter] = useState("all");
   const [loading, setLoading] = useState(true);
 
-  // Generate daftar bulan secara otomatis (misal: 12 bulan ke belakang dari hari ini)
+  // Generate daftar bulan secara otomatis (misal: 24 bulan ke belakang)
   const monthOptions = useMemo(() => {
     const options = [{ value: "all", label: "Semua Waktu" }];
     const monthsName = [
@@ -19,7 +19,6 @@ export default function Dashboard() {
     ];
     
     const now = new Date();
-    // Generate mundur selama 24 bulan (2 tahun ke belakang, termasuk tahun 2027, 2028, dst.)
     for (let i = 0; i < 24; i++) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const year = d.getFullYear();
@@ -50,7 +49,7 @@ export default function Dashboard() {
   }, [loadAnalytics]);
 
   return (
-    <AdminLayout title="Ringkasan Finansial" subtitle="Analisis pendapatan vendor dan cost fee fotografer profesional">
+    <AdminLayout title="Ringkasan Finansial" subtitle="Analisis pendapatan studio dan rincian fee fotografer profesional">
       {/* Filter Bulan Dinamis */}
       <div className="mb-6 flex justify-end">
         <Select onValueChange={setMonthFilter} value={monthFilter}>
@@ -74,7 +73,7 @@ export default function Dashboard() {
       ) : data ? (
         <div className="space-y-6">
           
-          {/* 1. KARTU METRIK UTAMA VENDOR */}
+          {/* 1. KARTU METRIK UTAMA */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             
             <div className="bg-white p-5 rounded-2xl border border-moss-900/10 shadow-sm relative overflow-hidden">
@@ -118,7 +117,7 @@ export default function Dashboard() {
           {/* 2. ANALISIS PENDAPATAN PER BULAN */}
           <div className="bg-white p-6 rounded-2xl border border-moss-900/10 shadow-sm">
             <h3 className="font-bold text-moss-900 text-base mb-4 flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-moss-700" /> Tren Pendapatan Vendor Per Bulan
+              <Calendar className="h-4 w-4 text-moss-700" /> Tren Pendapatan Per Bulan
             </h3>
             {data.monthly && data.monthly.length > 0 ? (
               <div className="overflow-x-auto">
@@ -166,8 +165,8 @@ export default function Dashboard() {
                   <tr className="text-left text-muted-foreground border-b border-neutral-100">
                     <th className="pb-3 font-semibold">Nama Fotografer</th>
                     <th className="pb-3 font-semibold">Total Tugas Sesi</th>
-                    <th className="pb-3 font-semibold">Total Fee (Cost Vendor)</th>
-                    <th className="pb-3 font-semibold text-right">Fee Belum Dibayar (Hutang Vendor)</th>
+                    <th className="pb-3 font-semibold">Total Fee</th>
+                    <th className="pb-3 font-semibold text-right">Fee Belum Dibayar (Kewajiban Studio)</th>
                   </tr>
                 </thead>
                 <tbody>
