@@ -429,7 +429,7 @@ async def create_booking(
     }
     await db.bookings.insert_one(dict(doc))
     
-    # --- KIRIM DATA OTOMATIS KE GOOGLE SPREADSHEET & DRIVE ---
+        # --- KIRIM DATA OTOMATIS KE GOOGLE SPREADSHEET & DRIVE ---
     sheet_synced = False
     drive_link = ""
     try:
@@ -451,14 +451,17 @@ async def create_booking(
             "notes": notes if notes else "-",
             "status": "pending"
         }
-        async with httpx.AsyncClient(timeout=10) as sheet_client:
+        async with httpx.AsyncClient(timeout=15, follow_redirects=True) as sheet_client:
             resp = await sheet_client.post(sheet_url, json=sheet_payload)
-            if resp.status_code < 400:
+            
+            # Cek apakah respon berupa JSON atau HTML (antisipasi redirect 302 login page)
+            content_type = resp.headers.get("content-type", "")
+            if resp.status_code < 400 and "application/json" in content_type:
                 sheet_synced = True
                 res_data = resp.json()
                 drive_link = res_data.get("drive_link", "")
             else:
-                logger.error(f"Sheet API error {resp.status_code}: {resp.text}")
+                logger.error(f"Sheet API error atau redirect terdeteksi ({resp.status_code}): {resp.text[:200]}")
     except Exception as e:
         logger.error(f"Gagal kirim ke spreadsheet/drive: {e}")
 
