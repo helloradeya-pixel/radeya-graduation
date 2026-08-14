@@ -256,7 +256,7 @@ export default function BookingPage() {
               <Input data-testid="input-end-time" type="time" required value={f.end_time} onChange={set("end_time")} className="h-11 rounded-xl bg-[#F8F6F0]/50 border-[#EBE7DF] w-full" />
             </Field>
             <Field label="Catatan (opsional)" full>
-              <Textarea data-testid="input-notes" value={f.notes} onChange={set("notes")} placeholder="Konsep foto, request khusus, dll." rows={3} className="rounded-xl bg-[#F8F6F0]/50 border-[#EBE7DF] w-full" />
+              <Textarea data-testid="input-notes" value={f.notes} onChange={set("notes")} placeholder="Request khusus,penambahan video,dll." rows={3} className="rounded-xl bg-[#F8F6F0]/50 border-[#EBE7DF] w-full" />
             </Field>
           </Section>
 
@@ -356,7 +356,7 @@ export default function BookingPage() {
 
               <div>
                 <span className="font-semibold text-[#2C2A29]">3. Perubahan Jadwal (Reschedule)</span>
-                <p className="mt-0.5">Perubahan jadwal pada Hari H tidak dapat dilakukan. Bisa reschedule kapan saja selama slot tanggal penggantinya masih kosong. Kabari admin secepatnya ya!.</p>
+                <p className="mt-0.5">Sesi foto tidak dapat di-reschedule pada Hari H. Apabila klien berhalangan hadir tanpa informasi, maka pemesanan dianggap cancel (batal), Bisa reschedule kapan saja selama slot tanggal penggantinya masih kosong. Kabari admin secepatnya ya!.</p>
               </div>
 
               <div>
