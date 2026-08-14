@@ -115,7 +115,7 @@ async def send_email(to: str, subject: str, html: str, reply_to: Optional[str] =
     return resp.json().get("id")
 
 # Fungsi Kirim ke Notion
-async def send_to_notion(booking_data: dict, pkg_name: str):
+async def send_to_notion(booking_data: dict, pkg_name: str, drive_link: str = ""):
     if not NOTION_API_KEY or not NOTION_DATABASE_ID:
         logger.warning("Notion API Key atau Database ID belum disetel.")
         return
@@ -127,34 +127,23 @@ async def send_to_notion(booking_data: dict, pkg_name: str):
         "Notion-Version": "2022-06-28"
     }
     
+    properties = {
+        "Nama": {"title": [{"text": {"content": booking_data["full_name"]}}]},
+        "Invoice": {"rich_text": [{"text": {"content": booking_data["invoice_number"]}}]},
+        "WhatsApp": {"rich_text": [{"text": {"content": booking_data["whatsapp"]}}]},
+        "Instagram": {"rich_text": [{"text": {"content": booking_data["instagram"]}}]},
+        "Kampus": {"rich_text": [{"text": {"content": booking_data["university"]}}]},
+        "Paket": {"select": {"name": pkg_name}},
+        "Tanggal": {"date": {"start": booking_data["shoot_date"]}},
+        "Lokasi Foto": {"rich_text": [{"text": {"content": booking_data["location"]}}]}
+    }
+
+    if drive_link:
+        properties["Google Drive"] = {"url": drive_link}
+
     payload = {
         "parent": {"database_id": NOTION_DATABASE_ID},
-        "properties": {
-            "Nama": {
-                "title": [{"text": {"content": booking_data["full_name"]}}]
-            },
-            "Invoice": {
-                "rich_text": [{"text": {"content": booking_data["invoice_number"]}}]
-            },
-            "WhatsApp": {
-                "rich_text": [{"text": {"content": booking_data["whatsapp"]}}]
-            },
-            "Instagram": {
-                "rich_text": [{"text": {"content": booking_data["instagram"]}}]
-            },
-            "Kampus": {
-                "rich_text": [{"text": {"content": booking_data["university"]}}]
-            },
-            "Paket": {
-                "select": {"name": pkg_name}
-            },
-            "Tanggal": {
-                "date": {"start": booking_data["shoot_date"]}
-            },
-            "Lokasi Foto": {
-                "rich_text": [{"text": {"content": booking_data["location"]}}]
-            }
-        }
+        "properties": properties
     }
 
     async with httpx.AsyncClient(timeout=30) as client:
@@ -163,7 +152,7 @@ async def send_to_notion(booking_data: dict, pkg_name: str):
             if resp.status_code >= 400:
                 logger.error(f"Notion API Error: {resp.text}")
             else:
-                logger.info("Berhasil mengirim data booking ke Notion!")
+                logger.info("Berhasil mengirim data booking & Link Drive ke Notion!")
         except Exception as e:
             logger.error(f"Gagal koneksi ke Notion: {e}")
 
@@ -429,7 +418,7 @@ async def create_booking(
     }
     await db.bookings.insert_one(dict(doc))
     
-            # --- KIRIM DATA OTOMATIS KE GOOGLE SPREADSHEET & DRIVE ---
+    # --- KIRIM DATA OTOMATIS KE GOOGLE SPREADSHEET & DRIVE ---
     sheet_synced = False
     drive_link = ""
     try:
@@ -453,17 +442,11 @@ async def create_booking(
         }
         async with httpx.AsyncClient(timeout=15, follow_redirects=True) as sheet_client:
             resp = await sheet_client.post(sheet_url, json=sheet_payload)
-            
-            # Cek apakah respon berupa JSON atau HTML (antisipasi redirect 302 login page)
             content_type = resp.headers.get("content-type", "")
             if resp.status_code < 400 and "application/json" in content_type:
                 sheet_synced = True
                 res_data = resp.json()
-                
-                # --- TAMBAHKAN BARIS INI UNTUK MELIHAT ISI RESPON DI TERMINAL ---
                 logger.info(f"RESPON APPS SCRIPT: {res_data}")
-                # ----------------------------------------------------------------
-                
                 drive_link = res_data.get("drive_link", "")
             else:
                 logger.error(f"Sheet API error atau redirect terdeteksi ({resp.status_code}): {resp.text[:200]}")
@@ -476,21 +459,17 @@ async def create_booking(
     )
     doc["sheet_synced"] = sheet_synced
     doc["drive_link"] = drive_link
-    # -----------------------------------------------
-
 
     # --- KIRIM DATA OTOMATIS KE NOTION ---
     try:
-        await send_to_notion(doc, pkg["name"])
+        await send_to_notion(doc, pkg["name"], drive_link=drive_link)
     except Exception as e:
         logger.error(f"Gagal kirim ke Notion: {e}")
-    # -------------------------------------
 
     doc["gcal_link"] = gcal_link(doc)
     from urllib.parse import quote
     
     invoice_web_url = f"https://booking.radeyaphoto.my.id/invoice/{booking_id}"
-    
     msg = (f"*BOOKING FOTO GRADUATION*\n\nNama: {full_name}\nEmail: {email}\nIG: {instagram}\nWA: {whatsapp}\n"
            f"Universitas: {university}\nProdi: {study}\n\nPaket: {pkg['name']} (Rp {pkg['price']:,.0f})\n"
            f"Tanggal: {shoot_date}\nJam: {start_time} - {end_time}\nLokasi: {location}\n\n"
@@ -562,7 +541,6 @@ async def update_booking(booking_id: str, body: BookingUpdate, request: Request)
         else:
             pho = await db.photographers.find_one({"photographer_id": upd["photographer_id"]}, {"_id": 0})
             upd["photographer_name"] = pho["name"] if pho else None
-            # Jika admin tidak memberikan fee manual, ambil default fotografer
             if pho and "photographer_fee" not in upd:
                 upd["photographer_fee"] = pho.get("fee_per_session", 0)
                 
