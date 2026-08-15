@@ -1,17 +1,18 @@
-type TrackLabel = string;
 const isBrowser = () => typeof window !== 'undefined';
 
+// Helper: Membuat ID unik untuk deduplikasi Meta (Pixel + CAPI)
 export const generateEventId = () => {
   return `graduation_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 };
 
+// Helper: Ambil FBC (Facebook Click ID) dari cookie atau localStorage
 const getFbc = () => {
   if (!isBrowser()) return undefined;
   const match = document.cookie.match(/_fbc=([^;]+)/);
   return match ? match[1] : localStorage.getItem('fbc') || undefined;
 };
 
-const metaTrack = (event: string, event_id: string, params?: any, userData?: any) => {
+const metaTrack = (event, event_id, params = {}, userData = {}) => {
   if (!isBrowser()) return;
 
   const finalUserData = {
@@ -28,7 +29,7 @@ const metaTrack = (event: string, event_id: string, params?: any, userData?: any
   window.fbq?.('track', event, payload, { eventID: event_id });
 };
 
-export const gaTrack = (event: string, params?: any) => {
+export const gaTrack = (event, params = {}) => {
   if (!isBrowser()) return;
   window.gtag?.('event', event, {
     event_category: 'graduation',
@@ -36,7 +37,7 @@ export const gaTrack = (event: string, params?: any) => {
   });
 };
 
-export const trackWA = (label: TrackLabel = 'unknown', extra?: Record<string, any>, wa?: string) => {
+export const trackWA = (label = 'unknown', extra = {}, wa = '') => {
   const event_id = generateEventId();
   const userData = wa ? { ph: wa } : {};
 
@@ -48,7 +49,7 @@ export const trackWA = (label: TrackLabel = 'unknown', extra?: Record<string, an
   gaTrack('click_whatsapp', { event_label: label, ...extra });
 };
 
-export const trackLead = (label: TrackLabel = 'form_submit', extra?: Record<string, any>, wa?: string) => {
+export const trackLead = (label = 'form_submit', extra = {}, wa = '') => {
   const event_id = generateEventId();
   const userData = wa ? { ph: wa } : {};
 
