@@ -1,12 +1,12 @@
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
 
-export function Meta({ title, description, addPixelId }) {
+export default function Meta({ title, description, addPixelId }) {
   const location = useLocation();
   const MAIN_PIXEL_ID = '804715912719122';
   const activePixelId = addPixelId || MAIN_PIXEL_ID;
 
-  // Tangkap fbc & fbp ke localStorage untuk keperluan tracking
+  // Tangkap fbc & fbp ke localStorage
   useEffect(() => {
     const getCookie = (name) => {
       const value = `; ${document.cookie}`;
@@ -22,11 +22,10 @@ export function Meta({ title, description, addPixelId }) {
     if (fbp) localStorage.setItem('fbp', fbp);
   }, []);
 
-  // Injeksi Meta Pixel ke tag <head> secara dinamis
+  // Injeksi Meta Pixel ke browser
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    // Ubah Title & Meta Description halaman secara dinamis
     if (title) document.title = title;
     if (description) {
       let metaDesc = document.querySelector("meta[name='description']");
@@ -38,7 +37,6 @@ export function Meta({ title, description, addPixelId }) {
       metaDesc.content = description;
     }
 
-    // Inisialisasi Meta Pixel script jika belum ada
     if (!window.fbq) {
       !(function(f,b,e,v,n,t,s) {
         if(f.fbq)return;n=f.fbq=function(){n.callMethod?
@@ -55,5 +53,5 @@ export function Meta({ title, description, addPixelId }) {
     window.fbq('track', 'PageView');
   }, [location, activePixelId, title, description]);
 
-  return null; // Komponen ini berjalan di background untuk memasang Pixel & SEO dasar
+  return null;
 }
