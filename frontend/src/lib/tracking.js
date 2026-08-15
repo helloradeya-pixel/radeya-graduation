@@ -88,7 +88,7 @@ export const trackLead = (label = 'form_submit', extra = {}, customerData = {}) 
     ...extra,
   }, userData);
 
-  gaTrack('generate_lead', { event_label: label, ...extra\},\s*\.\.\.extra);
+  gaTrack('generate_lead', { event_label: label, ...extra });
   
   return event_id;
 };
