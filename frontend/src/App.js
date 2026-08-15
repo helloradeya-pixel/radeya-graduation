@@ -10,9 +10,7 @@ import Dashboard from "./pages/Dashboard";
 import Clients from "./pages/Clients";
 import Settings from "./pages/Settings";
 import InvoicePage from "./pages/InvoicePage"; 
-
-// 1. IMPORT KOMPONEN META ANDA DI SINI
-import Meta from "./components/Meta"; // Sesuaikan path foldernya jika berbeda (misal: "./components/Meta.tsx" atau "./components/Meta.jsx")
+import Meta from "./components/Meta"; // Menggunakan import komponen Meta.jsx
 
 function AppRouter() {
   const location = useLocation();
@@ -33,7 +31,6 @@ function AppRouter() {
 export default function App() {
   return (
     <div className="App">
-      {/* 2. PASANG KOMPONEN META DI DALAM BROWSERROUTER */}
       <BrowserRouter>
         <Meta /> 
         <AuthProvider>
