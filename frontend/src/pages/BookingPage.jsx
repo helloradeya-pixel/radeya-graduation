@@ -17,7 +17,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "../components/ui/popove
 import { RadioGroup, RadioGroupItem } from "../components/ui/radio-group";
 import { api, rupiah } from "../lib/api";
 
-// Import fungsi tracking yang sudah dibuat di frontend/src/lib/tracking.ts
+// Import fungsi tracking dari file .js yang baru dibuat
 import { trackLead } from "../lib/tracking";
 
 const HERO = "https://images.unsplash.com/photo-1561409958-c0e6ad782a81?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDQ2MzR8MHwxfHNlYXJjaHwxfHxvdXRkb29yJTIwZ3JhZHVhdGlvbiUyMHBob3RvfGVufDB8fHx8MTc4NjMzODI2Nnww&ixlib=rb-4.1.0&q=85";
