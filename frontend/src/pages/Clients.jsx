@@ -171,13 +171,13 @@ export default function Clients() {
   const safeBookings = Array.isArray(bookings) ? bookings : [];
   const safePhotographers = Array.isArray(photographers) ? photographers : [];
 
-  // Mapping data bookings ke format Event Calendar
+  // Mapping data bookings ke format Event Calendar (Format Jam 24 Jam)
   const calendarEvents = safeBookings.map((b) => {
-    const startTime = b.start_time || "10:00";
-    const endTime = b.end_time || "11:00";
+    const startTime = (b.start_time || "10:00").substring(0, 5);
+    const endTime = (b.end_time || "11:00").substring(0, 5);
     return {
       id: b.booking_id,
-      title: `${b.full_name} (${b.package_name})`,
+      title: `${b.full_name} (${b.package_name}) [${startTime} - ${endTime}]`,
       start: new Date(`${b.shoot_date}T${startTime}:00`),
       end: new Date(`${b.shoot_date}T${endTime}:00`),
       resource: b,
@@ -186,7 +186,7 @@ export default function Clients() {
 
   return (
     <AdminLayout title="Database Client" subtitle="Kelola jadwal, fotografer, dan kirim invoice">
-      {/* BAGIAN FILTER ATAS YANG SUDAH DIOPTIMALKAN UNTUK MOBILE */}
+      {/* BAGIAN FILTER ATAS */}
       <div className="flex flex-col gap-3 mb-6" data-testid="client-filters">
         <div className="flex items-center justify-between gap-2 w-full">
           <div className="relative flex-1">
@@ -259,7 +259,7 @@ export default function Clients() {
         </div>
       </div>
 
-      {/* Render Berdasarkan View Mode (Kalender / Kartu List) */}
+      {/* Render Berdasarkan View Mode */}
       {viewMode === "calendar" ? (
         <div className="bg-white p-6 rounded-lg border border-moss-900/10 shadow-sm" style={{ height: 650 }}>
           <Calendar
@@ -294,87 +294,92 @@ export default function Clients() {
           )}
           
           {/* Tampilan Data Berbentuk Card Modern */}
-          {safeBookings.map((b) => (
-            <div 
-              key={b.booking_id} 
-              className="bg-white rounded-xl border border-moss-900/10 p-4 shadow-sm hover:border-moss-800/40 transition-all space-y-3"
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <p 
-                    onClick={() => openDetail(b)}
-                    className="font-bold text-moss-900 text-base cursor-pointer hover:underline"
+          {safeBookings.map((b) => {
+            const startTimeFormatted = (b.start_time || "").substring(0, 5);
+            const endTimeFormatted = (b.end_time || "").substring(0, 5);
+
+            return (
+              <div 
+                key={b.booking_id} 
+                className="bg-white rounded-xl border border-moss-900/10 p-4 shadow-sm hover:border-moss-800/40 transition-all space-y-3"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <p 
+                      onClick={() => openDetail(b)}
+                      className="font-bold text-moss-900 text-base cursor-pointer hover:underline"
+                    >
+                      {b.full_name}
+                    </p>
+                    <p className="text-xs text-muted-foreground">{b.invoice_number} · {b.whatsapp}</p>
+                    <p className="text-xs text-muted-foreground font-medium">{b.university} ({b.study})</p>
+                  </div>
+                  <div className="flex flex-col items-end gap-1">
+                    <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-moss-50 text-moss-800 border border-moss-900/15">
+                      {b.status}
+                    </span>
+                    <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-neutral-100 text-neutral-700">
+                      {b.payment_type}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="bg-moss-50/40 rounded-lg p-2.5 border border-moss-900/5 text-xs space-y-1">
+                  <p className="font-semibold text-moss-900">{b.package_name}</p>
+                  <p className="text-muted-foreground">📅 {fmtDate(b.shoot_date)} ({startTimeFormatted} - {endTimeFormatted} WIB)</p>
+                  <p className="text-muted-foreground truncate">📍 {b.location}</p>
+                </div>
+
+                <div className="flex items-center justify-between text-xs pt-1 border-t border-gray-100">
+                  <div>
+                    <span className="text-muted-foreground">Fotografer: </span>
+                    <span className="font-medium text-moss-900">
+                      {b.photographer_name ? `${b.photographer_name} ${b.photographer_paid ? "✓" : ""}` : "Belum ada"}
+                    </span>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-bold text-moss-900">{rupiah(b.amount_paid)}</p>
+                    {b.balance_due > 0 && <p className="text-[11px] text-amber-600 font-medium">Kurang: {rupiah(b.balance_due)}</p>}
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end gap-1.5 pt-2 border-t border-gray-100">
+                  <Button
+                    onClick={() => handleSendReminder(b)}
+                    size="sm"
+                    className="h-8 bg-emerald-600 hover:bg-emerald-700 text-white text-xs gap-1 px-3"
                   >
-                    {b.full_name}
-                  </p>
-                  <p className="text-xs text-muted-foreground">{b.invoice_number} · {b.whatsapp}</p>
-                  <p className="text-xs text-muted-foreground font-medium">{b.university} ({b.study})</p>
-                </div>
-                <div className="flex flex-col items-end gap-1">
-                  <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-moss-50 text-moss-800 border border-moss-900/15">
-                    {b.status}
-                  </span>
-                  <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-neutral-100 text-neutral-700">
-                    {b.payment_type}
-                  </span>
-                </div>
-              </div>
-
-              <div className="bg-moss-50/40 rounded-lg p-2.5 border border-moss-900/5 text-xs space-y-1">
-                <p className="font-semibold text-moss-900">{b.package_name}</p>
-                <p className="text-muted-foreground">📅 {fmtDate(b.shoot_date)} ({b.start_time} - {b.end_time})</p>
-                <p className="text-muted-foreground truncate">📍 {b.location}</p>
-              </div>
-
-              <div className="flex items-center justify-between text-xs pt-1 border-t border-gray-100">
-                <div>
-                  <span className="text-muted-foreground">Fotografer: </span>
-                  <span className="font-medium text-moss-900">
-                    {b.photographer_name ? `${b.photographer_name} ${b.photographer_paid ? "✓" : ""}` : "Belum ada"}
-                  </span>
-                </div>
-                <div className="text-right">
-                  <p className="font-bold text-moss-900">{rupiah(b.amount_paid)}</p>
-                  {b.balance_due > 0 && <p className="text-[11px] text-amber-600 font-medium">Kurang: {rupiah(b.balance_due)}</p>}
+                    <MessageSquare className="h-3.5 w-3.5" /> WA
+                  </Button>
+                  <Button
+                    onClick={() => window.open(`${process.env.REACT_APP_BACKEND_URL}/api/files/${b.proof_file_id}`, "_blank")}
+                    size="sm"
+                    variant="outline"
+                    className="h-8 text-xs px-2.5"
+                    title="Lihat Bukti Transfer"
+                  >
+                    <Eye className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button
+                    onClick={() => sendInvoice(b.booking_id)}
+                    size="sm"
+                    variant="outline"
+                    className="h-8 text-xs px-2.5"
+                    title="Kirim Invoice via Email"
+                  >
+                    <Mail className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button 
+                    onClick={() => openDetail(b)} 
+                    size="sm" 
+                    className="h-8 bg-moss-800 hover:bg-moss-900 text-white text-xs"
+                  >
+                    Kelola
+                  </Button>
                 </div>
               </div>
-
-              <div className="flex items-center justify-end gap-1.5 pt-2 border-t border-gray-100">
-                <Button
-                  onClick={() => handleSendReminder(b)}
-                  size="sm"
-                  className="h-8 bg-emerald-600 hover:bg-emerald-700 text-white text-xs gap-1 px-3"
-                >
-                  <MessageSquare className="h-3.5 w-3.5" /> WA
-                </Button>
-                <Button
-                  onClick={() => window.open(`${process.env.REACT_APP_BACKEND_URL}/api/files/${b.proof_file_id}`, "_blank")}
-                  size="sm"
-                  variant="outline"
-                  className="h-8 text-xs px-2.5"
-                  title="Lihat Bukti Transfer"
-                >
-                  <Eye className="h-3.5 w-3.5" />
-                </Button>
-                <Button
-                  onClick={() => sendInvoice(b.booking_id)}
-                  size="sm"
-                  variant="outline"
-                  className="h-8 text-xs px-2.5"
-                  title="Kirim Invoice via Email"
-                >
-                  <Mail className="h-3.5 w-3.5" />
-                </Button>
-                <Button 
-                  onClick={() => openDetail(b)} 
-                  size="sm" 
-                  className="h-8 bg-moss-800 hover:bg-moss-900 text-white text-xs"
-                >
-                  Kelola
-                </Button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -390,41 +395,46 @@ export default function Clients() {
                 <p><span className="font-bold">Client:</span> {selected.full_name} ({selected.whatsapp})</p>
                 <p><span className="font-bold">Kampus:</span> {selected.university} — {selected.study}</p>
                 <p><span className="font-bold">Paket:</span> {selected.package_name} ({rupiah(selected.package_price)})</p>
-                <p><span className="font-bold">Jadwal Asli:</span> {fmtDate(selected.shoot_date)} ({selected.start_time} - {selected.end_time})</p>
+                <p><span className="font-bold">Jadwal Asli:</span> {fmtDate(selected.shoot_date)} ({(selected.start_time || "").substring(0, 5)} - {(selected.end_time || "").substring(0, 5)})</p>
                 <p><span className="font-bold">Lokasi:</span> {selected.location}</p>
               </div>
 
-              {/* INPUT EDIT JADWAL / RESCHEDULE */}
-              <div className="space-y-3 p-3 bg-neutral-50 rounded-lg border border-neutral-200">
-                <label className="text-xs font-bold text-moss-900 uppercase tracking-wider block">Ubah Jadwal Sesi Foto (Reschedule)</label>
+              {/* INPUT EDIT JADWAL / RESCHEDULE FORMAT 24 JAM */}
+              <div className="space-y-3 p-3.5 bg-moss-50/40 rounded-xl border border-moss-900/10">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-moss-900 uppercase tracking-wider">Ubah Jadwal Sesi Foto (Reschedule)</label>
+                  <span className="text-[10px] text-muted-foreground bg-white px-2 py-0.5 rounded border">Opsional</span>
+                </div>
                 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium">Tanggal Foto</label>
+                  <label className="text-xs font-medium text-muted-foreground">Tanggal Foto</label>
                   <Input 
                     type="date" 
                     value={editShootDate} 
                     onChange={(e) => setEditShootDate(e.target.value)} 
-                    className="bg-white" 
+                    className="bg-white text-sm py-2 px-3 rounded-lg border border-moss-900/20" 
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <label className="text-xs font-medium">Jam Mulai</label>
+                    <label className="text-xs font-medium text-muted-foreground">Jam Mulai (24 Jam)</label>
                     <Input 
                       type="time" 
+                      step="60"
                       value={editStartTime} 
                       onChange={(e) => setEditStartTime(e.target.value)} 
-                      className="bg-white" 
+                      className="bg-white text-sm py-2 px-3 rounded-lg border border-moss-900/20" 
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-xs font-medium">Jam Selesai</label>
+                    <label className="text-xs font-medium text-muted-foreground">Jam Selesai (24 Jam)</label>
                     <Input 
                       type="time" 
+                      step="60"
                       value={editEndTime} 
                       onChange={(e) => setEditEndTime(e.target.value)} 
-                      className="bg-white" 
+                      className="bg-white text-sm py-2 px-3 rounded-lg border border-moss-900/20" 
                     />
                   </div>
                 </div>
