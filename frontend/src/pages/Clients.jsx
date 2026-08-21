@@ -186,25 +186,25 @@ export default function Clients() {
 
   return (
     <AdminLayout title="Database Client" subtitle="Kelola jadwal, fotografer, dan kirim invoice">
-      <div className="flex flex-col sm:flex-row gap-3 mb-6 items-center justify-between" data-testid="client-filters">
-        <div className="relative w-full sm:w-64">
-          <Search className="absolute h-4 w-4 left-3 top-3 text-muted-foreground" />
-          <Input
-            placeholder="Cari nama, email, univ..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 bg-white"
-          />
-        </div>
-        
-        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-          {/* Toggle View Mode (Tabel vs Kalender) */}
-          <div className="flex bg-white rounded-lg border border-moss-900/10 p-0.5">
+      {/* BAGIAN FILTER ATAS YANG SUDAH DIOPTIMALKAN UNTUK MOBILE */}
+      <div className="flex flex-col gap-3 mb-6" data-testid="client-filters">
+        <div className="flex items-center justify-between gap-2 w-full">
+          <div className="relative flex-1">
+            <Search className="absolute h-4 w-4 left-3 top-3 text-muted-foreground" />
+            <Input
+              placeholder="Cari nama, email, univ..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9 bg-white"
+            />
+          </div>
+          
+          <div className="flex bg-white rounded-lg border border-moss-900/10 p-0.5 shrink-0">
             <Button
               variant={viewMode === "table" ? "default" : "ghost"}
               size="sm"
               onClick={() => setViewMode("table")}
-              className={`h-8 text-xs gap-1 ${viewMode === "table" ? "bg-moss-800 text-white" : ""}`}
+              className={`h-9 text-xs gap-1 px-3 ${viewMode === "table" ? "bg-moss-800 text-white" : ""}`}
             >
               <Table className="h-3.5 w-3.5" /> Tabel
             </Button>
@@ -212,14 +212,17 @@ export default function Clients() {
               variant={viewMode === "calendar" ? "default" : "ghost"}
               size="sm"
               onClick={() => setViewMode("calendar")}
-              className={`h-8 text-xs gap-1 ${viewMode === "calendar" ? "bg-moss-800 text-white" : ""}`}
+              className={`h-9 text-xs gap-1 px-3 ${viewMode === "calendar" ? "bg-moss-800 text-white" : ""}`}
             >
               <CalendarIcon className="h-3.5 w-3.5" /> Kalender
             </Button>
           </div>
+        </div>
 
+        {/* Filter Dropdown dengan Horizontal Scroll */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
           <Select onValueChange={setMonthFilter} value={monthFilter}>
-            <SelectTrigger className="w-[150px] bg-white">
+            <SelectTrigger className="w-[140px] bg-white shrink-0">
               <SelectValue placeholder="Bulan / Tahun" />
             </SelectTrigger>
             <SelectContent className="max-h-60">
@@ -231,7 +234,7 @@ export default function Clients() {
           </Select>
 
           <Select onValueChange={setStatusFilter} value={statusFilter}>
-            <SelectTrigger className="w-[120px] bg-white">
+            <SelectTrigger className="w-[130px] bg-white shrink-0">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
@@ -244,7 +247,7 @@ export default function Clients() {
           </Select>
 
           <Select onValueChange={setPaymentFilter} value={paymentFilter}>
-            <SelectTrigger className="w-[120px] bg-white">
+            <SelectTrigger className="w-[130px] bg-white shrink-0">
               <SelectValue placeholder="Pembayaran" />
             </SelectTrigger>
             <SelectContent>
@@ -256,7 +259,7 @@ export default function Clients() {
         </div>
       </div>
 
-      {/* Render Berdasarkan View Mode */}
+      {/* Render Berdasarkan View Mode (Kalender / Kartu List) */}
       {viewMode === "calendar" ? (
         <div className="bg-white p-6 rounded-lg border border-moss-900/10 shadow-sm" style={{ height: 650 }}>
           <Calendar
@@ -282,103 +285,96 @@ export default function Clients() {
           />
         </div>
       ) : (
-        <div className="rounded-lg border border-moss-900/10 bg-white overflow-hidden" data-testid="clients-table">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-[11px] uppercase tracking-wider text-muted-foreground border-b border-moss-900/10 bg-moss-50/50">
-                  <th className="p-3.5">Invoice / Klien</th>
-                  <th className="p-3.5">Paket & Jadwal</th>
-                  <th className="p-3.5">Fotografer</th>
-                  <th className="p-3.5">Pembayaran</th>
-                  <th className="p-3.5">Status</th>
-                  <th className="p-3.5 text-right">Aksi</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading && (
-                  <tr><td colSpan={6} className="p-6 text-center text-muted-foreground">Memuat data...</td></tr>
-                )}
-                {!loading && safeBookings.length === 0 && (
-                  <tr><td colSpan={6} className="p-6 text-center text-muted-foreground">Tidak ada client ditemukan.</td></tr>
-                )}
-                {safeBookings.map((b) => (
-                  <tr key={b.booking_id} className="border-b border-moss-900/5 hover:bg-moss-50/30 transition-colors">
-                    <td className="p-3.5">
-                      <div 
-                        onClick={() => openDetail(b)} 
-                        className="cursor-pointer group inline-block"
-                      >
-                        <p className="font-bold text-moss-900 group-hover:text-moss-700 underline transition-colors">
-                          {b.full_name}
-                        </p>
-                        <p className="text-xs text-muted-foreground">{b.invoice_number} · {b.whatsapp}</p>
-                        <p className="text-xs text-muted-foreground">{b.university} ({b.study})</p>
-                      </div>
-                    </td>
-                    <td className="p-3.5">
-                      <p className="font-semibold">{b.package_name}</p>
-                      <p className="text-xs text-muted-foreground">{fmtDate(b.shoot_date)} · {b.start_time}-{b.end_time}</p>
-                      <p className="text-xs text-muted-foreground truncate max-w-xs">{b.location}</p>
-                    </td>
-                    <td className="p-3.5">
-                      {b.photographer_name ? (
-                        <div>
-                          <span className="inline-flex items-center gap-1.5 font-medium text-xs bg-moss-50 text-moss-800 px-2.5 py-1 rounded-full">
-                            {b.photographer_name} {b.photographer_paid && "✓"}
-                          </span>
-                          <p className="text-[11px] text-muted-foreground mt-0.5">Fee: {rupiah(b.photographer_fee)}</p>
-                        </div>
-                      ) : (
-                        <span className="text-xs text-amberx font-semibold">Belum ditugaskan</span>
-                      )}
-                    </td>
-                    <td className="p-3.5">
-                      <span className="text-[10px] uppercase font-semibold px-2 py-0.5 rounded border border-moss-900/20">
-                        {b.payment_type}
-                      </span>
-                      <p className="text-xs mt-1 font-semibold">{rupiah(b.amount_paid)}</p>
-                      {b.balance_due > 0 && <p className="text-[11px] text-amberx">Kurang: {rupiah(b.balance_due)}</p>}
-                    </td>
-                    <td className="p-3.5">
-                      <span className="text-[10px] uppercase font-semibold px-2 py-0.5 rounded border border-moss-900/25">
-                        {b.status}
-                      </span>
-                    </td>
-                    <td className="p-3.5 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button
-                          title="Kirim Reminder WA ke Klien"
-                          onClick={() => handleSendReminder(b)}
-                          size="sm"
-                          className="h-7 bg-emerald-600 hover:bg-emerald-700 text-white text-xs gap-1 px-2.5"
-                        >
-                          <MessageSquare className="h-3.5 w-3.5" /> Kirim WA
-                        </Button>
-                        <button
-                          title="Lihat Bukti Transfer"
-                          onClick={() => window.open(`${process.env.REACT_APP_BACKEND_URL}/api/files/${b.proof_file_id}`, "_blank")}
-                          className="p-1.5 rounded-md hover:bg-moss-100 text-moss-800"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </button>
-                        <button
-                          title="Kirim Invoice via Email"
-                          onClick={() => sendInvoice(b.booking_id)}
-                          className="p-1.5 rounded-md hover:bg-moss-100 text-moss-800"
-                        >
-                          <Mail className="h-4 w-4" />
-                        </button>
-                        <Button onClick={() => openDetail(b)} size="sm" variant="outline" className="h-7 text-xs">
-                          Kelola
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+        <div className="space-y-3" data-testid="clients-cards">
+          {loading && (
+            <div className="p-6 text-center text-muted-foreground bg-white rounded-lg border">Memuat data...</div>
+          )}
+          {!loading && safeBookings.length === 0 && (
+            <div className="p-6 text-center text-muted-foreground bg-white rounded-lg border">Tidak ada client ditemukan.</div>
+          )}
+          
+          {/* Tampilan Data Berbentuk Card Modern */}
+          {safeBookings.map((b) => (
+            <div 
+              key={b.booking_id} 
+              className="bg-white rounded-xl border border-moss-900/10 p-4 shadow-sm hover:border-moss-800/40 transition-all space-y-3"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <p 
+                    onClick={() => openDetail(b)}
+                    className="font-bold text-moss-900 text-base cursor-pointer hover:underline"
+                  >
+                    {b.full_name}
+                  </p>
+                  <p className="text-xs text-muted-foreground">{b.invoice_number} · {b.whatsapp}</p>
+                  <p className="text-xs text-muted-foreground font-medium">{b.university} ({b.study})</p>
+                </div>
+                <div className="flex flex-col items-end gap-1">
+                  <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-moss-50 text-moss-800 border border-moss-900/15">
+                    {b.status}
+                  </span>
+                  <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-neutral-100 text-neutral-700">
+                    {b.payment_type}
+                  </span>
+                </div>
+              </div>
+
+              <div className="bg-moss-50/40 rounded-lg p-2.5 border border-moss-900/5 text-xs space-y-1">
+                <p className="font-semibold text-moss-900">{b.package_name}</p>
+                <p className="text-muted-foreground">📅 {fmtDate(b.shoot_date)} ({b.start_time} - {b.end_time})</p>
+                <p className="text-muted-foreground truncate">📍 {b.location}</p>
+              </div>
+
+              <div className="flex items-center justify-between text-xs pt-1 border-t border-gray-100">
+                <div>
+                  <span className="text-muted-foreground">Fotografer: </span>
+                  <span className="font-medium text-moss-900">
+                    {b.photographer_name ? `${b.photographer_name} ${b.photographer_paid ? "✓" : ""}` : "Belum ada"}
+                  </span>
+                </div>
+                <div className="text-right">
+                  <p className="font-bold text-moss-900">{rupiah(b.amount_paid)}</p>
+                  {b.balance_due > 0 && <p className="text-[11px] text-amber-600 font-medium">Kurang: {rupiah(b.balance_due)}</p>}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-1.5 pt-2 border-t border-gray-100">
+                <Button
+                  onClick={() => handleSendReminder(b)}
+                  size="sm"
+                  className="h-8 bg-emerald-600 hover:bg-emerald-700 text-white text-xs gap-1 px-3"
+                >
+                  <MessageSquare className="h-3.5 w-3.5" /> WA
+                </Button>
+                <Button
+                  onClick={() => window.open(`${process.env.REACT_APP_BACKEND_URL}/api/files/${b.proof_file_id}`, "_blank")}
+                  size="sm"
+                  variant="outline"
+                  className="h-8 text-xs px-2.5"
+                  title="Lihat Bukti Transfer"
+                >
+                  <Eye className="h-3.5 w-3.5" />
+                </Button>
+                <Button
+                  onClick={() => sendInvoice(b.booking_id)}
+                  size="sm"
+                  variant="outline"
+                  className="h-8 text-xs px-2.5"
+                  title="Kirim Invoice via Email"
+                >
+                  <Mail className="h-3.5 w-3.5" />
+                </Button>
+                <Button 
+                  onClick={() => openDetail(b)} 
+                  size="sm" 
+                  className="h-8 bg-moss-800 hover:bg-moss-900 text-white text-xs"
+                >
+                  Kelola
+                </Button>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
