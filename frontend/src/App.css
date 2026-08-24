@@ -1,1 +1,21 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
+/* Penyesuaian agar tabel agenda kalender pas di layar HP */
+.rbc-agenda-view table {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+.rbc-agenda-view table tbody > tr > td {
+  white-space: normal !important;
+  word-break: break-word;
+  padding: 8px !important;
+  font-size: 11px !important;
+}
+
+.rbc-agenda-time, 
+.rbc-agenda-date-cell {
+  white-space: nowrap !important;
+}
