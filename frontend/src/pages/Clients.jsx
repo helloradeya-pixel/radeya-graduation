@@ -14,7 +14,7 @@ import { id } from "date-fns/locale";
 import { cn } from "../lib/utils";
 
 // Import untuk React Big Calendar
-import { Calendar, dateFnsLocalizer } from "react-big-calendar";
+import { Calendar, dateFnsLocalizer, Views } from "react-big-calendar";
 import parse from "date-fns/parse";
 import startOfWeek from "date-fns/startOfWeek";
 import getDay from "date-fns/getDay";
@@ -39,8 +39,9 @@ export default function Clients() {
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   
   const [viewMode, setViewMode] = useState("list");
+  const [currentView, setCurrentView] = useState(Views.MONTH);
 
-  // State untuk mengontrol navigasi kalender secara programmatic (mendukung swipe)
+  // State untuk tanggal aktif kalender
   const [calendarDate, setCalendarDate] = useState(new Date());
 
   const [selected, setSelected] = useState(null);
@@ -59,7 +60,6 @@ export default function Clients() {
   const [showReschedule, setShowReschedule] = useState(false);
   const [viewDetailOnly, setViewDetailOnly] = useState(null);
 
-  // Ref untuk mendeteksi sentuhan swipe geser layar
   const touchStartX = useRef(0);
   const touchEndX = useRef(0);
 
@@ -216,7 +216,7 @@ export default function Clients() {
     };
   });
 
-  // Fungsi penanganan gestur geser layar (Swipe Handlers)
+  // Gestur swipe geser bulan
   const handleTouchStart = (e) => {
     touchStartX.current = e.targetTouches[0].clientX;
   };
@@ -228,15 +228,13 @@ export default function Clients() {
   const handleTouchEnd = () => {
     if (!touchStartX.current || !touchEndX.current) return;
     const distance = touchStartX.current - touchEndX.current;
-    const minSwipeDistance = 50; // Batas minimal jarak geser (dalam pixel)
+    const minSwipeDistance = 50;
 
     if (distance > minSwipeDistance) {
-      // Geser ke Kiri -> Maju ke periode berikutnya
       const nextDate = new Date(calendarDate);
       nextDate.setMonth(nextDate.getMonth() + 1);
       setCalendarDate(nextDate);
     } else if (distance < -minSwipeDistance) {
-      // Geser ke Kanan -> Mundur ke periode sebelumnya
       const prevDate = new Date(calendarDate);
       prevDate.setMonth(prevDate.getMonth() - 1);
       setCalendarDate(prevDate);
@@ -374,8 +372,13 @@ export default function Clients() {
               startAccessor="start"
               endAccessor="end"
               date={calendarDate}
+              view={currentView}
+              onView={(newView) => setCurrentView(newView)}
               onNavigate={(newDate) => setCalendarDate(newDate)}
               style={{ height: "100%" }}
+              // Mengatur agar mode agenda menampilkan rentang tepat 1 bulan kalender penuh dari tanggal 1 s/d akhir bulan
+              views={[Views.MONTH, Views.WEEK, Views.DAY, Views.AGENDA]}
+              length={31}
               messages={{
                 next: "Selanjutnya",
                 previous: "Sebelumnya",
@@ -387,7 +390,7 @@ export default function Clients() {
                 date: "Tanggal",
                 time: "Waktu",
                 event: "Acara",
-                noEventsInRange: "Tidak ada jadwal di rentang waktu ini.",
+                noEventsInRange: "Tidak ada jadwal di bulan ini.",
               }}
               onSelectEvent={(event) => setViewDetailOnly(event.resource)}
             />
