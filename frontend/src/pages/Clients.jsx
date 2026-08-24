@@ -331,8 +331,8 @@ export default function Clients() {
 
                 <div className="bg-moss-50/40 rounded-lg p-2.5 border border-moss-900/5 text-xs space-y-1">
                   <p className="font-semibold text-moss-900">{b.package_name}</p>
-                  <p className="text-muted-foreground"> {fmtDate(b.shoot_date)} ({startTimeFormatted} - {endTimeFormatted} WIB)</p>
-                  <p className="text-muted-foreground truncate"> {b.location}</p>
+                  <p className="text-muted-foreground">📅 {fmtDate(b.shoot_date)} ({startTimeFormatted} - {endTimeFormatted} WIB)</p>
+                  <p className="text-muted-foreground truncate">📍 {b.location}</p>
                 </div>
 
                 <div className="flex items-center justify-between text-xs pt-1 border-t border-gray-100">
