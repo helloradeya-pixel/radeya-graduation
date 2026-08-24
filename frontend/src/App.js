@@ -1,5 +1,5 @@
 import "./App.css";
-import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation, Navigate } from "react-router-dom";
 import { Toaster } from "./components/ui/sonner";
 import { AuthProvider } from "./context/AuthContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
@@ -10,7 +10,7 @@ import Dashboard from "./pages/Dashboard";
 import Clients from "./pages/Clients";
 import Settings from "./pages/Settings";
 import InvoicePage from "./pages/InvoicePage"; 
-import Meta from "./components/Meta"; // Menggunakan import komponen Meta.jsx
+import Meta from "./components/Meta";
 
 function AppRouter() {
   const location = useLocation();
@@ -18,12 +18,21 @@ function AppRouter() {
 
   return (
     <Routes>
+      {/* 1. Klien tetap akses form booking di halaman utama */}
       <Route path="/" element={<BookingPage />} />
+      
+      {/* 2. Halaman Login Admin */}
       <Route path="/login" element={<Login />} />
+      
+      {/* 3. Halaman Invoice Klien */}
       <Route path="/invoice/:id" element={<InvoicePage />} />
-      <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-      <Route path="/clients" element={<ProtectedRoute><Clients /></ProtectedRoute>} />
-      <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+      
+      {/* 4. Area Khusus Admin (Aplikasi PWA di HP kamu mengarah ke sini) */}
+      <Route path="/admin-dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+      <Route path="/admin-clients" element={<ProtectedRoute><Clients /></ProtectedRoute>} />
+      <Route path="/admin-settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+      
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }
