@@ -53,9 +53,7 @@ export default function Clients() {
   const [editStartTime, setEditStartTime] = useState("");
   const [editEndTime, setEditEndTime] = useState("");
 
-  // State untuk mengontrol apakah bagian ubah jadwal sedang dibuka atau ditutup
   const [showReschedule, setShowReschedule] = useState(false);
-
   const [viewDetailOnly, setViewDetailOnly] = useState(null);
 
   const loadData = useCallback(async () => {
@@ -110,7 +108,7 @@ export default function Clients() {
     setEditShootDate(b.shoot_date || "");
     setEditStartTime(b.start_time || "");
     setEditEndTime(b.end_time || "");
-    setShowReschedule(false); // Default tertutup supaya tidak mengganggu
+    setShowReschedule(false);
   };
 
   const saveDetail = async () => {
@@ -198,12 +196,14 @@ export default function Clients() {
     return true;
   });
 
+  // Format teks acara di Kalender & Agenda: Menampilkan Nama, Paket, dan Lokasi (Tanpa jam)
   const calendarEvents = safeBookings.map((b) => {
     const startTime = (b.start_time || "10:00").substring(0, 5);
     const endTime = (b.end_time || "11:00").substring(0, 5);
+    const locationText = b.location ? ` — ${b.location}` : "";
     return {
       id: b.booking_id,
-      title: `${b.full_name} (${b.package_name}) [${startTime} - ${endTime}]`,
+      title: `${b.full_name} (${b.package_name})${locationText}`,
       start: new Date(`${b.shoot_date}T${startTime}:00`),
       end: new Date(`${b.shoot_date}T${endTime}:00`),
       resource: b,
@@ -488,7 +488,7 @@ export default function Clients() {
         </DialogContent>
       </Dialog>
 
-      {/* DIALOG KELOLA (PENGATURAN DENGAN TOMBOL RESCHEDULE TERTUTUP SECARA DEFAULT) */}
+      {/* DIALOG KELOLA */}
       <Dialog open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto rounded-3xl p-6 bg-white border border-moss-900/10 shadow-2xl z-50">
           <DialogHeader>
@@ -504,7 +504,7 @@ export default function Clients() {
                 <p><span className="font-bold text-moss-900">Lokasi:</span> {selected.location}</p>
               </div>
 
-              {/* TOMBOL TOGGLE RESCHEDULE (HANYA MUNCUL JIKA DIKLIK) */}
+              {/* TOGGLE RESCHEDULE */}
               <div className="border border-moss-900/15 rounded-2xl overflow-hidden bg-white shadow-sm">
                 <button
                   type="button"
