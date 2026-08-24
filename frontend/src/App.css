@@ -2,20 +2,54 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Penyesuaian agar tabel agenda kalender pas di layar HP */
+/* Batasi ukuran dan rapikan kalender agar pas di HP */
+.rbc-calendar {
+  font-size: 12px !important;
+}
+
+.rbc-toolbar {
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px !important;
+}
+
+.rbc-toolbar span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.rbc-toolbar button {
+  font-size: 11px !important;
+  padding: 4px 8px !important;
+  border-radius: 8px !important;
+  border-color: rgba(0, 0, 0, 0.1) !important;
+}
+
+.rbc-toolbar button.rbc-active {
+  background-color: #1c3324 !important;
+  color: white !important;
+}
+
+/* Atur tabel agenda agar tidak melar dan teksnya tersusun normal */
 .rbc-agenda-view table {
   width: 100% !important;
-  max-width: 100% !important;
+  table-layout: fixed !important;
 }
 
 .rbc-agenda-view table tbody > tr > td {
   white-space: normal !important;
-  word-break: break-word;
-  padding: 8px !important;
+  word-break: break-word !important;
+  padding: 10px !important;
   font-size: 11px !important;
 }
 
-.rbc-agenda-time, 
-.rbc-agenda-date-cell {
+.rbc-agenda-time {
+  width: 95px !important;
   white-space: nowrap !important;
+}
+
+.rbc-agenda-date-cell {
+  width: 85px !important;
+  font-weight: bold;
 }
