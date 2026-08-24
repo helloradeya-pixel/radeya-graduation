@@ -2,21 +2,16 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Batasi ukuran dan rapikan kalender agar pas di HP */
+/* Penyesuaian agar kalender bulanan proporsional di HP */
 .rbc-calendar {
-  font-size: 12px !important;
+  width: 100% !important;
+  font-size: 11px !important;
 }
 
 .rbc-toolbar {
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
   margin-bottom: 12px !important;
-}
-
-.rbc-toolbar span {
-  display: flex;
-  align-items: center;
-  gap: 4px;
 }
 
 .rbc-toolbar button {
@@ -31,25 +26,22 @@
   color: white !important;
 }
 
-/* Atur tabel agenda agar tidak melar dan teksnya tersusun normal */
-.rbc-agenda-view table {
-  width: 100% !important;
-  table-layout: fixed !important;
+.rbc-month-view {
+  min-height: 550px !important;
 }
 
-.rbc-agenda-view table tbody > tr > td {
-  white-space: normal !important;
-  word-break: break-word !important;
-  padding: 10px !important;
-  font-size: 11px !important;
+.rbc-event {
+  background-color: #1c3324 !important;
+  border-radius: 4px !important;
+  font-size: 9px !important;
+  padding: 1px 3px !important;
 }
 
-.rbc-agenda-time {
-  width: 95px !important;
-  white-space: nowrap !important;
+/* Sembunyikan scroll horizontal bawaan jika tidak perlu */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }
-
-.rbc-agenda-date-cell {
-  width: 85px !important;
-  font-weight: bold;
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
