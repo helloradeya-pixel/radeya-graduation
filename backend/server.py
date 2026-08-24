@@ -435,6 +435,7 @@ async def create_booking(
     booking_id = f"bk_{uuid.uuid4().hex[:12]}"
     
     actual_payment_type = "full" if float(amount_paid) >= pkg["price"] else payment_type
+    balance_due_calc = max(pkg["price"] - float(amount_paid), 0)
     
     doc = {
         "booking_id": booking_id, "invoice_number": await next_invoice_number(),
@@ -444,7 +445,7 @@ async def create_booking(
         "extra_charge": 0.0, "extra_note": "",
         "shoot_date": shoot_date, "location": location, "start_time": start_time, "end_time": end_time,
         "payment_type": actual_payment_type, "amount_paid": float(amount_paid),
-        "balance_due": max(pkg["price"] - float(amount_paid), 0),
+        "balance_due": balance_due_calc,
         "proof_file_id": proof_file_id, "notes": notes,
         "drive_link": "", "status": "pending", "photographer_id": None, "photographer_name": None,
         "photographer_fee": 0.0, "photographer_paid": False,
@@ -508,7 +509,10 @@ async def create_booking(
            f"Universitas: {university}\nProdi: {study}\n\nPaket: {pkg['name']} (Rp {pkg['price']:,.0f})\n"
            f"Tanggal: {shoot_date}\nJam: {start_time} - {end_time}\nLokasi: {location}\n\n"
            f"Pembayaran: {'DP' if actual_payment_type == 'dp' else 'Full Payment'} - Rp {float(amount_paid):,.0f}\n"
+           f"Sisa Tagihan: Rp {balance_due_calc:,.0f}\n"
            f"No. Invoice: {doc['invoice_number']}\n\n"
+           f"⚠️ *Batas waktu pelunasan paling lambat H-1*\n"
+           f"Bisa ditransfer ke: *BCA 2952093623 a/n Yulviana Kusnia*\n\n"
            f"📄 *Link Invoice:* {invoice_web_url}\n\n"
            f"Bukti transfer sudah saya upload. Mohon konfirmasi booking saya. Terima kasih!")
     doc["whatsapp_link"] = f"https://wa.me/{ADMIN_WHATSAPP}?text={quote(msg)}"
@@ -684,30 +688,44 @@ def invoice_html(b: dict) -> str:
     <td align="right" style="padding:8px 0;border-bottom:1px solid #eee">{rupiah(pkg_price)}</td></tr>
     {extra_row}"""
     
-    return f"""<div style="font-family:Arial,Helvetica,sans-serif;max-width:640px;margin:0 auto;background:#fdfbf7;padding:24px">
+    return f"""<div style="font-family:sans-serif;max-width:640px;margin:0 auto;background:#ffffff;padding:24px;border-radius:8px;border:1px solid rgba(6,95,70,0.1);color:#2C2A29;">
 <table width="100%" cellpadding="0" cellspacing="0"><tr>
-<td><div style="font-size:22px;font-weight:bold;color:#065f46">{EMAIL_FROM_NAME}</div>
-<div style="color:#71717a;font-size:12px">Graduation Photo Outdoor</div></td>
-<td align="right"><div style="font-size:16px;font-weight:bold">INVOICE</div>
-<div style="color:#71717a;font-size:12px">{b['invoice_number']}</div></td></tr></table>
-<hr style="border:none;border-top:2px solid #065f46;margin:16px 0">
-<table width="100%" cellpadding="0" cellspacing="0"><tr valign="top">
-<td><div style="font-size:11px;letter-spacing:1px;color:#71717a">DITAGIHKAN KEPADA</div>
-<div style="font-weight:bold">{b['full_name']}</div>
-<div style="font-size:12px;color:#3f3f46">{b['email']}<br>{b['whatsapp']} · {b['instagram']}<br>{b['university']} — {b['study']}</div></td>
-<td align="right"><div style="font-size:11px;letter-spacing:1px;color:#71717a">STATUS</div>
-<div style="font-weight:bold;color:#065f46">{'LUNAS' if b.get('balance_due', 0) <= 0 else 'DP / BELUM LUNAS'}</div></td></tr></table>
-<table width="100%" cellpadding="0" cellspacing="0" style="margin-top:20px;font-size:14px">
-<tr><td style="font-size:11px;letter-spacing:1px;color:#71717a;padding-bottom:6px">DESKRIPSI</td>
-<td align="right" style="font-size:11px;letter-spacing:1px;color:#71717a;padding-bottom:6px">JUMLAH</td></tr>
+<td><div style="font-size:20px;font-weight:bold;color:#065f46">{EMAIL_FROM_NAME} Invoice</div>
+<div style="color:#71717a;font-size:12px">{b['invoice_number']}</div></td>
+<td align="right"><div style="font-size:11px;font-weight:600;text-transform:uppercase;padding:4px 10px;background:{'#d1fae5' if b.get('balance_due', 0) <= 0 else '#fef3c7'};color:{'#065f46' if b.get('balance_due', 0) <= 0 else '#92400e'};border-radius:4px;display:inline-block;">
+{'Lunas (Full)' if b.get('balance_due', 0) <= 0 else 'DP / Belum Lunas'}
+</div></td></tr></table>
+<hr style="border:none;border-top:1px solid #e4e4e7;margin:16px 0">
+
+<div style="font-size:14px;margin-bottom:20px;">
+  <p style="margin:4px 0;"><span style="font-weight:600;">Nama Klien:</span> {b['full_name']}</p>
+  <p style="margin:4px 0;"><span style="font-weight:600;">Paket:</span> {b['package_name']} ({rupiah(pkg_price)})</p>
+  <p style="margin:4px 0;"><span style="font-weight:600;">Jadwal:</span> {b['shoot_date']} ({b['start_time']} - {b['end_time']})</p>
+  <p style="margin:4px 0;"><span style="font-weight:600;">Lokasi:</span> {b['location']}</p>
+  <hr style="border:none;border-top:1px solid #e4e4e7;margin:8px 0">
+  
+  <div style="background:#f8fafc;padding:12px;border-radius:6px;border:1px solid #e2e8f0;margin:12px 0;font-size:12px;">
+    <p style="margin:0 0 4px 0;color:#475569;">bisa di transfer ke sini yah kak</p>
+    <p style="margin:0;font-weight:bold;color:#1e293b;">BCA 2952093623 a/n Yulviana Kusnia</p>
+    <p style="margin:8px 0 0 0;color:#c2410c;font-weight:500;border-top:1px solid #e2e8f0;padding-top:6px;">
+      ⚠️ Batas waktu pelunasan paling lambat H-1 sebelum jadwal sesi foto.
+    </p>
+  </div>
+</div>
+
+<table width="100%" cellpadding="0" cellspacing="0" style="font-size:14px">
 {rows}
-<tr><td style="padding-top:10px">Total Keseluruhan</td><td align="right" style="padding-top:10px">{rupiah(total_tagihan)}</td></tr>
-<tr><td>Sudah Dibayar</td><td align="right">- {rupiah(b['amount_paid'])}</td></tr>
-<tr><td style="padding-top:10px;font-weight:bold;border-top:2px solid #065f46">Sisa Pembayaran</td>
-<td align="right" style="padding-top:10px;font-weight:bold;border-top:2px solid #065f46">{rupiah(b.get('balance_due', 0))}</td></tr>
+<tr><td style="padding-top:10px;font-weight:bold;border-top:1px solid #e4e4e7">Total Keseluruhan:</td>
+<td align="right" style="padding-top:10px;font-weight:bold;border-top:1px solid #e4e4e7">{rupiah(total_tagihan)}</td></tr>
+<tr><td style="padding-top:4px;color:#71717a">Sudah Dibayar:</td><td align="right" style="padding-top:4px;color:#71717a">{rupiah(b['amount_paid'])}</td></tr>
+<tr><td style="padding-top:8px;font-weight:bold;font-size:16px;color:#c2410c;border-top:1px solid #e4e4e7">Sisa Tagihan:</td>
+<td align="right" style="padding-top:8px;font-weight:bold;font-size:16px;color:#c2410c;border-top:1px solid #e4e4e7">{rupiah(b.get('balance_due', 0))}</td></tr>
 </table>
-<p style="font-size:12px;color:#71717a;margin-top:24px">Terima kasih telah mempercayakan momen kelulusanmu kepada kami.
-Hubungi admin di WhatsApp {ADMIN_WHATSAPP} untuk pertanyaan lebih lanjut.</p></div>"""
+
+<p style="font-size:12px;color:#71717a;margin-top:24px;border-top:1px solid #e4e4e7;padding-top:12px;">
+Terima kasih telah mempercayakan momen kelulusanmu kepada Radeyaphoto.<br>
+Hubungi admin di WhatsApp {ADMIN_WHATSAPP} jika ada pertanyaan lebih lanjut.
+</p></div>"""
 
 @api_router.get("/bookings/{booking_id}/invoice")
 async def get_invoice(booking_id: str):
