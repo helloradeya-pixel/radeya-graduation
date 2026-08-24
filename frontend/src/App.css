@@ -2,23 +2,37 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Penyesuaian agar kalender bulanan proporsional di HP */
+/* Penyesuaian agar kalender bulanan proporsional dan tidak terpotong di HP */
 .rbc-calendar {
   width: 100% !important;
   font-size: 11px !important;
 }
 
+/* Memperbaiki toolbar kalender bawaan agar tersusun rapi bertingkat */
 .rbc-toolbar {
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-bottom: 12px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  gap: 8px !important;
+  margin-bottom: 16px !important;
+}
+
+.rbc-toolbar > span {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  justify-content: center !important;
+  gap: 4px !important;
+  width: 100% !important;
 }
 
 .rbc-toolbar button {
+  flex: 1;
+  min-width: 70px;
   font-size: 11px !important;
-  padding: 4px 8px !important;
+  padding: 6px 10px !important;
+  background-color: #f9fafb;
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
   border-radius: 8px !important;
-  border-color: rgba(0, 0, 0, 0.1) !important;
 }
 
 .rbc-toolbar button.rbc-active {
