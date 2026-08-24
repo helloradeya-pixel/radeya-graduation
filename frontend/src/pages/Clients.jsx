@@ -322,33 +322,31 @@ export default function Clients() {
         )}
       </div>
 
-      {/* RENDER VIEW: REACT BIG CALENDAR DENGAN WRAPPER PROPORSIONAL */}
+      {/* RENDER VIEW: REACT BIG CALENDAR FULL SCREEN PROPORSIONAL */}
       {viewMode === "calendar" ? (
-        <div className="bg-white p-3 sm:p-6 rounded-2xl border border-moss-900/10 shadow-sm overflow-hidden">
-          <div className="overflow-x-auto w-full">
-            <div style={{ minWidth: "650px", height: "600px" }}>
-              <Calendar
-                localizer={localizer}
-                events={calendarEvents}
-                startAccessor="start"
-                endAccessor="end"
-                style={{ height: "100%" }}
-                messages={{
-                  next: "Selanjutnya",
-                  previous: "Sebelumnya",
-                  today: "Hari Ini",
-                  month: "Bulan",
-                  week: "Minggu",
-                  day: "Hari",
-                  agenda: "Agenda",
-                  date: "Tanggal",
-                  time: "Waktu",
-                  event: "Acara",
-                  noEventsInRange: "Tidak ada jadwal di rentang waktu ini.",
-                }}
-                onSelectEvent={(event) => openDetail(event.resource)}
-              />
-            </div>
+        <div className="bg-white p-3 sm:p-6 rounded-2xl border border-moss-900/10 shadow-sm w-full">
+          <div className="w-full" style={{ height: "75vh", minHeight: "650px" }}>
+            <Calendar
+              localizer={localizer}
+              events={calendarEvents}
+              startAccessor="start"
+              endAccessor="end"
+              style={{ height: "100%" }}
+              messages={{
+                next: "Selanjutnya",
+                previous: "Sebelumnya",
+                today: "Hari Ini",
+                month: "Bulan",
+                week: "Minggu",
+                day: "Hari",
+                agenda: "Agenda",
+                date: "Tanggal",
+                time: "Waktu",
+                event: "Acara",
+                noEventsInRange: "Tidak ada jadwal di rentang waktu ini.",
+              }}
+              onSelectEvent={(event) => openDetail(event.resource)}
+            />
           </div>
         </div>
       ) : (
