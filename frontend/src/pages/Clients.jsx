@@ -54,13 +54,6 @@ export default function Clients() {
         q: search || undefined,
       };
 
-      if (dateRange?.from) {
-        params.start_date = format(dateRange.from, "yyyy-MM-dd");
-      }
-      if (dateRange?.to) {
-        params.end_date = format(dateRange.to, "yyyy-MM-dd");
-      }
-
       const [{ data: b }, { data: p }] = await Promise.all([
         api.get("/bookings", { params }),
         api.get("/photographers"),
@@ -72,13 +65,13 @@ export default function Clients() {
     } finally {
       setLoading(false);
     }
-  }, [statusFilter, paymentFilter, dateRange, search]);
+  }, [statusFilter, paymentFilter, search]);
 
   useEffect(() => {
     loadData();
   }, [loadData]);
 
-  // Tombol Shortcut Cepat Kalender (Gaya Meta Ads / Dashboard)
+  // Tombol Shortcut Cepat Kalender
   const handlePreset = (preset) => {
     const today = new Date();
     if (preset === "all") {
@@ -177,12 +170,31 @@ export default function Clients() {
   const safeBookings = Array.isArray(bookings) ? bookings : [];
   const safePhotographers = Array.isArray(photographers) ? photographers : [];
 
-  const sortedBookingsForAgenda = [...safeBookings].sort((a, b) => new Date(a.shoot_date) - new Date(b.shoot_date));
+  // Filter tanggal secara lokal
+  const filteredBookings = safeBookings.filter((b) => {
+    if (dateRange?.from && dateRange?.to && b.shoot_date) {
+      const shootDate = new Date(b.shoot_date);
+      shootDate.setHours(0, 0, 0, 0);
+
+      const fromDate = new Date(dateRange.from);
+      fromDate.setHours(0, 0, 0, 0);
+
+      const toDate = new Date(dateRange.to);
+      toDate.setHours(23, 59, 59, 999);
+
+      if (shootDate < fromDate || shootDate > toDate) {
+        return false;
+      }
+    }
+    return true;
+  });
+
+  const sortedBookingsForAgenda = [...filteredBookings].sort((a, b) => new Date(a.shoot_date) - new Date(b.shoot_date));
 
   return (
     <AdminLayout title="Database Client" subtitle="Kelola jadwal, fotografer, dan kirim invoice">
       {/* BAGIAN FILTER ATAS */}
-      <div className="flex flex-col gap-3 mb-5" data-testid="client-filters">
+      <div className="flex flex-col gap-3 mb-6" data-testid="client-filters">
         <div className="flex items-center justify-between gap-2 w-full">
           <div className="relative flex-1">
             <Search className="absolute h-4 w-4 left-3 top-3 text-muted-foreground" />
@@ -190,33 +202,32 @@ export default function Clients() {
               placeholder="Cari nama, email, univ..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-9 bg-white rounded-xl border-moss-900/10 text-xs h-10 shadow-sm"
+              className="pl-9 bg-white"
             />
           </div>
           
-          <div className="flex bg-white rounded-xl border border-moss-900/10 p-1 shrink-0 shadow-sm">
+          <div className="flex bg-white rounded-lg border border-moss-900/10 p-0.5 shrink-0">
             <Button
               variant={viewMode === "list" ? "default" : "ghost"}
               size="sm"
               onClick={() => setViewMode("list")}
-              className={`h-8 text-xs gap-1 px-3 rounded-lg ${viewMode === "list" ? "bg-moss-900 text-white hover:bg-moss-800" : "text-muted-foreground"}`}
+              className={`h-9 text-xs gap-1 px-3 ${viewMode === "list" ? "bg-moss-800 text-white" : ""}`}
             >
-              <Table className="h-3.5 w-3.5" /> List
+              <Table className="h-3.5 w-3.5" /> Tabel
             </Button>
             <Button
               variant={viewMode === "agenda" ? "default" : "ghost"}
               size="sm"
               onClick={() => setViewMode("agenda")}
-              className={`h-8 text-xs gap-1 px-3 rounded-lg ${viewMode === "agenda" ? "bg-moss-900 text-white hover:bg-moss-800" : "text-muted-foreground"}`}
+              className={`h-9 text-xs gap-1 px-3 ${viewMode === "agenda" ? "bg-moss-800 text-white" : ""}`}
             >
               <CalendarIcon className="h-3.5 w-3.5" /> Agenda
             </Button>
           </div>
         </div>
 
-        {/* Filter Rentang Tanggal Ala Dashboard & Status/Bayar */}
+        {/* Filter Rentang Tanggal Ala Dashboard & Dropdown */}
         <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
-          {/* Date Range Picker Popover */}
           <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
             <PopoverTrigger asChild>
               <Button
@@ -261,7 +272,7 @@ export default function Clients() {
                     locale={id}
                   />
                   <div className="flex items-center justify-end gap-2 p-2 border-t border-neutral-100">
-                    <Button size="sm" className="bg-moss-900 text-white hover:bg-moss-800 text-xs h-8 px-4 rounded-lg" onClick={() => setIsCalendarOpen(false)}>Terapkan</Button>
+                    <Button size="sm" className="bg-moss-800 text-white hover:bg-moss-900 text-xs h-8 px-4 rounded-lg" onClick={() => setIsCalendarOpen(false)}>Terapkan</Button>
                   </div>
                 </div>
               </div>
@@ -269,26 +280,26 @@ export default function Clients() {
           </Popover>
 
           <Select onValueChange={setStatusFilter} value={statusFilter}>
-            <SelectTrigger className="w-[120px] bg-white shrink-0 rounded-xl border-moss-900/10 text-xs h-9 shadow-sm">
+            <SelectTrigger className="w-[130px] bg-white shrink-0">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
-            <SelectContent className="bg-white z-50">
-              <SelectItem value="all" className="text-xs">Semua Status</SelectItem>
-              <SelectItem value="pending" className="text-xs">Pending</SelectItem>
-              <SelectItem value="confirmed" className="text-xs">Confirmed</SelectItem>
-              <SelectItem value="completed" className="text-xs">Completed</SelectItem>
-              <SelectItem value="cancelled" className="text-xs">Cancelled</SelectItem>
+            <SelectContent>
+              <SelectItem value="all">Semua Status</SelectItem>
+              <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem value="confirmed">Confirmed</SelectItem>
+              <SelectItem value="completed">Completed</SelectItem>
+              <SelectItem value="cancelled">Cancelled</SelectItem>
             </SelectContent>
           </Select>
 
           <Select onValueChange={setPaymentFilter} value={paymentFilter}>
-            <SelectTrigger className="w-[120px] bg-white shrink-0 rounded-xl border-moss-900/10 text-xs h-9 shadow-sm">
+            <SelectTrigger className="w-[130px] bg-white shrink-0">
               <SelectValue placeholder="Pembayaran" />
             </SelectTrigger>
-            <SelectContent className="bg-white z-50">
-              <SelectItem value="all" className="text-xs">Semua Bayar</SelectItem>
-              <SelectItem value="dp" className="text-xs">DP Saja</SelectItem>
-              <SelectItem value="full" className="text-xs">Full Payment</SelectItem>
+            <SelectContent>
+              <SelectItem value="all">Semua Bayar</SelectItem>
+              <SelectItem value="dp">DP Saja</SelectItem>
+              <SelectItem value="full">Full Payment</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -298,14 +309,10 @@ export default function Clients() {
       {viewMode === "agenda" ? (
         <div className="space-y-4 pb-20">
           {loading && (
-            <div className="flex justify-center items-center p-20 bg-white rounded-2xl border border-moss-900/10">
-              <div className="h-8 w-8 rounded-full border-2 border-moss-800 border-t-transparent animate-spin" />
-            </div>
+            <div className="p-6 text-center text-muted-foreground bg-white rounded-lg border">Memuat data...</div>
           )}
           {!loading && sortedBookingsForAgenda.length === 0 && (
-            <div className="p-12 text-center text-muted-foreground bg-white rounded-2xl border border-moss-900/10 text-xs">
-              Tidak ada jadwal agenda di rentang tanggal ini.
-            </div>
+            <div className="p-6 text-center text-muted-foreground bg-white rounded-lg border">Tidak ada jadwal agenda di rentang tanggal ini.</div>
           )}
 
           {sortedBookingsForAgenda.map((b) => {
@@ -316,15 +323,15 @@ export default function Clients() {
               <div 
                 key={b.booking_id}
                 onClick={() => openDetail(b)}
-                className="bg-white rounded-2xl border border-moss-900/10 p-4 shadow-sm hover:border-moss-800/40 transition-all cursor-pointer space-y-2.5 relative overflow-hidden"
+                className="bg-white rounded-xl border border-moss-900/10 p-4 shadow-sm hover:border-moss-800/40 transition-all cursor-pointer space-y-2.5 relative overflow-hidden"
               >
-                <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-moss-900" />
+                <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-moss-800" />
                 <div className="flex items-center justify-between pl-2">
                   <div className="flex items-center gap-1.5 text-xs font-bold text-moss-900">
                     <CalendarIcon className="h-3.5 w-3.5 text-moss-700" />
                     {fmtDate(b.shoot_date)}
                   </div>
-                  <span className="text-[10px] uppercase font-bold px-2.5 py-0.5 rounded-full bg-moss-50 text-moss-800 border border-moss-900/15">
+                  <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-moss-50 text-moss-800 border border-moss-900/15">
                     {b.status}
                   </span>
                 </div>
@@ -355,78 +362,70 @@ export default function Clients() {
           })}
         </div>
       ) : (
-        /* RENDER VIEW: LIST KARTU STANDARD */
+        /* RENDER VIEW: LIST KARTU STANDARD DENGAN TOMBOL LAMA */
         <div className="space-y-3 pb-20" data-testid="clients-cards">
           {loading && (
-            <div className="flex justify-center items-center p-20 bg-white rounded-2xl border border-moss-900/10">
-              <div className="h-8 w-8 rounded-full border-2 border-moss-800 border-t-transparent animate-spin" />
-            </div>
+            <div className="p-6 text-center text-muted-foreground bg-white rounded-lg border">Memuat data...</div>
           )}
-          {!loading && safeBookings.length === 0 && (
-            <div className="p-12 text-center text-muted-foreground bg-white rounded-2xl border border-moss-900/10 text-xs">
-              Tidak ada client atau jadwal ditemukan.
-            </div>
+          {!loading && filteredBookings.length === 0 && (
+            <div className="p-6 text-center text-muted-foreground bg-white rounded-lg border">Tidak ada client atau jadwal ditemukan.</div>
           )}
           
-          {safeBookings.map((b) => {
+          {filteredBookings.map((b) => {
             const startTimeFormatted = (b.start_time || "").substring(0, 5);
             const endTimeFormatted = (b.end_time || "").substring(0, 5);
 
             return (
               <div 
                 key={b.booking_id} 
-                className="bg-white rounded-2xl border border-moss-900/10 p-4 shadow-sm hover:border-moss-800/30 transition-all space-y-3"
+                className="bg-white rounded-xl border border-moss-900/10 p-4 shadow-sm hover:border-moss-800/40 transition-all space-y-3"
               >
                 <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0 flex-1">
+                  <div>
                     <p 
                       onClick={() => openDetail(b)}
-                      className="font-bold text-moss-900 text-sm sm:text-base cursor-pointer hover:underline truncate"
+                      className="font-bold text-moss-900 text-base cursor-pointer hover:underline"
                     >
                       {b.full_name}
                     </p>
-                    <p className="text-[11px] text-muted-foreground">{b.invoice_number} · <span className="text-moss-800 font-medium">{b.whatsapp}</span></p>
-                    <p className="text-[11px] text-muted-foreground font-medium truncate">{b.university} {b.study ? `(${b.study})` : ""}</p>
+                    <p className="text-xs text-muted-foreground">{b.invoice_number} · {b.whatsapp}</p>
+                    <p className="text-xs text-muted-foreground font-medium">{b.university} ({b.study})</p>
                   </div>
-                  <div className="flex flex-col items-end gap-1 shrink-0">
-                    <span className="text-[10px] uppercase font-bold px-2.5 py-0.5 rounded-full bg-moss-50 text-moss-800 border border-moss-900/15">
+                  <div className="flex flex-col items-end gap-1">
+                    <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-moss-50 text-moss-800 border border-moss-900/15">
                       {b.status}
                     </span>
-                    <span className="text-[10px] uppercase font-semibold px-2 py-0.5 rounded bg-neutral-100 text-neutral-600">
+                    <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-neutral-100 text-neutral-700">
                       {b.payment_type}
                     </span>
                   </div>
                 </div>
 
-                <div className="bg-moss-50/40 rounded-xl p-3 border border-moss-900/5 text-xs space-y-1">
-                  <p className="font-bold text-moss-900 flex items-center justify-between">
-                    <span>{b.package_name}</span>
-                    <span className="text-emerald-700 font-semibold">{rupiah(b.amount_paid)}</span>
-                  </p>
-                  <p className="text-muted-foreground font-medium flex items-center gap-1.5">
-                    📅 {fmtDate(b.shoot_date)} <span className="text-moss-900 font-bold">({startTimeFormatted} - {endTimeFormatted})</span>
-                  </p>
-                  <p className="text-muted-foreground truncate flex items-center gap-1.5">
-                    📍 {b.location}
-                  </p>
+                <div className="bg-moss-50/40 rounded-lg p-2.5 border border-moss-900/5 text-xs space-y-1">
+                  <p className="font-semibold text-moss-900">{b.package_name}</p>
+                  <p className="text-muted-foreground">📅 {fmtDate(b.shoot_date)} ({startTimeFormatted} - {endTimeFormatted} WIB)</p>
+                  <p className="text-muted-foreground truncate">📍 {b.location}</p>
                 </div>
 
-                <div className="flex items-center justify-between text-xs pt-1 px-1">
-                  <div className="text-muted-foreground">
-                    Fotografer: <span className="font-semibold text-moss-900">{b.photographer_name ? `${b.photographer_name} ${b.photographer_paid ? "✓" : ""}` : "Belum ditugaskan"}</span>
+                <div className="flex items-center justify-between text-xs pt-1 border-t border-gray-100">
+                  <div>
+                    <span className="text-muted-foreground">Fotografer: </span>
+                    <span className="font-medium text-moss-900">
+                      {b.photographer_name ? `${b.photographer_name} ${b.photographer_paid ? "✓" : ""}` : "Belum ada"}
+                    </span>
                   </div>
-                  {b.balance_due > 0 && (
-                    <div className="text-amber-600 font-bold text-xs bg-amber-50 px-2 py-0.5 rounded-lg border border-amber-200">
-                      Kurang: {rupiah(b.balance_due)}
-                    </div>
-                  )}
+                  <div className="text-right">
+                    <p className="font-bold text-moss-900">{rupiah(b.amount_paid)}</p>
+                    {b.balance_due > 0 && <p className="text-[11px] text-amber-600 font-medium">Kurang: {rupiah(b.balance_due)}</p>}
+                  </div>
                 </div>
 
-                <div className="grid grid-cols-4 gap-1.5 pt-2 border-t border-neutral-100">
+                {/* Tombol Aksi Versi Lama */}
+                <div className="flex items-center justify-end gap-1.5 pt-2 border-t border-gray-100">
                   <Button
                     onClick={() => handleSendReminder(b)}
                     size="sm"
-                    className="h-9 bg-emerald-600 hover:bg-emerald-700 text-white text-xs gap-1 col-span-1 rounded-xl shadow-none"
+                    className="h-8 bg-emerald-600 hover:bg-emerald-700 text-white text-xs gap-1 px-3"
                   >
                     <MessageSquare className="h-3.5 w-3.5" /> WA
                   </Button>
@@ -434,24 +433,24 @@ export default function Clients() {
                     onClick={() => window.open(`${process.env.REACT_APP_BACKEND_URL}/api/files/${b.proof_file_id}`, "_blank")}
                     size="sm"
                     variant="outline"
-                    className="h-9 text-xs col-span-1 rounded-xl border-moss-900/20 hover:bg-moss-50"
+                    className="h-8 text-xs px-2.5"
                     title="Lihat Bukti Transfer"
                   >
-                    <Eye className="h-3.5 w-3.5" /> Bukti
+                    <Eye className="h-3.5 w-3.5" />
                   </Button>
                   <Button
                     onClick={() => sendInvoice(b.booking_id)}
                     size="sm"
                     variant="outline"
-                    className="h-9 text-xs col-span-1 rounded-xl border-moss-900/20 hover:bg-moss-50"
-                    title="Kirim Invoice"
+                    className="h-8 text-xs px-2.5"
+                    title="Kirim Invoice via Email"
                   >
-                    <Mail className="h-3.5 w-3.5" /> Inv
+                    <Mail className="h-3.5 w-3.5" />
                   </Button>
                   <Button 
                     onClick={() => openDetail(b)} 
                     size="sm" 
-                    className="h-9 bg-moss-900 hover:bg-moss-800 text-white text-xs col-span-1 rounded-xl shadow-none font-medium"
+                    className="h-8 bg-moss-800 hover:bg-moss-900 text-white text-xs"
                   >
                     Kelola
                   </Button>
@@ -464,110 +463,110 @@ export default function Clients() {
 
       {/* Dialog Detail / Edit Booking */}
       <Dialog open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto rounded-3xl p-6 bg-white border border-moss-900/10 shadow-2xl">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="font-serif text-xl text-moss-900">Detail & Pengaturan Booking</DialogTitle>
+            <DialogTitle>Detail & Pengaturan Booking</DialogTitle>
           </DialogHeader>
           {selected && (
             <div className="space-y-4 py-2">
-              <div className="rounded-2xl bg-moss-50/50 p-4 border border-moss-900/10 text-xs space-y-1.5">
-                <p><span className="font-bold text-moss-900">Client:</span> {selected.full_name} ({selected.whatsapp})</p>
-                <p><span className="font-bold text-moss-900">Kampus:</span> {selected.university} — {selected.study}</p>
-                <p><span className="font-bold text-moss-900">Paket:</span> {selected.package_name} ({rupiah(selected.package_price)})</p>
-                <p><span className="font-bold text-moss-900">Jadwal Asli:</span> {fmtDate(selected.shoot_date)} ({(selected.start_time || "").substring(0, 5)} - {(selected.end_time || "").substring(0, 5)})</p>
-                <p><span className="font-bold text-moss-900">Lokasi:</span> {selected.location}</p>
+              <div className="rounded-md bg-moss-50/50 p-3 border border-moss-900/10 text-xs space-y-1">
+                <p><span className="font-bold">Client:</span> {selected.full_name} ({selected.whatsapp})</p>
+                <p><span className="font-bold">Kampus:</span> {selected.university} — {selected.study}</p>
+                <p><span className="font-bold">Paket:</span> {selected.package_name} ({rupiah(selected.package_price)})</p>
+                <p><span className="font-bold">Jadwal Asli:</span> {fmtDate(selected.shoot_date)} ({(selected.start_time || "").substring(0, 5)} - {(selected.end_time || "").substring(0, 5)})</p>
+                <p><span className="font-bold">Lokasi:</span> {selected.location}</p>
               </div>
 
-              {/* INPUT EDIT JADWAL / RESCHEDULE (Sudah Dirapikan Kolomnya) */}
-              <div className="space-y-3 p-4 bg-moss-50/30 rounded-2xl border border-moss-900/10">
+              {/* INPUT EDIT JADWAL / RESCHEDULE (Sudah Rapikan Kolom Jam) */}
+              <div className="space-y-3 p-3.5 bg-moss-50/40 rounded-xl border border-moss-900/10">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-moss-900 uppercase tracking-wider">Ubah Jadwal Sesi Foto</label>
-                  <span className="text-[10px] text-muted-foreground bg-white px-2 py-0.5 rounded border border-moss-900/10">Opsional</span>
+                  <label className="text-xs font-bold text-moss-900 uppercase tracking-wider">Ubah Jadwal Sesi Foto (Reschedule)</label>
+                  <span className="text-[10px] text-muted-foreground bg-white px-2 py-0.5 rounded border">Opsional</span>
                 </div>
                 
-                <div className="space-y-1">
-                  <label className="text-[11px] font-medium text-muted-foreground">Tanggal Foto</label>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground">Tanggal Foto</label>
                   <Input 
                     type="date" 
                     value={editShootDate} 
                     onChange={(e) => setEditShootDate(e.target.value)} 
-                    className="bg-white text-xs h-10 w-full rounded-xl border border-moss-900/20 shadow-sm" 
+                    className="bg-white text-sm py-2 px-3 rounded-lg border border-moss-900/20" 
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-2">
-                  <div className="space-y-1">
-                    <label className="text-[11px] font-medium text-muted-foreground">Jam Mulai</label>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-muted-foreground">Jam Mulai (24 Jam)</label>
                     <Input 
                       type="time" 
                       step="60"
                       value={editStartTime} 
                       onChange={(e) => setEditStartTime(e.target.value)} 
-                      className="bg-white text-xs h-10 w-full rounded-xl border border-moss-900/20 shadow-sm" 
+                      className="bg-white text-sm py-2 px-3 rounded-lg border border-moss-900/20" 
                     />
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-[11px] font-medium text-muted-foreground">Jam Selesai</label>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-muted-foreground">Jam Selesai (24 Jam)</label>
                     <Input 
                       type="time" 
                       step="60"
                       value={editEndTime} 
                       onChange={(e) => setEditEndTime(e.target.value)} 
-                      className="bg-white text-xs h-10 w-full rounded-xl border border-moss-900/20 shadow-sm" 
+                      className="bg-white text-sm py-2 px-3 rounded-lg border border-moss-900/20" 
                     />
                   </div>
                 </div>
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-moss-900">Status Booking</label>
+                <label className="text-xs font-bold">Status Booking</label>
                 <Select onValueChange={setEditStatus} value={editStatus}>
-                  <SelectTrigger className="bg-white rounded-xl border-moss-900/20 h-10 text-xs"><SelectValue /></SelectTrigger>
-                  <SelectContent className="bg-white z-50">
-                    <SelectItem value="pending" className="text-xs">Pending</SelectItem>
-                    <SelectItem value="confirmed" className="text-xs">Confirmed</SelectItem>
-                    <SelectItem value="completed" className="text-xs">Completed</SelectItem>
-                    <SelectItem value="cancelled" className="text-xs">Cancelled</SelectItem>
+                  <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="confirmed">Confirmed</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="cancelled">Cancelled</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-moss-900">Status Pembayaran</label>
+                <label className="text-xs font-bold">Status Pembayaran</label>
                 <Select onValueChange={setEditPaymentType} value={editPaymentType}>
-                  <SelectTrigger className="bg-white rounded-xl border-moss-900/20 h-10 text-xs"><SelectValue /></SelectTrigger>
-                  <SelectContent className="bg-white z-50">
-                    <SelectItem value="dp" className="text-xs">DP (Down Payment)</SelectItem>
-                    <SelectItem value="full" className="text-xs">Full (Lunas)</SelectItem>
+                  <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="dp">DP (Down Payment)</SelectItem>
+                    <SelectItem value="full">Full (Lunas)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-moss-900">Extra Charge / Biaya Lain (Rp)</label>
+                  <label className="text-xs font-bold">Extra Charge / Biaya Lain (Rp)</label>
                   <Input 
                     type="number" 
                     value={editExtraCharge} 
                     onChange={(e) => setEditExtraCharge(e.target.value)} 
                     placeholder="Misal: 200000" 
-                    className="bg-white rounded-xl border-moss-900/20 h-10 text-xs" 
+                    className="bg-white" 
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-moss-900">Keterangan Extra</label>
+                  <label className="text-xs font-bold">Keterangan Extra</label>
                   <Input 
                     type="text" 
                     value={editExtraNote} 
                     onChange={(e) => setEditExtraNote(e.target.value)} 
-                    placeholder="Misal: Extra Time" 
-                    className="bg-white rounded-xl border-moss-900/20 h-10 text-xs" 
+                    placeholder="Misal: Extra Time 30 Menit" 
+                    className="bg-white" 
                   />
                 </div>
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-moss-900">Tugaskan Fotografer</label>
+                <label className="text-xs font-bold">Tugaskan Fotografer</label>
                 <Select 
                   onValueChange={(val) => {
                     setEditPho(val);
@@ -580,12 +579,12 @@ export default function Clients() {
                   }} 
                   value={editPho}
                 >
-                  <SelectTrigger className="bg-white rounded-xl border-moss-900/20 h-10 text-xs"><SelectValue placeholder="Pilih fotografer" /></SelectTrigger>
-                  <SelectContent className="bg-white z-50">
-                    <SelectItem value="none" className="text-xs">— Belum Ditugaskan —</SelectItem>
+                  <SelectTrigger className="bg-white"><SelectValue placeholder="Pilih fotografer" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">— Belum Ditugaskan —</SelectItem>
                     {safePhotographers.map((p) => (
-                      <SelectItem key={p.photographer_id} value={p.photographer_id} className="text-xs">
-                        {p.name} (Fee: {rupiah(p.fee_per_session)})
+                      <SelectItem key={p.photographer_id} value={p.photographer_id}>
+                        {p.name} (Default Fee: {rupiah(p.fee_per_session)})
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -593,31 +592,31 @@ export default function Clients() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-moss-900">Fee Fotografer Sesi Ini (Rp)</label>
+                <label className="text-xs font-bold">Fee Fotografer Sesi Ini (Rp)</label>
                 <Input 
                   type="number" 
                   value={editPhoFee} 
                   onChange={(e) => setEditPhoFee(e.target.value)} 
-                  placeholder="Nominal fee sesi ini" 
-                  className="bg-white rounded-xl border-moss-900/20 h-10 text-xs" 
+                  placeholder="Masukkan nominal fee fotografer sesi ini" 
+                  className="bg-white" 
                 />
               </div>
 
-              <div className="flex items-center space-x-2 pt-1 bg-moss-50/40 p-3 rounded-xl border border-moss-900/10">
+              <div className="flex items-center space-x-2 pt-1">
                 <input
                   type="checkbox"
                   id="phoPaid"
                   checked={editPhoPaid}
                   onChange={(e) => setEditPhoPaid(e.target.checked)}
-                  className="h-4 w-4 rounded border-gray-300 text-moss-900 focus:ring-moss-900 cursor-pointer"
+                  className="h-4 w-4 rounded border-gray-300 text-moss-800 focus:ring-moss-800 cursor-pointer"
                 />
-                <label htmlFor="phoPaid" className="text-xs font-bold text-moss-900 cursor-pointer">
+                <label htmlFor="phoPaid" className="text-xs font-bold cursor-pointer">
                   Fee Fotografer Sudah Dibayar (Lunas)
                 </label>
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-moss-900">Jumlah Total Sudah Dibayar (Rp)</label>
+                <label className="text-xs font-bold">Jumlah Total Sudah Dibayar (Rp)</label>
                 <Input 
                   type="number" 
                   value={editPaid} 
@@ -630,7 +629,7 @@ export default function Clients() {
                       setEditPaymentType("full");
                     }
                   }} 
-                  className="bg-white rounded-xl border-moss-900/20 h-10 text-xs" 
+                  className="bg-white" 
                 />
               </div>
 
@@ -650,9 +649,9 @@ export default function Clients() {
               </div>
             </div>
           )}
-          <DialogFooter className="gap-2 sm:gap-0 pt-2">
-            <Button variant="outline" className="rounded-xl h-10 text-xs" onClick={() => setSelected(null)}>Batal</Button>
-            <Button className="bg-moss-900 hover:bg-moss-800 text-white rounded-xl h-10 text-xs" onClick={saveDetail}>Simpan Perubahan</Button>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSelected(null)}>Batal</Button>
+            <Button className="bg-moss-800 hover:bg-moss-900 text-white" onClick={saveDetail}>Simpan Perubahan</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
