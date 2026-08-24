@@ -1,12 +1,17 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
-import { Search, Mail, Eye, Trash2, MessageSquare, Table, Calendar as CalendarIcon, MapPin, Clock, User } from "lucide-react";
+import { Search, Mail, Eye, Trash2, MessageSquare, Table, Calendar as CalendarIcon, MapPin, Clock, User, ExternalLink } from "lucide-react";
 import { AdminLayout } from "../components/AdminLayout";
 import { api, rupiah, fmtDate } from "../lib/api";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "../components/ui/popover";
+import { Calendar } from "../components/ui/calendar";
 import { toast } from "sonner";
+import { format, subDays, startOfMonth, endOfMonth } from "date-fns";
+import { id } from "date-fns/locale";
+import { cn } from "../lib/utils";
 
 export default function Clients() {
   const [bookings, setBookings] = useState([]);
@@ -15,7 +20,13 @@ export default function Clients() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [paymentFilter, setPaymentFilter] = useState("all");
-  const [monthFilter, setMonthFilter] = useState("all");
+  
+  // State untuk rentang tanggal ala Dashboard (Date Range Picker)
+  const [dateRange, setDateRange] = useState({
+    from: startOfMonth(new Date()),
+    to: endOfMonth(new Date()),
+  });
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   
   // State untuk Switch View ("list" atau "agenda")
   const [viewMode, setViewMode] = useState("list");
@@ -35,34 +46,23 @@ export default function Clients() {
   const [editStartTime, setEditStartTime] = useState("");
   const [editEndTime, setEditEndTime] = useState("");
 
-  const monthOptions = useMemo(() => {
-    const monthsName = [
-      "Januari", "Februari", "Maret", "April", "Mei", "Juni", 
-      "Juli", "Agustus", "September", "Oktober", "November", "Desember"
-    ];
-    let options = [];
-    for (let year = 2030; year >= 2025; year--) {
-      for (let month = 12; month >= 1; month--) {
-        const mStr = String(month).padStart(2, '0');
-        const value = `${year}-${mStr}`;
-        const label = `${monthsName[month - 1]} ${year}`;
-        options.push({ value, label });
-      }
-    }
-    return options;
-  }, []);
-
   const loadData = useCallback(async () => {
     try {
+      const params = {
+        status: statusFilter,
+        payment_type: paymentFilter,
+        q: search || undefined,
+      };
+
+      if (dateRange?.from) {
+        params.start_date = format(dateRange.from, "yyyy-MM-dd");
+      }
+      if (dateRange?.to) {
+        params.end_date = format(dateRange.to, "yyyy-MM-dd");
+      }
+
       const [{ data: b }, { data: p }] = await Promise.all([
-        api.get("/bookings", { 
-          params: { 
-            status: statusFilter, 
-            payment_type: paymentFilter, 
-            month: monthFilter, 
-            q: search || undefined 
-          } 
-        }),
+        api.get("/bookings", { params }),
         api.get("/photographers"),
       ]);
       setBookings(Array.isArray(b) ? b : (b?.data || b?.bookings || []));
@@ -72,11 +72,26 @@ export default function Clients() {
     } finally {
       setLoading(false);
     }
-  }, [statusFilter, paymentFilter, monthFilter, search]);
+  }, [statusFilter, paymentFilter, dateRange, search]);
 
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  // Tombol Shortcut Cepat Kalender (Gaya Meta Ads / Dashboard)
+  const handlePreset = (preset) => {
+    const today = new Date();
+    if (preset === "all") {
+      setDateRange({ from: undefined, to: undefined });
+    } else if (preset === "today") {
+      setDateRange({ from: today, to: today });
+    } else if (preset === "7days") {
+      setDateRange({ from: subDays(today, 6), to: today });
+    } else if (preset === "thisMonth") {
+      setDateRange({ from: startOfMonth(today), to: endOfMonth(today) });
+    }
+    setIsCalendarOpen(false);
+  };
 
   const openDetail = (b) => {
     setSelected(b);
@@ -162,7 +177,6 @@ export default function Clients() {
   const safeBookings = Array.isArray(bookings) ? bookings : [];
   const safePhotographers = Array.isArray(photographers) ? photographers : [];
 
-  // Urutkan bookings berdasarkan tanggal foto terdekat untuk mode Agenda
   const sortedBookingsForAgenda = [...safeBookings].sort((a, b) => new Date(a.shoot_date) - new Date(b.shoot_date));
 
   return (
@@ -200,22 +214,62 @@ export default function Clients() {
           </div>
         </div>
 
-        {/* Filter Dropdown dengan Horizontal Scroll */}
+        {/* Filter Rentang Tanggal Ala Dashboard & Status/Bayar */}
         <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
-          <Select onValueChange={setMonthFilter} value={monthFilter}>
-            <SelectTrigger className="w-[140px] bg-white shrink-0 rounded-xl border-moss-900/10 text-xs h-9 shadow-sm">
-              <SelectValue placeholder="Bulan / Tahun" />
-            </SelectTrigger>
-            <SelectContent className="max-h-60 bg-white z-50">
-              <SelectItem value="all" className="text-xs">Semua Waktu</SelectItem>
-              {monthOptions.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value} className="text-xs">{opt.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {/* Date Range Picker Popover */}
+          <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={cn(
+                  "w-[220px] sm:w-[260px] justify-start text-left font-normal bg-white rounded-xl border-moss-900/10 text-xs h-9 shadow-sm shrink-0",
+                  !dateRange && "text-muted-foreground"
+                )}
+              >
+                <CalendarIcon className="mr-2 h-3.5 w-3.5 text-moss-700" />
+                {dateRange?.from ? (
+                  dateRange.to ? (
+                    <>
+                      {format(dateRange.from, "d MMM yyyy", { locale: id })} -{" "}
+                      {format(dateRange.to, "d MMM yyyy", { locale: id })}
+                    </>
+                  ) : (
+                    format(dateRange.from, "d MMM yyyy", { locale: id })
+                  )
+                ) : (
+                  <span>Semua Waktu</span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0 bg-white z-50 shadow-xl rounded-2xl border border-moss-900/10" align="start">
+              <div className="flex flex-col sm:flex-row">
+                <div className="p-3 border-b sm:border-b-0 sm:border-r border-neutral-100 flex flex-col gap-1.5 min-w-[130px]">
+                  <p className="text-[11px] font-bold text-muted-foreground uppercase px-2 mb-1">Periode Cepat</p>
+                  <Button variant="ghost" size="sm" className="justify-start text-xs h-8 px-2 font-normal hover:bg-moss-50" onClick={() => handlePreset("today")}>Hari Ini</Button>
+                  <Button variant="ghost" size="sm" className="justify-start text-xs h-8 px-2 font-normal hover:bg-moss-50" onClick={() => handlePreset("7days")}>7 Hari Terakhir</Button>
+                  <Button variant="ghost" size="sm" className="justify-start text-xs h-8 px-2 font-normal hover:bg-moss-50" onClick={() => handlePreset("thisMonth")}>Bulan Ini</Button>
+                  <Button variant="ghost" size="sm" className="justify-start text-xs h-8 px-2 font-normal hover:bg-moss-50 text-rose-600" onClick={() => handlePreset("all")}>Semua Waktu</Button>
+                </div>
+                <div className="p-2">
+                  <Calendar
+                    initialFocus
+                    mode="range"
+                    defaultMonth={dateRange?.from}
+                    selected={dateRange}
+                    onSelect={setDateRange}
+                    numberOfMonths={1}
+                    locale={id}
+                  />
+                  <div className="flex items-center justify-end gap-2 p-2 border-t border-neutral-100">
+                    <Button size="sm" className="bg-moss-900 text-white hover:bg-moss-800 text-xs h-8 px-4 rounded-lg" onClick={() => setIsCalendarOpen(false)}>Terapkan</Button>
+                  </div>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
 
           <Select onValueChange={setStatusFilter} value={statusFilter}>
-            <SelectTrigger className="w-[130px] bg-white shrink-0 rounded-xl border-moss-900/10 text-xs h-9 shadow-sm">
+            <SelectTrigger className="w-[120px] bg-white shrink-0 rounded-xl border-moss-900/10 text-xs h-9 shadow-sm">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent className="bg-white z-50">
@@ -228,7 +282,7 @@ export default function Clients() {
           </Select>
 
           <Select onValueChange={setPaymentFilter} value={paymentFilter}>
-            <SelectTrigger className="w-[130px] bg-white shrink-0 rounded-xl border-moss-900/10 text-xs h-9 shadow-sm">
+            <SelectTrigger className="w-[120px] bg-white shrink-0 rounded-xl border-moss-900/10 text-xs h-9 shadow-sm">
               <SelectValue placeholder="Pembayaran" />
             </SelectTrigger>
             <SelectContent className="bg-white z-50">
@@ -240,7 +294,7 @@ export default function Clients() {
         </div>
       </div>
 
-      {/* RENDER VIEW: AGENDA HARIAN (Ganti Kalendar Rusak dengan Timeline Bersih) */}
+      {/* RENDER VIEW: AGENDA HARIAN */}
       {viewMode === "agenda" ? (
         <div className="space-y-4 pb-20">
           {loading && (
@@ -250,7 +304,7 @@ export default function Clients() {
           )}
           {!loading && sortedBookingsForAgenda.length === 0 && (
             <div className="p-12 text-center text-muted-foreground bg-white rounded-2xl border border-moss-900/10 text-xs">
-              Tidak ada jadwal agenda di periode ini.
+              Tidak ada jadwal agenda di rentang tanggal ini.
             </div>
           )}
 
@@ -264,9 +318,7 @@ export default function Clients() {
                 onClick={() => openDetail(b)}
                 className="bg-white rounded-2xl border border-moss-900/10 p-4 shadow-sm hover:border-moss-800/40 transition-all cursor-pointer space-y-2.5 relative overflow-hidden"
               >
-                {/* Aksen Garis Samping Kiri */}
-                <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-moss-800" />
-
+                <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-moss-900" />
                 <div className="flex items-center justify-between pl-2">
                   <div className="flex items-center gap-1.5 text-xs font-bold text-moss-900">
                     <CalendarIcon className="h-3.5 w-3.5 text-moss-700" />
@@ -426,42 +478,42 @@ export default function Clients() {
                 <p><span className="font-bold text-moss-900">Lokasi:</span> {selected.location}</p>
               </div>
 
-              {/* INPUT EDIT JADWAL / RESCHEDULE FORMAT 24 JAM */}
+              {/* INPUT EDIT JADWAL / RESCHEDULE (Sudah Dirapikan Kolomnya) */}
               <div className="space-y-3 p-4 bg-moss-50/30 rounded-2xl border border-moss-900/10">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-moss-900 uppercase tracking-wider">Ubah Jadwal Sesi Foto (Reschedule)</label>
+                  <label className="text-xs font-bold text-moss-900 uppercase tracking-wider">Ubah Jadwal Sesi Foto</label>
                   <span className="text-[10px] text-muted-foreground bg-white px-2 py-0.5 rounded border border-moss-900/10">Opsional</span>
                 </div>
                 
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">Tanggal Foto</label>
+                <div className="space-y-1">
+                  <label className="text-[11px] font-medium text-muted-foreground">Tanggal Foto</label>
                   <Input 
                     type="date" 
                     value={editShootDate} 
                     onChange={(e) => setEditShootDate(e.target.value)} 
-                    className="bg-white text-xs h-10 rounded-xl border border-moss-900/20" 
+                    className="bg-white text-xs h-10 w-full rounded-xl border border-moss-900/20 shadow-sm" 
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-muted-foreground">Jam Mulai (24 Jam)</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-medium text-muted-foreground">Jam Mulai</label>
                     <Input 
                       type="time" 
                       step="60"
                       value={editStartTime} 
                       onChange={(e) => setEditStartTime(e.target.value)} 
-                      className="bg-white text-xs h-10 rounded-xl border border-moss-900/20" 
+                      className="bg-white text-xs h-10 w-full rounded-xl border border-moss-900/20 shadow-sm" 
                     />
                   </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-muted-foreground">Jam Selesai (24 Jam)</label>
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-medium text-muted-foreground">Jam Selesai</label>
                     <Input 
                       type="time" 
                       step="60"
                       value={editEndTime} 
                       onChange={(e) => setEditEndTime(e.target.value)} 
-                      className="bg-white text-xs h-10 rounded-xl border border-moss-900/20" 
+                      className="bg-white text-xs h-10 w-full rounded-xl border border-moss-900/20 shadow-sm" 
                     />
                   </div>
                 </div>
@@ -585,9 +637,9 @@ export default function Clients() {
               <div className="flex items-center justify-between pt-2">
                 <button
                   onClick={() => window.open(`${process.env.REACT_APP_BACKEND_URL}/api/files/${selected.proof_file_id}`, "_blank")}
-                  className="text-xs text-moss-800 underline font-semibold"
+                  className="text-xs text-moss-800 underline font-semibold flex items-center gap-1"
                 >
-                  Lihat Bukti Transfer Asli
+                  <ExternalLink className="h-3.5 w-3.5" /> Lihat Bukti Transfer Asli
                 </button>
                 <button
                   onClick={() => removeBooking(selected.booking_id)}
