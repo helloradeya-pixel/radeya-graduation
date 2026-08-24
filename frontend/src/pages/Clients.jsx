@@ -159,12 +159,17 @@ export default function Clients() {
     }
     const invoiceUrl = `https://booking.radeyaphoto.my.id/invoice/${booking.booking_id}`;
     const balanceDueText = booking.balance_due > 0 ? `Rp ${(booking.balance_due || 0).toLocaleString("id-ID")}` : "LUNAS";
+    
     const message = `Halo Kak *${booking.full_name}*, terima kasih telah mempercayakan momen kelulusanmu di Radeyaphoto.\n\n` +
       `Berikut adalah rincian tagihan / sisa pelunasan untuk No. Invoice *${booking.invoice_number}*:\n` +
       `- Paket: ${booking.package_name}\n` +
       `- Sisa Tagihan: *${balanceDueText}*\n\n` +
+      `⚠️ *Batas waktu pelunasan paling lambat H-1* sebelum jadwal sesi foto.\n\n` +
+      `Bisa ditransfer ke sini ya Kak:\n` +
+      `💳 *BCA 2952093623 a/n Yulviana Kusnia*\n\n` +
       `Silakan cek detail lengkap dan upload bukti pelunasan melalui tautan berikut:\n${invoiceUrl}\n\n` +
       `Mohon konfirmasinya ya Kak. Terima kasih!`;
+
     window.open(`https://wa.me/${waNumber}?text=${encodeURIComponent(message)}`, "_blank");
   };
 
