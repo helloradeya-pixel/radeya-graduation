@@ -42,6 +42,7 @@ export default function Clients() {
   // State Switch View ("list" atau "calendar")
   const [viewMode, setViewMode] = useState("list");
 
+  // State untuk Modal Edit / Kelola
   const [selected, setSelected] = useState(null);
   const [editPho, setEditPho] = useState("");
   const [editStatus, setEditStatus] = useState("");
@@ -54,6 +55,9 @@ export default function Clients() {
   const [editShootDate, setEditShootDate] = useState("");
   const [editStartTime, setEditStartTime] = useState("");
   const [editEndTime, setEditEndTime] = useState("");
+
+  // State khusus untuk Modal Lihat Detail Saja (Tanpa Edit)
+  const [viewDetailOnly, setViewDetailOnly] = useState(null);
 
   const loadData = useCallback(async () => {
     try {
@@ -345,7 +349,7 @@ export default function Clients() {
                 event: "Acara",
                 noEventsInRange: "Tidak ada jadwal di rentang waktu ini.",
               }}
-              onSelectEvent={(event) => openDetail(event.resource)}
+              onSelectEvent={(event) => setViewDetailOnly(event.resource)}
             />
           </div>
         </div>
@@ -370,9 +374,10 @@ export default function Clients() {
               >
                 <div className="flex items-start justify-between gap-2">
                   <div>
+                    {/* KLIK NAMA HANYA MELIHAT DETAIL, TIDAK MASUK MODE EDIT */}
                     <p 
-                      onClick={() => openDetail(b)}
-                      className="font-bold text-moss-900 text-base cursor-pointer hover:underline"
+                      onClick={() => setViewDetailOnly(b)}
+                      className="font-bold text-moss-900 text-base cursor-pointer hover:underline text-moss-800"
                     >
                       {b.full_name}
                     </p>
@@ -448,7 +453,47 @@ export default function Clients() {
         </div>
       )}
 
-      {/* Dialog Detail / Edit Booking */}
+      {/* MODAL KHUSUS LIHAT DETAIL SAJA (Hanya Baca) */}
+      <Dialog open={!!viewDetailOnly} onOpenChange={(o) => !o && setViewDetailOnly(null)}>
+        <DialogContent className="max-w-md rounded-3xl p-6 bg-white border border-moss-900/10 shadow-2xl">
+          <DialogHeader>
+            <DialogTitle className="font-serif text-lg text-moss-900">Detail Informasi Booking</DialogTitle>
+          </DialogHeader>
+          {viewDetailOnly && (
+            <div className="space-y-3 py-2 text-xs">
+              <div className="rounded-2xl bg-moss-50/60 p-4 border border-moss-900/10 space-y-2">
+                <p><span className="font-bold text-moss-900">No. Invoice:</span> {viewDetailOnly.invoice_number}</p>
+                <p><span className="font-bold text-moss-900">Nama Client:</span> {viewDetailOnly.full_name}</p>
+                <p><span className="font-bold text-moss-900">WhatsApp:</span> {viewDetailOnly.whatsapp}</p>
+                <p><span className="font-bold text-moss-900">Kampus / Jurusan:</span> {viewDetailOnly.university} — {viewDetailOnly.study}</p>
+                <p><span className="font-bold text-moss-900">Paket Foto:</span> {viewDetailOnly.package_name} ({rupiah(viewDetailOnly.package_price)})</p>
+                <p><span className="font-bold text-moss-900">Jadwal Sesi:</span> {fmtDate(viewDetailOnly.shoot_date)} ({(viewDetailOnly.start_time || "").substring(0, 5)} - {(viewDetailOnly.end_time || "").substring(0, 5)} WIB)</p>
+                <p><span className="font-bold text-moss-900">Lokasi:</span> {viewDetailOnly.location}</p>
+                <p><span className="font-bold text-moss-900">Status Booking:</span> <span className="uppercase font-bold text-moss-800">{viewDetailOnly.status}</span></p>
+                <p><span className="font-bold text-moss-900">Status Pembayaran:</span> <span className="uppercase font-bold">{viewDetailOnly.payment_type}</span> ({rupiah(viewDetailOnly.amount_paid)} dibayar)</p>
+                {viewDetailOnly.balance_due > 0 && (
+                  <p className="text-amber-700 font-bold">Sisa Tagihan: {rupiah(viewDetailOnly.balance_due)}</p>
+                )}
+                <p><span className="font-bold text-moss-900">Fotografer:</span> {viewDetailOnly.photographer_name || "Belum ditugaskan"}</p>
+              </div>
+
+              {viewDetailOnly.proof_file_id && (
+                <button
+                  onClick={() => window.open(`${process.env.REACT_APP_BACKEND_URL}/api/files/${viewDetailOnly.proof_file_id}`, "_blank")}
+                  className="w-full py-2.5 bg-moss-50 hover:bg-moss-100 text-moss-900 rounded-xl font-semibold flex items-center justify-center gap-1.5 border border-moss-900/10"
+                >
+                  <ExternalLink className="h-4 w-4" /> Lihat Bukti Transfer
+                </button>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button className="w-full bg-moss-900 hover:bg-moss-800 text-white rounded-xl h-10 text-xs" onClick={() => setViewDetailOnly(null)}>Tutup</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Detail / Edit Booking (Menu Kelola) */}
       <Dialog open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
