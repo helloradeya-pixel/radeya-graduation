@@ -1,0 +1,15 @@
+{
+  "short_name": "Radeyaphoto",
+  "name": "Radeyaphoto Admin",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#065f46",
+  "icons": [
+    {
+      "src": "/logo-radeya.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ]
+}
