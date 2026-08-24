@@ -1,71 +1,137 @@
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { AdminLayout } from "../components/AdminLayout";
 import { api, rupiah } from "../lib/api";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { toast } from "sonner";
-import { TrendingUp, Wallet, Users, Calendar, DollarSign } from "lucide-react";
+import { TrendingUp, Wallet, Users, Calendar as CalendarIcon, DollarSign } from "lucide-react";
+import { format, subDays, startOfMonth, endOfMonth } from "date-fns";
+import { id } from "date-fns/locale";
+
+// Komponen UI shadcn
+import { Button } from "../components/ui/button";
+import { Calendar } from "../components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "../components/ui/popover";
+import { cn } from "../lib/utils";
 
 export default function Dashboard() {
   const [data, setData] = useState(null);
-  const [monthFilter, setMonthFilter] = useState("all");
   const [loading, setLoading] = useState(true);
 
-  const monthOptions = useMemo(() => {
-    const options = [{ value: "all", label: "Semua Waktu" }];
-    const monthsName = [
-      "Januari", "Februari", "Maret", "April", "Mei", "Juni", 
-      "Juli", "Agustus", "September", "Oktober", "November", "Desember"
-    ];
-    
-    const now = new Date();
-    for (let i = 0; i < 24; i++) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const year = d.getFullYear();
-      const monthIdx = d.getMonth();
-      const monthValue = `${year}-${String(monthIdx + 1).padStart(2, '0')}`;
-      const monthLabel = `${monthsName[monthIdx]} ${year}`;
-      options.push({ value: monthValue, label: monthLabel });
-    }
-    return options;
-  }, []);
+  // State untuk rentang tanggal (default: Bulan Ini)
+  const [dateRange, setDateRange] = useState({
+    from: startOfMonth(new Date()),
+    to: endOfMonth(new Date()),
+  });
+  const [isOpen, setIsOpen] = useState(false);
 
+  // Fungsi load data berdasarkan rentang tanggal (format YYYY-MM-DD ke backend)
   const loadAnalytics = useCallback(async () => {
     setLoading(true);
     try {
-      const { data: res } = await api.get("/analytics/summary", { 
-        params: { month: monthFilter } 
-      });
+      const params = {};
+      if (dateRange?.from) {
+        params.start_date = format(dateRange.from, "yyyy-MM-dd");
+      }
+      if (dateRange?.to) {
+        params.end_date = format(dateRange.to, "yyyy-MM-dd");
+      }
+
+      const { data: res } = await api.get("/analytics/summary", { params });
       setData(res);
     } catch {
       toast.error("Gagal memuat data ringkasan");
     } finally {
       setLoading(false);
     }
-  }, [monthFilter]);
+  }, [dateRange]);
 
   useEffect(() => {
     loadAnalytics();
   }, [loadAnalytics]);
 
+  // Tombol Shortcut Cepat (Gaya Meta Ads)
+  const handlePreset = (preset) => {
+    const today = new Date();
+    if (preset === "all") {
+      setDateRange({ from: undefined, to: undefined });
+    } else if (preset === "today") {
+      setDateRange({ from: today, to: today });
+    } else if (preset === "7days") {
+      setDateRange({ from: subDays(today, 6), to: today });
+    } else if (preset === "thisMonth") {
+      setDateRange({ from: startOfMonth(today), to: endOfMonth(today));
+    }
+    setIsOpen(false);
+  };
+
   return (
     <AdminLayout title="Ringkasan Finansial" subtitle="Analisis pendapatan studio & rincian fee fotografer">
-      {/* Container utama dengan padding bawah agar tidak tertutup menu HP */}
       <div className="space-y-4 pb-20">
         
-        {/* Filter Bulan */}
+        {/* Filter Rentang Tanggal (Date Range Picker ala Meta Ads) */}
         <div className="flex justify-end">
-          <Select onValueChange={setMonthFilter} value={monthFilter}>
-            <SelectTrigger className="w-full sm:w-[200px] bg-white rounded-xl border-moss-900/10 text-xs">
-              <SelectValue placeholder="Pilih Periode" />
-            </SelectTrigger>
-            <SelectContent>
-              {monthOptions.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value} className="text-xs">
-                  {opt.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Popover open={isOpen} onOpenChange={setIsOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={cn(
+                  "w-full sm:w-[280px] justify-start text-left font-normal bg-white rounded-xl border-moss-900/10 text-xs h-10",
+                  !dateRange && "text-muted-foreground"
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4 text-moss-700" />
+                {dateRange?.from ? (
+                  dateRange.to ? (
+                    <>
+                      {format(dateRange.from, "d MMM yyyy", { locale: id })} -{" "}
+                      {format(dateRange.to, "d MMM yyyy", { locale: id })}
+                    </>
+                  ) : (
+                    format(dateRange.from, "d MMM yyyy", { locale: id })
+                  )
+                ) : (
+                  <span>Semua Waktu (Tanpa Batas)</span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0 bg-white z-50 shadow-lg rounded-2xl border border-moss-900/10" align="end">
+              <div className="flex flex-col sm:flex-row">
+                {/* Bagian Shortcut Kiri */}
+                <div className="p-3 border-b sm:border-b-0 sm:border-r border-neutral-100 flex flex-col gap-1.5 min-w-[140px]">
+                  <p className="text-[11px] font-bold text-muted-foreground uppercase px-2 mb-1">Periode Cepat</p>
+                  <Button variant="ghost" size="sm" className="justify-start text-xs h-8 px-2 font-normal hover:bg-moss-50" onClick={() => handlePreset("today")}>
+                    Hari Ini
+                  </Button>
+                  <Button variant="ghost" size="sm" className="justify-start text-xs h-8 px-2 font-normal hover:bg-moss-50" onClick={() => handlePreset("7days")}>
+                    7 Hari Terakhir
+                  </Button>
+                  <Button variant="ghost" size="sm" className="justify-start text-xs h-8 px-2 font-normal hover:bg-moss-50" onClick={() => handlePreset("thisMonth")}>
+                    Bulan Ini
+                  </Button>
+                  <Button variant="ghost" size="sm" className="justify-start text-xs h-8 px-2 font-normal hover:bg-moss-50 text-rose-600" onClick={() => handlePreset("all")}>
+                    Semua Waktu
+                  </Button>
+                </div>
+
+                {/* Bagian Kalender Interaktif Kanan */}
+                <div className="p-2">
+                  <Calendar
+                    initialFocus
+                    mode="range"
+                    defaultMonth={dateRange?.from}
+                    selected={dateRange}
+                    onSelect={setDateRange}
+                    numberOfMonths={1}
+                    locale={id}
+                  />
+                  <div className="flex items-center justify-end gap-2 p-2 border-t border-neutral-100">
+                    <Button size="sm" className="bg-moss-900 text-white hover:bg-moss-800 text-xs h-8 px-4 rounded-lg" onClick={() => setIsOpen(false)}>
+                      Terapkan
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
 
         {loading ? (
@@ -75,10 +141,8 @@ export default function Dashboard() {
         ) : data ? (
           <div className="space-y-4">
             
-            {/* 1. KARTU METRIK UTAMA (Dibuat 1 kolom di HP agar tidak kepotong) */}
+            {/* 1. KARTU METRIK UTAMA */}
             <div className="grid grid-cols-1 gap-3">
-              
-              {/* Net Profit Card */}
               <div className="bg-gradient-to-br from-moss-900 to-moss-950 text-white p-5 rounded-2xl shadow-sm relative overflow-hidden">
                 <div className="flex items-center justify-between">
                   <p className="text-[11px] font-bold uppercase tracking-wider text-white/80">Net Profit (Bersih)</p>
@@ -116,13 +180,12 @@ export default function Dashboard() {
                   <p className="text-[10px] text-rose-700 mt-0.5">Belum lunas: {rupiah(data.photographer_fee_unpaid)}</p>
                 </div>
               </div>
-
             </div>
 
-            {/* 2. TREND PENDAPATAN PER BULAN (Dibuat scrollable agar rapi di HP) */}
+            {/* 2. TREND PENDAPATAN PER BULAN */}
             <div className="bg-white p-4 sm:p-6 rounded-2xl border border-moss-900/10 shadow-sm">
               <h3 className="font-bold text-moss-900 text-sm sm:text-base mb-3 flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-moss-700" /> Tren Pendapatan Per Bulan
+                <CalendarIcon className="h-4 w-4 text-moss-700" /> Tren Pendapatan Per Bulan
               </h3>
               {data.monthly && data.monthly.length > 0 ? (
                 <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
