@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { Search, Mail, Eye, Trash2, MessageSquare, Table, Calendar as CalendarIcon, ExternalLink } from "lucide-react";
+import { Search, Mail, Eye, Trash2, MessageSquare, Table, Calendar as CalendarIcon, ExternalLink, ChevronDown, ChevronUp } from "lucide-react";
 import { AdminLayout } from "../components/AdminLayout";
 import { api, rupiah, fmtDate } from "../lib/api";
 import { Button } from "../components/ui/button";
@@ -32,17 +32,14 @@ export default function Clients() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [paymentFilter, setPaymentFilter] = useState("all");
   
-  // State untuk rentang tanggal filter list
   const [dateRange, setDateRange] = useState({
     from: startOfMonth(new Date()),
     to: endOfMonth(new Date()),
   });
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   
-  // State Switch View ("list" atau "calendar")
   const [viewMode, setViewMode] = useState("list");
 
-  // State untuk Modal Edit / Kelola
   const [selected, setSelected] = useState(null);
   const [editPho, setEditPho] = useState("");
   const [editStatus, setEditStatus] = useState("");
@@ -56,7 +53,9 @@ export default function Clients() {
   const [editStartTime, setEditStartTime] = useState("");
   const [editEndTime, setEditEndTime] = useState("");
 
-  // State khusus untuk Modal Lihat Detail Saja (Tanpa Edit)
+  // State untuk mengontrol apakah bagian ubah jadwal sedang dibuka atau ditutup
+  const [showReschedule, setShowReschedule] = useState(false);
+
   const [viewDetailOnly, setViewDetailOnly] = useState(null);
 
   const loadData = useCallback(async () => {
@@ -111,6 +110,7 @@ export default function Clients() {
     setEditShootDate(b.shoot_date || "");
     setEditStartTime(b.start_time || "");
     setEditEndTime(b.end_time || "");
+    setShowReschedule(false); // Default tertutup supaya tidak mengganggu
   };
 
   const saveDetail = async () => {
@@ -198,7 +198,6 @@ export default function Clients() {
     return true;
   });
 
-  // Mapping data bookings ke format Event Calendar
   const calendarEvents = safeBookings.map((b) => {
     const startTime = (b.start_time || "10:00").substring(0, 5);
     const endTime = (b.end_time || "11:00").substring(0, 5);
@@ -213,7 +212,6 @@ export default function Clients() {
 
   return (
     <AdminLayout title="Database Client" subtitle="Kelola jadwal, fotografer, dan kirim invoice">
-      {/* BAGIAN FILTER ATAS */}
       <div className="flex flex-col gap-3 mb-6" data-testid="client-filters">
         <div className="flex items-center justify-between gap-2 w-full">
           <div className="relative flex-1">
@@ -326,7 +324,6 @@ export default function Clients() {
         )}
       </div>
 
-      {/* RENDER VIEW: REACT BIG CALENDAR FULL SCREEN PROPORSIONAL */}
       {viewMode === "calendar" ? (
         <div className="bg-white p-3 sm:p-6 rounded-2xl border border-moss-900/10 shadow-sm w-full">
           <div className="w-full" style={{ height: "75vh", minHeight: "650px" }}>
@@ -354,7 +351,6 @@ export default function Clients() {
           </div>
         </div>
       ) : (
-        /* RENDER VIEW: LIST KARTU STANDARD */
         <div className="space-y-3 pb-20" data-testid="clients-cards">
           {loading && (
             <div className="p-6 text-center text-muted-foreground bg-white rounded-lg border">Memuat data...</div>
@@ -374,7 +370,6 @@ export default function Clients() {
               >
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    {/* KLIK NAMA HANYA MELIHAT DETAIL */}
                     <p 
                       onClick={() => setViewDetailOnly(b)}
                       className="font-bold text-moss-900 text-base cursor-pointer hover:underline text-moss-800"
@@ -453,9 +448,9 @@ export default function Clients() {
         </div>
       )}
 
-      {/* MODAL KHUSUS LIHAT DETAIL SAJA (Hanya Baca) */}
+      {/* MODAL KHUSUS LIHAT DETAIL SAJA */}
       <Dialog open={!!viewDetailOnly} onOpenChange={(o) => !o && setViewDetailOnly(null)}>
-        <DialogContent className="max-w-md rounded-3xl p-6 bg-white border border-moss-900/10 shadow-2xl">
+        <DialogContent className="max-w-md rounded-3xl p-6 bg-white border border-moss-900/10 shadow-2xl z-50">
           <DialogHeader>
             <DialogTitle className="font-serif text-lg text-moss-900">Detail Informasi Booking</DialogTitle>
           </DialogHeader>
@@ -493,112 +488,120 @@ export default function Clients() {
         </DialogContent>
       </Dialog>
 
-      {/* Dialog Detail / Edit Booking (Menu Kelola) */}
+      {/* DIALOG KELOLA (PENGATURAN DENGAN TOMBOL RESCHEDULE TERTUTUP SECARA DEFAULT) */}
       <Dialog open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto rounded-3xl p-6 bg-white border border-moss-900/10 shadow-2xl z-50">
           <DialogHeader>
-            <DialogTitle>Detail & Pengaturan Booking</DialogTitle>
+            <DialogTitle className="font-serif text-xl text-moss-900">Kelola & Pengaturan Booking</DialogTitle>
           </DialogHeader>
           {selected && (
             <div className="space-y-4 py-2">
-              <div className="rounded-md bg-moss-50/50 p-3 border border-moss-900/10 text-xs space-y-1">
-                <p><span className="font-bold">Client:</span> {selected.full_name} ({selected.whatsapp})</p>
-                <p><span className="font-bold">Kampus:</span> {selected.university} — {selected.study}</p>
-                <p><span className="font-bold">Paket:</span> {selected.package_name} ({rupiah(selected.package_price)})</p>
-                <p><span className="font-bold">Jadwal Asli:</span> {fmtDate(selected.shoot_date)} ({(selected.start_time || "").substring(0, 5)} - {(selected.end_time || "").substring(0, 5)})</p>
-                <p><span className="font-bold">Lokasi:</span> {selected.location}</p>
+              <div className="rounded-2xl bg-moss-50/50 p-4 border border-moss-900/10 text-xs space-y-1.5">
+                <p><span className="font-bold text-moss-900">Client:</span> {selected.full_name} ({selected.whatsapp})</p>
+                <p><span className="font-bold text-moss-900">Kampus:</span> {selected.university} — {selected.study}</p>
+                <p><span className="font-bold text-moss-900">Paket:</span> {selected.package_name} ({rupiah(selected.package_price)})</p>
+                <p><span className="font-bold text-moss-900">Jadwal Saat Ini:</span> {fmtDate(selected.shoot_date)} ({(selected.start_time || "").substring(0, 5)} - {(selected.end_time || "").substring(0, 5)})</p>
+                <p><span className="font-bold text-moss-900">Lokasi:</span> {selected.location}</p>
               </div>
 
-              {/* INPUT EDIT JADWAL / RESCHEDULE */}
-              <div className="space-y-3 p-3.5 bg-moss-50/40 rounded-xl border border-moss-900/10">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-moss-900 uppercase tracking-wider">Ubah Jadwal Sesi Foto (Reschedule)</label>
-                  <span className="text-[10px] text-muted-foreground bg-white px-2 py-0.5 rounded border">Opsional</span>
-                </div>
-                
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">Tanggal Foto</label>
-                  <Input 
-                    type="date" 
-                    value={editShootDate} 
-                    onChange={(e) => setEditShootDate(e.target.value)} 
-                    className="bg-white text-sm py-2 px-3 rounded-lg border border-moss-900/20" 
-                  />
-                </div>
+              {/* TOMBOL TOGGLE RESCHEDULE (HANYA MUNCUL JIKA DIKLIK) */}
+              <div className="border border-moss-900/15 rounded-2xl overflow-hidden bg-white shadow-sm">
+                <button
+                  type="button"
+                  onClick={() => setShowReschedule(!showReschedule)}
+                  className="w-full px-4 py-3 bg-moss-50/70 hover:bg-moss-50 flex items-center justify-between text-xs font-bold text-moss-900 transition-colors"
+                >
+                  <span>📅 Ingin Ubah Tanggal & Jam Sesi Foto?</span>
+                  {showReschedule ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                </button>
 
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-muted-foreground">Jam Mulai (24 Jam)</label>
-                    <Input 
-                      type="time" 
-                      step="60"
-                      value={editStartTime} 
-                      onChange={(e) => setEditStartTime(e.target.value)} 
-                      className="bg-white text-sm py-2 px-3 rounded-lg border border-moss-900/20" 
-                    />
+                {showReschedule && (
+                  <div className="p-4 space-y-3 bg-white border-t border-moss-900/10">
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-medium text-muted-foreground">Tanggal Foto</label>
+                      <Input 
+                        type="date" 
+                        value={editShootDate} 
+                        onChange={(e) => setEditShootDate(e.target.value)} 
+                        className="bg-white text-xs h-10 w-full rounded-xl border border-moss-900/20 shadow-sm" 
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-medium text-muted-foreground">Jam Mulai</label>
+                        <Input 
+                          type="time" 
+                          step="60"
+                          value={editStartTime} 
+                          onChange={(e) => setEditStartTime(e.target.value)} 
+                          className="bg-white text-xs h-10 w-full rounded-xl border border-moss-900/20 shadow-sm" 
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-medium text-muted-foreground">Jam Selesai</label>
+                        <Input 
+                          type="time" 
+                          step="60"
+                          value={editEndTime} 
+                          onChange={(e) => setEditEndTime(e.target.value)} 
+                          className="bg-white text-xs h-10 w-full rounded-xl border border-moss-900/20 shadow-sm" 
+                        />
+                      </div>
+                    </div>
                   </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-muted-foreground">Jam Selesai (24 Jam)</label>
-                    <Input 
-                      type="time" 
-                      step="60"
-                      value={editEndTime} 
-                      onChange={(e) => setEditEndTime(e.target.value)} 
-                      className="bg-white text-sm py-2 px-3 rounded-lg border border-moss-900/20" 
-                    />
-                  </div>
-                </div>
+                )}
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-bold">Status Booking</label>
+                <label className="text-xs font-bold text-moss-900">Status Booking</label>
                 <Select onValueChange={setEditStatus} value={editStatus}>
-                  <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="confirmed">Confirmed</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
-                    <SelectItem value="cancelled">Cancelled</SelectItem>
+                  <SelectTrigger className="bg-white rounded-xl border-moss-900/20 h-10 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent className="bg-white z-50">
+                    <SelectItem value="pending" className="text-xs">Pending</SelectItem>
+                    <SelectItem value="confirmed" className="text-xs">Confirmed</SelectItem>
+                    <SelectItem value="completed" className="text-xs">Completed</SelectItem>
+                    <SelectItem value="cancelled" className="text-xs">Cancelled</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-bold">Status Pembayaran</label>
+                <label className="text-xs font-bold text-moss-900">Status Pembayaran</label>
                 <Select onValueChange={setEditPaymentType} value={editPaymentType}>
-                  <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="dp">DP (Down Payment)</SelectItem>
-                    <SelectItem value="full">Full (Lunas)</SelectItem>
+                  <SelectTrigger className="bg-white rounded-xl border-moss-900/20 h-10 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent className="bg-white z-50">
+                    <SelectItem value="dp" className="text-xs">DP (Down Payment)</SelectItem>
+                    <SelectItem value="full" className="text-xs">Full (Lunas)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold">Extra Charge / Biaya Lain (Rp)</label>
+                  <label className="text-xs font-bold text-moss-900">Extra Charge / Biaya Lain (Rp)</label>
                   <Input 
                     type="number" 
                     value={editExtraCharge} 
                     onChange={(e) => setEditExtraCharge(e.target.value)} 
                     placeholder="Misal: 200000" 
-                    className="bg-white" 
+                    className="bg-white rounded-xl border-moss-900/20 h-10 text-xs" 
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold">Keterangan Extra</label>
+                  <label className="text-xs font-bold text-moss-900">Keterangan Extra</label>
                   <Input 
                     type="text" 
                     value={editExtraNote} 
                     onChange={(e) => setEditExtraNote(e.target.value)} 
-                    placeholder="Misal: Extra Time 30 Menit" 
-                    className="bg-white" 
+                    placeholder="Misal: Extra Time" 
+                    className="bg-white rounded-xl border-moss-900/20 h-10 text-xs" 
                   />
                 </div>
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-bold">Tugaskan Fotografer</label>
+                <label className="text-xs font-bold text-moss-900">Tugaskan Fotografer</label>
                 <Select 
                   onValueChange={(val) => {
                     setEditPho(val);
@@ -611,12 +614,12 @@ export default function Clients() {
                   }} 
                   value={editPho}
                 >
-                  <SelectTrigger className="bg-white"><SelectValue placeholder="Pilih fotografer" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">— Belum Ditugaskan —</SelectItem>
+                  <SelectTrigger className="bg-white rounded-xl border-moss-900/20 h-10 text-xs"><SelectValue placeholder="Pilih fotografer" /></SelectTrigger>
+                  <SelectContent className="bg-white z-50">
+                    <SelectItem value="none" className="text-xs">— Belum Ditugaskan —</SelectItem>
                     {safePhotographers.map((p) => (
-                      <SelectItem key={p.photographer_id} value={p.photographer_id}>
-                        {p.name} (Default Fee: {rupiah(p.fee_per_session)})
+                      <SelectItem key={p.photographer_id} value={p.photographer_id} className="text-xs">
+                        {p.name} (Fee: {rupiah(p.fee_per_session)})
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -624,31 +627,31 @@ export default function Clients() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-bold">Fee Fotografer Sesi Ini (Rp)</label>
+                <label className="text-xs font-bold text-moss-900">Fee Fotografer Sesi Ini (Rp)</label>
                 <Input 
                   type="number" 
                   value={editPhoFee} 
                   onChange={(e) => setEditPhoFee(e.target.value)} 
-                  placeholder="Masukkan nominal fee fotografer sesi ini" 
-                  className="bg-white" 
+                  placeholder="Nominal fee sesi ini" 
+                  className="bg-white rounded-xl border-moss-900/20 h-10 text-xs" 
                 />
               </div>
 
-              <div className="flex items-center space-x-2 pt-1">
+              <div className="flex items-center space-x-2 pt-1 bg-moss-50/40 p-3 rounded-xl border border-moss-900/10">
                 <input
                   type="checkbox"
                   id="phoPaid"
                   checked={editPhoPaid}
                   onChange={(e) => setEditPhoPaid(e.target.checked)}
-                  className="h-4 w-4 rounded border-gray-300 text-moss-800 focus:ring-moss-800 cursor-pointer"
+                  className="h-4 w-4 rounded border-gray-300 text-moss-900 focus:ring-moss-900 cursor-pointer"
                 />
-                <label htmlFor="phoPaid" className="text-xs font-bold cursor-pointer">
+                <label htmlFor="phoPaid" className="text-xs font-bold text-moss-900 cursor-pointer">
                   Fee Fotografer Sudah Dibayar (Lunas)
                 </label>
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-bold">Jumlah Total Sudah Dibayar (Rp)</label>
+                <label className="text-xs font-bold text-moss-900">Jumlah Total Sudah Dibayar (Rp)</label>
                 <Input 
                   type="number" 
                   value={editPaid} 
@@ -661,7 +664,7 @@ export default function Clients() {
                       setEditPaymentType("full");
                     }
                   }} 
-                  className="bg-white" 
+                  className="bg-white rounded-xl border-moss-900/20 h-10 text-xs" 
                 />
               </div>
 
@@ -681,9 +684,9 @@ export default function Clients() {
               </div>
             </div>
           )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setSelected(null)}>Batal</Button>
-            <Button className="bg-moss-800 hover:bg-moss-900 text-white" onClick={saveDetail}>Simpan Perubahan</Button>
+          <DialogFooter className="gap-2 sm:gap-0 pt-2">
+            <Button variant="outline" className="rounded-xl h-10 text-xs" onClick={() => setSelected(null)}>Batal</Button>
+            <Button className="bg-moss-900 hover:bg-moss-800 text-white rounded-xl h-10 text-xs" onClick={saveDetail}>Simpan Perubahan</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
