@@ -264,30 +264,34 @@ export default function Clients() {
         </div>
       </div>
 
-      {/* Render Berdasarkan View Mode */}
+      {/* Render Berdasarkan View Mode dengan Scrollable Container untuk HP */}
       {viewMode === "calendar" ? (
-        <div className="bg-white p-6 rounded-lg border border-moss-900/10 shadow-sm" style={{ height: 650 }}>
-          <Calendar
-            localizer={localizer}
-            events={calendarEvents}
-            startAccessor="start"
-            endAccessor="end"
-            style={{ height: "100%" }}
-            messages={{
-              next: "Selanjutnya",
-              previous: "Sebelumnya",
-              today: "Hari Ini",
-              month: "Bulan",
-              week: "Minggu",
-              day: "Hari",
-              agenda: "Agenda",
-              date: "Tanggal",
-              time: "Waktu",
-              event: "Acara",
-              noEventsInRange: "Tidak ada jadwal di rentang waktu ini.",
-            }}
-            onSelectEvent={(event) => openDetail(event.resource)}
-          />
+        <div className="bg-white p-4 sm:p-6 rounded-lg border border-moss-900/10 shadow-sm overflow-hidden">
+          <div className="overflow-x-auto w-full">
+            <div style={{ minWidth: "650px", height: "650px" }}>
+              <Calendar
+                localizer={localizer}
+                events={calendarEvents}
+                startAccessor="start"
+                endAccessor="end"
+                style={{ height: "100%" }}
+                messages={{
+                  next: "Selanjutnya",
+                  previous: "Sebelumnya",
+                  today: "Hari Ini",
+                  month: "Bulan",
+                  week: "Minggu",
+                  day: "Hari",
+                  agenda: "Agenda",
+                  date: "Tanggal",
+                  time: "Waktu",
+                  event: "Acara",
+                  noEventsInRange: "Tidak ada jadwal di rentang waktu ini.",
+                }}
+                onSelectEvent={(event) => openDetail(event.resource)}
+              />
+            </div>
+          </div>
         </div>
       ) : (
         <div className="space-y-3" data-testid="clients-cards">
