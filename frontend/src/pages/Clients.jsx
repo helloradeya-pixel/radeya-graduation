@@ -374,7 +374,7 @@ export default function Clients() {
               >
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    {/* KLIK NAMA HANYA MELIHAT DETAIL, TIDAK MASUK MODE EDIT */}
+                    {/* KLIK NAMA HANYA MELIHAT DETAIL */}
                     <p 
                       onClick={() => setViewDetailOnly(b)}
                       className="font-bold text-moss-900 text-base cursor-pointer hover:underline text-moss-800"
