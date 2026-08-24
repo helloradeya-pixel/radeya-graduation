@@ -120,7 +120,7 @@ export default function Dashboard() {
 
             </div>
 
-            {/* 1.5 WIDGET JADWAL TERDEKAT + TOMBOL GOOGLE CALENDAR */}
+            {/* 1.5 WIDGET JADWAL TERDEKAT + TOMBOL GOOGLE CALENDAR (DISEMPURNAKAN) */}
             <div className="bg-white p-4 sm:p-6 rounded-2xl border border-moss-900/10 shadow-sm space-y-3">
               <div className="flex items-center justify-between">
                 <h3 className="font-bold text-moss-900 text-sm sm:text-base flex items-center gap-2">
@@ -140,22 +140,29 @@ export default function Dashboard() {
                     return (
                       <div 
                         key={item.booking_id} 
-                        className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 rounded-xl bg-moss-50/40 border border-moss-900/10 gap-3 hover:border-moss-800/30 transition-all"
+                        className="flex items-center justify-between p-3 rounded-xl bg-moss-50/40 border border-moss-900/10 gap-3 hover:border-moss-800/30 transition-all"
                       >
-                        <div className="space-y-0.5 min-w-0">
-                          <p className="font-bold text-xs text-moss-900 truncate">{item.full_name} — <span className="text-moss-700 font-semibold">{item.package_name}</span></p>
-                          <p className="text-[11px] text-muted-foreground font-medium">
+                        {/* Bagian Teks Kiri */}
+                        <div className="space-y-0.5 min-w-0 flex-1">
+                          <p className="font-bold text-xs text-moss-900 truncate">
+                            {item.full_name} <span className="font-normal text-moss-700">— {item.package_name}</span>
+                          </p>
+                          <p className="text-[11px] text-muted-foreground font-medium truncate">
                             📅 {fmtDate(item.shoot_date)} ({startTime} - {endTime})
                           </p>
-                          <p className="text-[11px] text-muted-foreground truncate">📍 {item.location}</p>
+                          <p className="text-[11px] text-muted-foreground truncate">
+                            📍 {item.location}
+                          </p>
                         </div>
 
+                        {/* Tombol GCal Kanan (Compact & Clean) */}
                         <Button
                           size="sm"
-                          className="w-full sm:w-auto h-8 bg-blue-600 hover:bg-blue-700 text-white text-xs gap-1.5 shrink-0"
+                          variant="outline"
+                          className="h-8 px-3 bg-white border-moss-900/20 hover:bg-blue-600 hover:text-white text-xs gap-1.5 shrink-0 transition-colors"
                           onClick={() => window.open(item.gcal_link, "_blank")}
                         >
-                          <ExternalLink className="h-3.5 w-3.5" /> Buka GCal
+                          <ExternalLink className="h-3.5 w-3.5" /> GCal
                         </Button>
                       </div>
                     );
