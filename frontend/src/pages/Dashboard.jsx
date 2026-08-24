@@ -23,7 +23,7 @@ export default function Dashboard() {
   });
   const [isOpen, setIsOpen] = useState(false);
 
-  // Fungsi load data berdasarkan rentang tanggal (format YYYY-MM-DD ke backend)
+  // Fungsi load data berdasarkan rentang tanggal ke backend
   const loadAnalytics = useCallback(async () => {
     setLoading(true);
     try {
@@ -58,13 +58,13 @@ export default function Dashboard() {
     } else if (preset === "7days") {
       setDateRange({ from: subDays(today, 6), to: today });
     } else if (preset === "thisMonth") {
-      setDateRange({ from: startOfMonth(today), to: endOfMonth(today));
+      setDateRange({ from: startOfMonth(today), to: endOfMonth(today) });
     }
     setIsOpen(false);
   };
 
   return (
-    <AdminLayout title="Ringkasan Finansial" subtitle="Analisis pendapatan studio & rincian fee fotografer">
+    <AdminLayout title="Ringkasan Finansial" subtitle="Analisis pendapatan & rincian fee fotografer">
       <div className="space-y-4 pb-20">
         
         {/* Filter Rentang Tanggal (Date Range Picker ala Meta Ads) */}
@@ -74,7 +74,7 @@ export default function Dashboard() {
               <Button
                 variant="outline"
                 className={cn(
-                  "w-full sm:w-[280px] justify-start text-left font-normal bg-white rounded-xl border-moss-900/10 text-xs h-10",
+                  "w-full sm:w-[280px] justify-start text-left font-normal bg-white rounded-xl border-moss-900/10 text-xs h-10 shadow-sm",
                   !dateRange && "text-muted-foreground"
                 )}
               >
@@ -93,7 +93,7 @@ export default function Dashboard() {
                 )}
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-auto p-0 bg-white z-50 shadow-lg rounded-2xl border border-moss-900/10" align="end">
+            <PopoverContent className="w-auto p-0 bg-white z-50 shadow-xl rounded-2xl border border-moss-900/10" align="end">
               <div className="flex flex-col sm:flex-row">
                 {/* Bagian Shortcut Kiri */}
                 <div className="p-3 border-b sm:border-b-0 sm:border-r border-neutral-100 flex flex-col gap-1.5 min-w-[140px]">
