@@ -92,6 +92,16 @@ export default function InvoicePage() {
         <p><span className="font-semibold">Jadwal:</span> {fmtDate(invoice.shoot_date)} ({invoice.start_time} - {invoice.end_time})</p>
         <p><span className="font-semibold">Lokasi:</span> {invoice.location}</p>
         <hr className="my-2" />
+        
+        {/* Informasi Rekening & Batas Pelunasan */}
+        <div className="bg-slate-50 p-3 rounded-md border border-slate-200 my-3 text-xs space-y-1.5">
+          <p className="text-slate-600">bisa di transfer ke sini yah kak</p>
+          <p className="font-bold text-slate-800">BCA 2952093623 a/n Yulviana Kusnia</p>
+          <p className="text-amber-700 font-medium pt-1 border-t border-slate-200">
+            ⚠️ Batas waktu pelunasan paling lambat H-1 sebelum jadwal sesi foto.
+          </p>
+        </div>
+
         <div className="flex justify-between">
           <span>Harga Paket:</span>
           <span className="font-medium">{rupiah(packagePrice)}</span>
