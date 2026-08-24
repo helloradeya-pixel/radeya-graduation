@@ -1,7 +1,7 @@
 {
   "short_name": "Radeyaphoto",
   "name": "Radeyaphoto Admin",
-  "start_url": "/admin-dashboard",
+  "start_url": "/dashboard",
   "scope": "/",
   "display": "standalone",
   "background_color": "#ffffff",
