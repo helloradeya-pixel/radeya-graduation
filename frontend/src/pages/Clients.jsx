@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { Search, Mail, Eye, Trash2, MessageSquare, Table, Calendar as CalendarIcon, MapPin, Clock, User, ExternalLink } from "lucide-react";
+import { Search, Mail, Eye, Trash2, MessageSquare, Table, Calendar as CalendarIcon, ExternalLink } from "lucide-react";
 import { AdminLayout } from "../components/AdminLayout";
 import { api, rupiah, fmtDate } from "../lib/api";
 import { Button } from "../components/ui/button";
@@ -7,11 +7,22 @@ import { Input } from "../components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "../components/ui/popover";
-import { Calendar } from "../components/ui/calendar";
+import { Calendar as UICalendar } from "../components/ui/calendar";
 import { toast } from "sonner";
 import { format, subDays, startOfMonth, endOfMonth } from "date-fns";
 import { id } from "date-fns/locale";
 import { cn } from "../lib/utils";
+
+// Import untuk React Big Calendar
+import { Calendar, dateFnsLocalizer } from "react-big-calendar";
+import parse from "date-fns/parse";
+import startOfWeek from "date-fns/startOfWeek";
+import getDay from "date-fns/getDay";
+import idLocale from "date-fns/locale/id";
+import "react-big-calendar/lib/css/react-big-calendar.css";
+
+const locales = { "id": idLocale };
+const localizer = dateFnsLocalizer({ format: (date, fmt, options) => format(date, fmt, { locale: id }), parse, startOfWeek, getDay, locales });
 
 export default function Clients() {
   const [bookings, setBookings] = useState([]);
@@ -21,14 +32,14 @@ export default function Clients() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [paymentFilter, setPaymentFilter] = useState("all");
   
-  // State untuk rentang tanggal ala Dashboard (Date Range Picker)
+  // State untuk rentang tanggal filter list
   const [dateRange, setDateRange] = useState({
     from: startOfMonth(new Date()),
     to: endOfMonth(new Date()),
   });
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   
-  // State untuk Switch View ("list" atau "agenda")
+  // State Switch View ("list" atau "calendar")
   const [viewMode, setViewMode] = useState("list");
 
   const [selected, setSelected] = useState(null);
@@ -40,8 +51,6 @@ export default function Clients() {
   const [editPhoFee, setEditPhoFee] = useState("");
   const [editExtraCharge, setEditExtraCharge] = useState("");
   const [editExtraNote, setEditExtraNote] = useState("");
-
-  // State untuk Edit Jadwal (Reschedule)
   const [editShootDate, setEditShootDate] = useState("");
   const [editStartTime, setEditStartTime] = useState("");
   const [editEndTime, setEditEndTime] = useState("");
@@ -71,7 +80,6 @@ export default function Clients() {
     loadData();
   }, [loadData]);
 
-  // Tombol Shortcut Cepat Kalender
   const handlePreset = (preset) => {
     const today = new Date();
     if (preset === "all") {
@@ -170,7 +178,6 @@ export default function Clients() {
   const safeBookings = Array.isArray(bookings) ? bookings : [];
   const safePhotographers = Array.isArray(photographers) ? photographers : [];
 
-  // Filter tanggal secara lokal
   const filteredBookings = safeBookings.filter((b) => {
     if (dateRange?.from && dateRange?.to && b.shoot_date) {
       const shootDate = new Date(b.shoot_date);
@@ -182,14 +189,23 @@ export default function Clients() {
       const toDate = new Date(dateRange.to);
       toDate.setHours(23, 59, 59, 999);
 
-      if (shootDate < fromDate || shootDate > toDate) {
-        return false;
-      }
+      if (shootDate < fromDate || shootDate > toDate) return false;
     }
     return true;
   });
 
-  const sortedBookingsForAgenda = [...filteredBookings].sort((a, b) => new Date(a.shoot_date) - new Date(b.shoot_date));
+  // Mapping data bookings ke format Event Calendar
+  const calendarEvents = safeBookings.map((b) => {
+    const startTime = (b.start_time || "10:00").substring(0, 5);
+    const endTime = (b.end_time || "11:00").substring(0, 5);
+    return {
+      id: b.booking_id,
+      title: `${b.full_name} (${b.package_name}) [${startTime} - ${endTime}]`,
+      start: new Date(`${b.shoot_date}T${startTime}:00`),
+      end: new Date(`${b.shoot_date}T${endTime}:00`),
+      resource: b,
+    };
+  });
 
   return (
     <AdminLayout title="Database Client" subtitle="Kelola jadwal, fotografer, dan kirim invoice">
@@ -216,153 +232,127 @@ export default function Clients() {
               <Table className="h-3.5 w-3.5" /> Tabel
             </Button>
             <Button
-              variant={viewMode === "agenda" ? "default" : "ghost"}
+              variant={viewMode === "calendar" ? "default" : "ghost"}
               size="sm"
-              onClick={() => setViewMode("agenda")}
-              className={`h-9 text-xs gap-1 px-3 ${viewMode === "agenda" ? "bg-moss-800 text-white" : ""}`}
+              onClick={() => setViewMode("calendar")}
+              className={`h-9 text-xs gap-1 px-3 ${viewMode === "calendar" ? "bg-moss-800 text-white" : ""}`}
             >
-              <CalendarIcon className="h-3.5 w-3.5" /> Agenda
+              <CalendarIcon className="h-3.5 w-3.5" /> Kalender
             </Button>
           </div>
         </div>
 
-        {/* Filter Rentang Tanggal Ala Dashboard & Dropdown */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
-          <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className={cn(
-                  "w-[220px] sm:w-[260px] justify-start text-left font-normal bg-white rounded-xl border-moss-900/10 text-xs h-9 shadow-sm shrink-0",
-                  !dateRange && "text-muted-foreground"
-                )}
-              >
-                <CalendarIcon className="mr-2 h-3.5 w-3.5 text-moss-700" />
-                {dateRange?.from ? (
-                  dateRange.to ? (
-                    <>
-                      {format(dateRange.from, "d MMM yyyy", { locale: id })} -{" "}
-                      {format(dateRange.to, "d MMM yyyy", { locale: id })}
-                    </>
+        {viewMode === "list" && (
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+            <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-[220px] sm:w-[260px] justify-start text-left font-normal bg-white rounded-xl border-moss-900/10 text-xs h-9 shadow-sm shrink-0",
+                    !dateRange && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-3.5 w-3.5 text-moss-700" />
+                  {dateRange?.from ? (
+                    dateRange.to ? (
+                      <>
+                        {format(dateRange.from, "d MMM yyyy", { locale: id })} -{" "}
+                        {format(dateRange.to, "d MMM yyyy", { locale: id })}
+                      </>
+                    ) : (
+                      format(dateRange.from, "d MMM yyyy", { locale: id })
+                    )
                   ) : (
-                    format(dateRange.from, "d MMM yyyy", { locale: id })
-                  )
-                ) : (
-                  <span>Semua Waktu</span>
-                )}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0 bg-white z-50 shadow-xl rounded-2xl border border-moss-900/10" align="start">
-              <div className="flex flex-col sm:flex-row">
-                <div className="p-3 border-b sm:border-b-0 sm:border-r border-neutral-100 flex flex-col gap-1.5 min-w-[130px]">
-                  <p className="text-[11px] font-bold text-muted-foreground uppercase px-2 mb-1">Periode Cepat</p>
-                  <Button variant="ghost" size="sm" className="justify-start text-xs h-8 px-2 font-normal hover:bg-moss-50" onClick={() => handlePreset("today")}>Hari Ini</Button>
-                  <Button variant="ghost" size="sm" className="justify-start text-xs h-8 px-2 font-normal hover:bg-moss-50" onClick={() => handlePreset("7days")}>7 Hari Terakhir</Button>
-                  <Button variant="ghost" size="sm" className="justify-start text-xs h-8 px-2 font-normal hover:bg-moss-50" onClick={() => handlePreset("thisMonth")}>Bulan Ini</Button>
-                  <Button variant="ghost" size="sm" className="justify-start text-xs h-8 px-2 font-normal hover:bg-moss-50 text-rose-600" onClick={() => handlePreset("all")}>Semua Waktu</Button>
-                </div>
-                <div className="p-2">
-                  <Calendar
-                    initialFocus
-                    mode="range"
-                    defaultMonth={dateRange?.from}
-                    selected={dateRange}
-                    onSelect={setDateRange}
-                    numberOfMonths={1}
-                    locale={id}
-                  />
-                  <div className="flex items-center justify-end gap-2 p-2 border-t border-neutral-100">
-                    <Button size="sm" className="bg-moss-800 text-white hover:bg-moss-900 text-xs h-8 px-4 rounded-lg" onClick={() => setIsCalendarOpen(false)}>Terapkan</Button>
+                    <span>Semua Waktu</span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0 bg-white z-50 shadow-xl rounded-2xl border border-moss-900/10" align="start">
+                <div className="flex flex-col sm:flex-row">
+                  <div className="p-3 border-b sm:border-b-0 sm:border-r border-neutral-100 flex flex-col gap-1.5 min-w-[130px]">
+                    <p className="text-[11px] font-bold text-muted-foreground uppercase px-2 mb-1">Periode Cepat</p>
+                    <Button variant="ghost" size="sm" className="justify-start text-xs h-8 px-2 font-normal hover:bg-moss-50" onClick={() => handlePreset("today")}>Hari Ini</Button>
+                    <Button variant="ghost" size="sm" className="justify-start text-xs h-8 px-2 font-normal hover:bg-moss-50" onClick={() => handlePreset("7days")}>7 Hari Terakhir</Button>
+                    <Button variant="ghost" size="sm" className="justify-start text-xs h-8 px-2 font-normal hover:bg-moss-50" onClick={() => handlePreset("thisMonth")}>Bulan Ini</Button>
+                    <Button variant="ghost" size="sm" className="justify-start text-xs h-8 px-2 font-normal hover:bg-moss-50 text-rose-600" onClick={() => handlePreset("all")}>Semua Waktu</Button>
+                  </div>
+                  <div className="p-2">
+                    <UICalendar
+                      initialFocus
+                      mode="range"
+                      defaultMonth={dateRange?.from}
+                      selected={dateRange}
+                      onSelect={setDateRange}
+                      numberOfMonths={1}
+                      locale={id}
+                    />
+                    <div className="flex items-center justify-end gap-2 p-2 border-t border-neutral-100">
+                      <Button size="sm" className="bg-moss-800 text-white hover:bg-moss-900 text-xs h-8 px-4 rounded-lg" onClick={() => setIsCalendarOpen(false)}>Terapkan</Button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </PopoverContent>
-          </Popover>
+              </PopoverContent>
+            </Popover>
 
-          <Select onValueChange={setStatusFilter} value={statusFilter}>
-            <SelectTrigger className="w-[130px] bg-white shrink-0">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Semua Status</SelectItem>
-              <SelectItem value="pending">Pending</SelectItem>
-              <SelectItem value="confirmed">Confirmed</SelectItem>
-              <SelectItem value="completed">Completed</SelectItem>
-              <SelectItem value="cancelled">Cancelled</SelectItem>
-            </SelectContent>
-          </Select>
+            <Select onValueChange={setStatusFilter} value={statusFilter}>
+              <SelectTrigger className="w-[130px] bg-white shrink-0">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Semua Status</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="confirmed">Confirmed</SelectItem>
+                <SelectItem value="completed">Completed</SelectItem>
+                <SelectItem value="cancelled">Cancelled</SelectItem>
+              </SelectContent>
+            </Select>
 
-          <Select onValueChange={setPaymentFilter} value={paymentFilter}>
-            <SelectTrigger className="w-[130px] bg-white shrink-0">
-              <SelectValue placeholder="Pembayaran" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Semua Bayar</SelectItem>
-              <SelectItem value="dp">DP Saja</SelectItem>
-              <SelectItem value="full">Full Payment</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+            <Select onValueChange={setPaymentFilter} value={paymentFilter}>
+              <SelectTrigger className="w-[130px] bg-white shrink-0">
+                <SelectValue placeholder="Pembayaran" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Semua Bayar</SelectItem>
+                <SelectItem value="dp">DP Saja</SelectItem>
+                <SelectItem value="full">Full Payment</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
       </div>
 
-      {/* RENDER VIEW: AGENDA HARIAN */}
-      {viewMode === "agenda" ? (
-        <div className="space-y-4 pb-20">
-          {loading && (
-            <div className="p-6 text-center text-muted-foreground bg-white rounded-lg border">Memuat data...</div>
-          )}
-          {!loading && sortedBookingsForAgenda.length === 0 && (
-            <div className="p-6 text-center text-muted-foreground bg-white rounded-lg border">Tidak ada jadwal agenda di rentang tanggal ini.</div>
-          )}
-
-          {sortedBookingsForAgenda.map((b) => {
-            const startTimeFormatted = (b.start_time || "").substring(0, 5);
-            const endTimeFormatted = (b.end_time || "").substring(0, 5);
-
-            return (
-              <div 
-                key={b.booking_id}
-                onClick={() => openDetail(b)}
-                className="bg-white rounded-xl border border-moss-900/10 p-4 shadow-sm hover:border-moss-800/40 transition-all cursor-pointer space-y-2.5 relative overflow-hidden"
-              >
-                <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-moss-800" />
-                <div className="flex items-center justify-between pl-2">
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-moss-900">
-                    <CalendarIcon className="h-3.5 w-3.5 text-moss-700" />
-                    {fmtDate(b.shoot_date)}
-                  </div>
-                  <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-moss-50 text-moss-800 border border-moss-900/15">
-                    {b.status}
-                  </span>
-                </div>
-
-                <div className="pl-2 space-y-1">
-                  <p className="font-bold text-sm text-moss-900">{b.full_name}</p>
-                  <p className="text-xs font-medium text-moss-800">{b.package_name}</p>
-                  
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground pt-0.5">
-                    <span className="flex items-center gap-1 font-semibold text-neutral-800">
-                      <Clock className="h-3 w-3 text-moss-700" /> {startTimeFormatted} - {endTimeFormatted} WIB
-                    </span>
-                  </div>
-                  
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground truncate">
-                    <MapPin className="h-3 w-3 shrink-0 text-moss-700" /> {b.location}
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between pt-2 pl-2 border-t border-neutral-100 text-xs">
-                  <span className="text-muted-foreground flex items-center gap-1">
-                    <User className="h-3 w-3 text-moss-700" /> Fotografer: <strong className="text-moss-900">{b.photographer_name || "Belum ditugaskan"}</strong>
-                  </span>
-                  <span className="font-bold text-emerald-700">{rupiah(b.amount_paid)}</span>
-                </div>
-              </div>
-            );
-          })}
+      {/* RENDER VIEW: REACT BIG CALENDAR DENGAN WRAPPER PROPORSIONAL */}
+      {viewMode === "calendar" ? (
+        <div className="bg-white p-3 sm:p-6 rounded-2xl border border-moss-900/10 shadow-sm overflow-hidden">
+          <div className="overflow-x-auto w-full">
+            <div style={{ minWidth: "650px", height: "600px" }}>
+              <Calendar
+                localizer={localizer}
+                events={calendarEvents}
+                startAccessor="start"
+                endAccessor="end"
+                style={{ height: "100%" }}
+                messages={{
+                  next: "Selanjutnya",
+                  previous: "Sebelumnya",
+                  today: "Hari Ini",
+                  month: "Bulan",
+                  week: "Minggu",
+                  day: "Hari",
+                  agenda: "Agenda",
+                  date: "Tanggal",
+                  time: "Waktu",
+                  event: "Acara",
+                  noEventsInRange: "Tidak ada jadwal di rentang waktu ini.",
+                }}
+                onSelectEvent={(event) => openDetail(event.resource)}
+              />
+            </div>
+          </div>
         </div>
       ) : (
-        /* RENDER VIEW: LIST KARTU STANDARD DENGAN TOMBOL LAMA */
+        /* RENDER VIEW: LIST KARTU STANDARD */
         <div className="space-y-3 pb-20" data-testid="clients-cards">
           {loading && (
             <div className="p-6 text-center text-muted-foreground bg-white rounded-lg border">Memuat data...</div>
@@ -420,7 +410,6 @@ export default function Clients() {
                   </div>
                 </div>
 
-                {/* Tombol Aksi Versi Lama */}
                 <div className="flex items-center justify-end gap-1.5 pt-2 border-t border-gray-100">
                   <Button
                     onClick={() => handleSendReminder(b)}
@@ -477,7 +466,7 @@ export default function Clients() {
                 <p><span className="font-bold">Lokasi:</span> {selected.location}</p>
               </div>
 
-              {/* INPUT EDIT JADWAL / RESCHEDULE (Sudah Rapikan Kolom Jam) */}
+              {/* INPUT EDIT JADWAL / RESCHEDULE */}
               <div className="space-y-3 p-3.5 bg-moss-50/40 rounded-xl border border-moss-900/10">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-bold text-moss-900 uppercase tracking-wider">Ubah Jadwal Sesi Foto (Reschedule)</label>
