@@ -1,10 +1,9 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { AdminLayout } from "../components/AdminLayout";
-import { api, rupiah, fmtDate } from "../lib/api";
+import { api, rupiah } from "../lib/api";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
-import { Button } from "../components/ui/button";
 import { toast } from "sonner";
-import { TrendingUp, Wallet, Users, Calendar, DollarSign, ExternalLink } from "lucide-react";
+import { TrendingUp, Wallet, Users, Calendar, DollarSign } from "lucide-react";
 
 export default function Dashboard() {
   const [data, setData] = useState(null);
@@ -118,59 +117,6 @@ export default function Dashboard() {
                 </div>
               </div>
 
-            </div>
-
-            {/* 1.5 WIDGET JADWAL TERDEKAT + TOMBOL GOOGLE CALENDAR (DISEMPURNAKAN) */}
-            <div className="bg-white p-4 sm:p-6 rounded-2xl border border-moss-900/10 shadow-sm space-y-3">
-              <div className="flex items-center justify-between">
-                <h3 className="font-bold text-moss-900 text-sm sm:text-base flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-moss-700" /> Jadwal Sesi Foto Terdekat
-                </h3>
-                <span className="text-[10px] bg-moss-50 text-moss-800 px-2 py-0.5 rounded border border-moss-900/10 font-medium">
-                  Google Calendar
-                </span>
-              </div>
-
-              {data.upcoming && data.upcoming.length > 0 ? (
-                <div className="space-y-2.5">
-                  {data.upcoming.map((item) => {
-                    const startTime = (item.start_time || "").substring(0, 5);
-                    const endTime = (item.end_time || "").substring(0, 5);
-
-                    return (
-                      <div 
-                        key={item.booking_id} 
-                        className="flex items-center justify-between p-3 rounded-xl bg-moss-50/40 border border-moss-900/10 gap-3 hover:border-moss-800/30 transition-all"
-                      >
-                        {/* Bagian Teks Kiri */}
-                        <div className="space-y-0.5 min-w-0 flex-1">
-                          <p className="font-bold text-xs text-moss-900 truncate">
-                            {item.full_name} <span className="font-normal text-moss-700">— {item.package_name}</span>
-                          </p>
-                          <p className="text-[11px] text-muted-foreground font-medium truncate">
-                            📅 {fmtDate(item.shoot_date)} ({startTime} - {endTime})
-                          </p>
-                          <p className="text-[11px] text-muted-foreground truncate">
-                            📍 {item.location}
-                          </p>
-                        </div>
-
-                        {/* Tombol GCal Kanan (Compact & Clean) */}
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-8 px-3 bg-white border-moss-900/20 hover:bg-blue-600 hover:text-white text-xs gap-1.5 shrink-0 transition-colors"
-                          onClick={() => window.open(item.gcal_link, "_blank")}
-                        >
-                          <ExternalLink className="h-3.5 w-3.5" /> GCal
-                        </Button>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <p className="text-xs text-muted-foreground py-4 text-center">Tidak ada jadwal sesi foto terdekat.</p>
-              )}
             </div>
 
             {/* 2. TREND PENDAPATAN PER BULAN (Dibuat scrollable agar rapi di HP) */}
