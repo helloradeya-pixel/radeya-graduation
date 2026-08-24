@@ -751,11 +751,20 @@ async def send_invoice(booking_id: str, request: Request):
     return {"ok": True, "email_id": eid, "sent_to": b["email"]}
 
 @api_router.get("/analytics/summary")
-async def analytics(request: Request, month: Optional[str] = Query(None)):
+async def analytics(
+    request: Request, 
+    month: Optional[str] = Query(None),
+    start_date: Optional[str] = Query(None),
+    end_date: Optional[str] = Query(None)
+):
     await get_current_user(request)
     
     query = {"status": {"$ne": "cancelled"}}
-    if month and month != "all":
+    
+    # Dukungan filter rentang tanggal (start_date & end_date) atau filter bulan lama
+    if start_date and end_date:
+        query["shoot_date"] = {"$gte": start_date, "$lte": end_date}
+    elif month and month != "all":
         query["shoot_date"] = {"$regex": f"^{month}"}
         
     bookings = await db.bookings.find(query, {"_id": 0}).to_list(5000)
