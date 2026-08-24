@@ -18,19 +18,19 @@ function AppRouter() {
 
   return (
     <Routes>
-      {/* 1. Klien tetap akses form booking di halaman utama */}
+      {/* 1. Klien tetap akses form booking utama di link utama */}
       <Route path="/" element={<BookingPage />} />
       
-      {/* 2. Halaman Login Admin */}
+      {/* 2. Halaman Login */}
       <Route path="/login" element={<Login />} />
       
-      {/* 3. Halaman Invoice Klien */}
+      {/* 3. Halaman Invoice */}
       <Route path="/invoice/:id" element={<InvoicePage />} />
       
-      {/* 4. Area Khusus Admin (Aplikasi PWA di HP kamu mengarah ke sini) */}
-      <Route path="/admin-dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-      <Route path="/admin-clients" element={<ProtectedRoute><Clients /></ProtectedRoute>} />
-      <Route path="/admin-settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+      {/* 4. Area Dashboard & Manajemen (Pendek dan Praktis) */}
+      <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+      <Route path="/clients" element={<ProtectedRoute><Clients /></ProtectedRoute>} />
+      <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
       
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
