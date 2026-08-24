@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { Search, Mail, Eye, Trash2, MessageSquare, Table, Calendar as CalendarIcon, ExternalLink, ChevronDown, ChevronUp } from "lucide-react";
 import { AdminLayout } from "../components/AdminLayout";
 import { api, rupiah, fmtDate } from "../lib/api";
@@ -40,6 +40,9 @@ export default function Clients() {
   
   const [viewMode, setViewMode] = useState("list");
 
+  // State untuk mengontrol navigasi kalender secara programmatic (mendukung swipe)
+  const [calendarDate, setCalendarDate] = useState(new Date());
+
   const [selected, setSelected] = useState(null);
   const [editPho, setEditPho] = useState("");
   const [editStatus, setEditStatus] = useState("");
@@ -55,6 +58,10 @@ export default function Clients() {
 
   const [showReschedule, setShowReschedule] = useState(false);
   const [viewDetailOnly, setViewDetailOnly] = useState(null);
+
+  // Ref untuk mendeteksi sentuhan swipe geser layar
+  const touchStartX = useRef(0);
+  const touchEndX = useRef(0);
 
   const loadData = useCallback(async () => {
     try {
@@ -196,7 +203,6 @@ export default function Clients() {
     return true;
   });
 
-  // Format teks acara di Kalender & Agenda: Menampilkan Nama, Paket, dan Lokasi (Tanpa jam)
   const calendarEvents = safeBookings.map((b) => {
     const startTime = (b.start_time || "10:00").substring(0, 5);
     const endTime = (b.end_time || "11:00").substring(0, 5);
@@ -209,6 +215,36 @@ export default function Clients() {
       resource: b,
     };
   });
+
+  // Fungsi penanganan gestur geser layar (Swipe Handlers)
+  const handleTouchStart = (e) => {
+    touchStartX.current = e.targetTouches[0].clientX;
+  };
+
+  const handleTouchMove = (e) => {
+    touchEndX.current = e.targetTouches[0].clientX;
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStartX.current || !touchEndX.current) return;
+    const distance = touchStartX.current - touchEndX.current;
+    const minSwipeDistance = 50; // Batas minimal jarak geser (dalam pixel)
+
+    if (distance > minSwipeDistance) {
+      // Geser ke Kiri -> Maju ke periode berikutnya
+      const nextDate = new Date(calendarDate);
+      nextDate.setMonth(nextDate.getMonth() + 1);
+      setCalendarDate(nextDate);
+    } else if (distance < -minSwipeDistance) {
+      // Geser ke Kanan -> Mundur ke periode sebelumnya
+      const prevDate = new Date(calendarDate);
+      prevDate.setMonth(prevDate.getMonth() - 1);
+      setCalendarDate(prevDate);
+    }
+
+    touchStartX.current = 0;
+    touchEndX.current = 0;
+  };
 
   return (
     <AdminLayout title="Database Client" subtitle="Kelola jadwal, fotografer, dan kirim invoice">
@@ -325,13 +361,20 @@ export default function Clients() {
       </div>
 
       {viewMode === "calendar" ? (
-        <div className="bg-white p-3 sm:p-6 rounded-2xl border border-moss-900/10 shadow-sm w-full">
+        <div 
+          className="bg-white p-3 sm:p-6 rounded-2xl border border-moss-900/10 shadow-sm w-full select-none"
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+        >
           <div className="w-full" style={{ height: "75vh", minHeight: "650px" }}>
             <Calendar
               localizer={localizer}
               events={calendarEvents}
               startAccessor="start"
               endAccessor="end"
+              date={calendarDate}
+              onNavigate={(newDate) => setCalendarDate(newDate)}
               style={{ height: "100%" }}
               messages={{
                 next: "Selanjutnya",
