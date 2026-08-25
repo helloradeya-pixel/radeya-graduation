@@ -121,7 +121,7 @@ export default function Clients() {
     try {
       await api.put(`/bookings/${selected.booking_id}`, {
         status: editStatus,
-        photographer_id: editPho === "none" ? null : editPho,
+        photographer_id: (!editPho || editPho === "none") ? null : editPho,
         amount_paid: parseFloat(editPaid) || 0,
         payment_type: editPaymentType,
         photographer_paid: editPhoPaid,
@@ -684,6 +684,8 @@ export default function Clients() {
                       if (found) {
                         setEditPhoFee(String(found.fee_per_session || 0));
                       }
+                    } else {
+                      setEditPhoFee("");
                     }
                   }} 
                   value={editPho}
