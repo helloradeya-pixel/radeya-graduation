@@ -573,7 +573,8 @@ async def update_booking(booking_id: str, body: BookingUpdate, request: Request)
     upd = {k: v for k, v in body.model_dump().items() if v is not None}
     
     if "photographer_id" in upd:
-        if upd["photographer_id"] is None:
+        if not upd["photographer_id"] or upd["photographer_id"] == "none":
+            upd["photographer_id"] = None
             upd["photographer_name"] = None
             upd["photographer_fee"] = 0.0
         else:
