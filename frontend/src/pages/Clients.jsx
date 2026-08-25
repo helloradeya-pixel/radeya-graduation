@@ -44,7 +44,7 @@ export default function Clients() {
   const [calendarDate, setCalendarDate] = useState(new Date());
 
   const [selected, setSelected] = useState(null);
-  const [editPho, setEditPho] = useState("");
+  const [editPho, setEditPho] = useState("none");
   const [editStatus, setEditStatus] = useState("");
   const [editPaid, setEditPaid] = useState("");
   const [editPaymentType, setEditPaymentType] = useState("dp");
@@ -103,7 +103,7 @@ export default function Clients() {
 
   const openDetail = (b) => {
     setSelected(b);
-    setEditPho(b.photographer_id ? String(b.photographer_id) : "");
+    setEditPho(b.photographer_id ? String(b.photographer_id) : "none");
     setEditStatus(b.status);
     setEditPaid(String(b.amount_paid));
     setEditPaymentType(b.payment_type || "dp");
@@ -680,9 +680,10 @@ export default function Clients() {
                 <label className="text-xs font-bold text-moss-900">Tugaskan Fotografer</label>
                 <Select 
                   onValueChange={(val) => {
+                    const actualVal = val === "none" ? "" : val;
                     setEditPho(val);
-                    if (val && val !== "none" && val !== "") {
-                      const found = safePhotographers.find(p => p.photographer_id === val);
+                    if (actualVal && actualVal !== "") {
+                      const found = safePhotographers.find(p => p.photographer_id === actualVal);
                       if (found) {
                         setEditPhoFee(String(found.fee_per_session || 0));
                       }
@@ -696,7 +697,7 @@ export default function Clients() {
                     <SelectValue placeholder="— Belum Ditugaskan —" />
                   </SelectTrigger>
                   <SelectContent className="bg-white z-50">
-                    <SelectItem value="" className="text-xs">— Belum Ditugaskan —</SelectItem>
+                    <SelectItem value="none" className="text-xs">— Belum Ditugaskan —</SelectItem>
                     {safePhotographers.map((p) => (
                       <SelectItem key={p.photographer_id} value={p.photographer_id} className="text-xs">
                         {p.name} (Fee: {rupiah(p.fee_per_session)})
