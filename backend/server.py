@@ -764,9 +764,7 @@ async def analytics(
 ):
     await get_current_user(request)
     
-    # PERBAIKAN: Tidak memfilter cancelled di awal agar pembayaran DP dari booking cancelled tetap terbaca
     query = {}
-    
     if start_date and end_date:
         query["shoot_date"] = {"$gte": start_date, "$lte": end_date}
     elif month and month != "all":
@@ -774,17 +772,21 @@ async def analytics(
         
     bookings = await db.bookings.find(query, {"_id": 0}).to_list(5000)
     
-    # Total pendapatan mencakup semua amount_paid yang masuk (termasuk dari status cancelled)
+    # 1. Komponen Pendapatan & Piutang
     dp_income = sum(b["amount_paid"] for b in bookings if b["payment_type"] == "dp")
     full_income = sum(b["amount_paid"] for b in bookings if b["payment_type"] == "full")
     total_income = dp_income + full_income
     
-    # Piutang (outstanding) hanya dihitung untuk booking yang tidak cancelled
     outstanding = sum(max((float(b.get("package_price", 0)) + float(b.get("extra_charge", 0))) - float(b.get("amount_paid", 0)), 0) for b in bookings if b.get("status") != "cancelled")
+    total_turnover = total_income + outstanding # Total Omzet Kotor
     
-    # Fee fotografer hanya dihitung dari booking yang tidak cancelled dan memiliki fotografer
+    # 2. Komponen Beban (Fee Fotografer)
     fee_total = sum(b.get("photographer_fee", 0) for b in bookings if b.get("photographer_id") and b.get("status") != "cancelled")
     fee_unpaid = sum(b.get("photographer_fee", 0) for b in bookings if b.get("photographer_id") and not b.get("photographer_paid") and b.get("status") != "cancelled")
+
+    # 3. Perhitungan Laba Bersih (Dual Basis)
+    net_profit_cash = total_income - fee_total       # Berdasarkan uang kas riil masuk
+    net_profit_accrual = total_turnover - fee_total  # Berdasarkan potensi omzet jika semua lunas
 
     per_pho = {}
     for b in bookings:
@@ -826,14 +828,22 @@ async def analytics(
         u["gcal_link"] = gcal_link(u)
 
     return {
-        "total_bookings": len(bookings), "dp_income": dp_income, "full_income": full_income,
-        "total_income": total_income, "outstanding": outstanding,
-        "photographer_fee_total": fee_total, "photographer_fee_unpaid": fee_unpaid,
-        "net_profit": total_income - fee_total,
+        "total_bookings": len(bookings), 
+        "dp_income": dp_income, 
+        "full_income": full_income,
+        "total_income": total_income, 
+        "total_turnover": total_turnover,
+        "outstanding": outstanding,
+        "photographer_fee_total": fee_total, 
+        "photographer_fee_unpaid": fee_unpaid,
+        "net_profit": net_profit_cash,          # Backward compatibility (tetap ada)
+        "net_profit_cash": net_profit_cash,     # Net profit arus kas riil
+        "net_profit_accrual": net_profit_accrual, # Net profit potensi omzet
         "per_photographer": sorted(per_pho.values(), key=lambda x: -x["revenue"]),
         "per_package": sorted(per_pkg.values(), key=lambda x: -x["revenue"]),
         "monthly": sorted(monthly.values(), key=lambda x: x["month"]),
-        "status_counts": status_counts, "upcoming": upcoming,
+        "status_counts": status_counts, 
+        "upcoming": upcoming,
     }
 
 @api_router.get("/config")
