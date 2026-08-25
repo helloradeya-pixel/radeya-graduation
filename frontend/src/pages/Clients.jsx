@@ -103,7 +103,7 @@ export default function Clients() {
 
   const openDetail = (b) => {
     setSelected(b);
-    setEditPho(b.photographer_id || "none");
+    setEditPho(b.photographer_id ? String(b.photographer_id) : "");
     setEditStatus(b.status);
     setEditPaid(String(b.amount_paid));
     setEditPaymentType(b.payment_type || "dp");
@@ -119,9 +119,11 @@ export default function Clients() {
 
   const saveDetail = async () => {
     try {
+      const photographerIdToSend = (!editPho || editPho === "none" || editPho === "") ? null : editPho;
+
       await api.put(`/bookings/${selected.booking_id}`, {
         status: editStatus,
-        photographer_id: (!editPho || editPho === "none") ? null : editPho,
+        photographer_id: photographerIdToSend,
         amount_paid: parseFloat(editPaid) || 0,
         payment_type: editPaymentType,
         photographer_paid: editPhoPaid,
@@ -435,8 +437,8 @@ export default function Clients() {
 
                 <div className="bg-moss-50/40 rounded-lg p-2.5 border border-moss-900/5 text-xs space-y-1">
                   <p className="font-semibold text-moss-900">{b.package_name}</p>
-                  <p className="text-muted-foreground"> {fmtDate(b.shoot_date)} ({startTimeFormatted} - {endTimeFormatted} WIB)</p>
-                  <p className="text-muted-foreground truncate"> {b.location}</p>
+                  <p className="text-muted-foreground">📅 {fmtDate(b.shoot_date)} ({startTimeFormatted} - {endTimeFormatted} WIB)</p>
+                  <p className="text-muted-foreground truncate">📍 {b.location}</p>
                 </div>
 
                 <div className="flex items-center justify-between text-xs pt-1 border-t border-gray-100">
@@ -679,7 +681,7 @@ export default function Clients() {
                 <Select 
                   onValueChange={(val) => {
                     setEditPho(val);
-                    if (val !== "none") {
+                    if (val && val !== "none" && val !== "") {
                       const found = safePhotographers.find(p => p.photographer_id === val);
                       if (found) {
                         setEditPhoFee(String(found.fee_per_session || 0));
@@ -690,9 +692,11 @@ export default function Clients() {
                   }} 
                   value={editPho}
                 >
-                  <SelectTrigger className="bg-white rounded-xl border-moss-900/20 h-10 text-xs"><SelectValue placeholder="Pilih fotografer" /></SelectTrigger>
+                  <SelectTrigger className="bg-white rounded-xl border-moss-900/20 h-10 text-xs">
+                    <SelectValue placeholder="— Belum Ditugaskan —" />
+                  </SelectTrigger>
                   <SelectContent className="bg-white z-50">
-                    <SelectItem value="none" className="text-xs">— Belum Ditugaskan —</SelectItem>
+                    <SelectItem value="" className="text-xs">— Belum Ditugaskan —</SelectItem>
                     {safePhotographers.map((p) => (
                       <SelectItem key={p.photographer_id} value={p.photographer_id} className="text-xs">
                         {p.name} (Fee: {rupiah(p.fee_per_session)})
