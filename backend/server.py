@@ -762,7 +762,6 @@ async def analytics(
     
     query = {"status": {"$ne": "cancelled"}}
     
-    # Dukungan filter rentang tanggal (start_date & end_date) atau filter bulan lama
     if start_date and end_date:
         query["shoot_date"] = {"$gte": start_date, "$lte": end_date}
     elif month and month != "all":
@@ -774,8 +773,10 @@ async def analytics(
     full_income = sum(b["amount_paid"] for b in bookings if b["payment_type"] == "full")
     total_income = dp_income + full_income
     outstanding = sum(max((float(b.get("package_price", 0)) + float(b.get("extra_charge", 0))) - float(b.get("amount_paid", 0)), 0) for b in bookings)
-    fee_total = sum(b.get("photographer_fee", 0) for b in bookings)
-    fee_unpaid = sum(b.get("photographer_fee", 0) for b in bookings if not b.get("photographer_paid"))
+    
+    # PERBAIKAN: Hanya menjumlahkan fee dari booking yang benar-benar memiliki fotografer (photographer_id terisi)
+    fee_total = sum(b.get("photographer_fee", 0) for b in bookings if b.get("photographer_id"))
+    fee_unpaid = sum(b.get("photographer_fee", 0) for b in bookings if b.get("photographer_id") and not b.get("photographer_paid"))
 
     per_pho = {}
     for b in bookings:
@@ -783,9 +784,10 @@ async def analytics(
         p = per_pho.setdefault(name, {"name": name, "sessions": 0, "revenue": 0.0, "fee": 0.0, "fee_unpaid": 0.0})
         p["sessions"] += 1
         p["revenue"] += b["amount_paid"]
-        p["fee"] += b.get("photographer_fee", 0)
-        if not b.get("photographer_paid"):
-            p["fee_unpaid"] += b.get("photographer_fee", 0)
+        if b.get("photographer_id"):
+            p["fee"] += b.get("photographer_fee", 0)
+            if not b.get("photographer_paid"):
+                p["fee_unpaid"] += b.get("photographer_fee", 0)
 
     per_pkg = {}
     for b in bookings:
