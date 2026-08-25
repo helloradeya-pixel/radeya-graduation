@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from "react";
-import { Search, Mail, Eye, Trash2, MessageSquare, Table, Calendar as CalendarIcon, ExternalLink, ChevronDown, ChevronUp } from "lucide-react";
+import { Search, Mail, Eye, Trash2, MessageSquare, Table, Calendar as CalendarIcon, ExternalLink, ChevronDown, ChevronUp, Settings } from "lucide-react";
 import { AdminLayout } from "../components/AdminLayout";
 import { api, rupiah, fmtDate } from "../lib/api";
 import { Button } from "../components/ui/button";
@@ -435,8 +435,8 @@ export default function Clients() {
 
                 <div className="bg-moss-50/40 rounded-lg p-2.5 border border-moss-900/5 text-xs space-y-1">
                   <p className="font-semibold text-moss-900">{b.package_name}</p>
-                  <p className="text-muted-foreground">📅 {fmtDate(b.shoot_date)} ({startTimeFormatted} - {endTimeFormatted} WIB)</p>
-                  <p className="text-muted-foreground truncate">📍 {b.location}</p>
+                  <p className="text-muted-foreground"> {fmtDate(b.shoot_date)} ({startTimeFormatted} - {endTimeFormatted} WIB)</p>
+                  <p className="text-muted-foreground truncate"> {b.location}</p>
                 </div>
 
                 <div className="flex items-center justify-between text-xs pt-1 border-t border-gray-100">
@@ -492,9 +492,9 @@ export default function Clients() {
         </div>
       )}
 
-      {/* MODAL KHUSUS LIHAT DETAIL SAJA */}
+      {/* MODAL DETAIL DENGAN TOMBOL AKSI LENGKAP */}
       <Dialog open={!!viewDetailOnly} onOpenChange={(o) => !o && setViewDetailOnly(null)}>
-        <DialogContent className="max-w-md rounded-3xl p-6 bg-white border border-moss-900/10 shadow-2xl z-50">
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto rounded-3xl p-6 bg-white border border-moss-900/10 shadow-2xl z-50">
           <DialogHeader>
             <DialogTitle className="font-serif text-lg text-moss-900">Detail Informasi Booking</DialogTitle>
           </DialogHeader>
@@ -516,6 +516,36 @@ export default function Clients() {
                 <p><span className="font-bold text-moss-900">Fotografer:</span> {viewDetailOnly.photographer_name || "Belum ditugaskan"}</p>
               </div>
 
+              {/* TOMBOL AKSI CEPAT DI DALAM POP-UP DETAIL */}
+              <div className="grid grid-cols-3 gap-2 pt-1">
+                <Button
+                  onClick={() => handleSendReminder(viewDetailOnly)}
+                  size="sm"
+                  className="h-9 bg-emerald-600 hover:bg-emerald-700 text-white text-xs gap-1"
+                >
+                  <MessageSquare className="h-3.5 w-3.5" /> WA
+                </Button>
+                <Button
+                  onClick={() => sendInvoice(viewDetailOnly.booking_id)}
+                  size="sm"
+                  variant="outline"
+                  className="h-9 text-xs gap-1 border-moss-900/20"
+                >
+                  <Mail className="h-3.5 w-3.5" /> Email
+                </Button>
+                <Button
+                  onClick={() => {
+                    const dataToEdit = viewDetailOnly;
+                    setViewDetailOnly(null);
+                    openDetail(dataToEdit);
+                  }}
+                  size="sm"
+                  className="h-9 bg-moss-800 hover:bg-moss-900 text-white text-xs gap-1"
+                >
+                  <Settings className="h-3.5 w-3.5" /> Kelola
+                </Button>
+              </div>
+
               {viewDetailOnly.proof_file_id && (
                 <button
                   onClick={() => window.open(`${process.env.REACT_APP_BACKEND_URL}/api/files/${viewDetailOnly.proof_file_id}`, "_blank")}
@@ -526,7 +556,7 @@ export default function Clients() {
               )}
             </div>
           )}
-          <DialogFooter>
+          <DialogFooter className="pt-2">
             <Button className="w-full bg-moss-900 hover:bg-moss-800 text-white rounded-xl h-10 text-xs" onClick={() => setViewDetailOnly(null)}>Tutup</Button>
           </DialogFooter>
         </DialogContent>
