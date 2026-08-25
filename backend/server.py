@@ -570,11 +570,12 @@ async def update_booking(booking_id: str, body: BookingUpdate, request: Request)
     if not cur:
         raise HTTPException(404, "Booking tidak ditemukan")
     
-    upd = {k: v for k, v in body.model_dump().items() if v is not None}
+    body_dict = body.model_dump()
+    upd = {k: v for k, v in body_dict.items() if v is not None}
     
-    # Penanganan mutlak untuk mengosongkan fotografer
-    if "photographer_id" in upd:
-        pho_id = upd["photographer_id"]
+    # Penanganan mutlak untuk mengosongkan fotografer secara eksplisit ke database
+    if "photographer_id" in body_dict:
+        pho_id = body_dict["photographer_id"]
         if not pho_id or pho_id == "none" or pho_id == "" or pho_id == "null":
             upd["photographer_id"] = None
             upd["photographer_name"] = None
@@ -596,7 +597,7 @@ async def update_booking(booking_id: str, body: BookingUpdate, request: Request)
     if "payment_type" not in upd:
         upd["payment_type"] = "full" if paid_amount >= total_tagihan else "dp"
 
-    # 1. Update ke MongoDB dengan memastikan nilai kosong benar-benar tersimpan
+    # 1. Update ke MongoDB dengan parameter lengkap ($set)
     await db.bookings.update_one({"booking_id": booking_id}, {"$set": upd})
     d = await db.bookings.find_one({"booking_id": booking_id}, {"_id": 0})
     
