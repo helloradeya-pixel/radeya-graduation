@@ -764,7 +764,8 @@ async def analytics(
 ):
     await get_current_user(request)
     
-    query = {"status": {"$ne": "cancelled"}}
+    # PERBAIKAN: Tidak memfilter cancelled di awal agar pembayaran DP dari booking cancelled tetap terbaca
+    query = {}
     
     if start_date and end_date:
         query["shoot_date"] = {"$gte": start_date, "$lte": end_date}
@@ -773,16 +774,22 @@ async def analytics(
         
     bookings = await db.bookings.find(query, {"_id": 0}).to_list(5000)
     
+    # Total pendapatan mencakup semua amount_paid yang masuk (termasuk dari status cancelled)
     dp_income = sum(b["amount_paid"] for b in bookings if b["payment_type"] == "dp")
     full_income = sum(b["amount_paid"] for b in bookings if b["payment_type"] == "full")
     total_income = dp_income + full_income
-    outstanding = sum(max((float(b.get("package_price", 0)) + float(b.get("extra_charge", 0))) - float(b.get("amount_paid", 0)), 0) for b in bookings)
     
-    fee_total = sum(b.get("photographer_fee", 0) for b in bookings if b.get("photographer_id"))
-    fee_unpaid = sum(b.get("photographer_fee", 0) for b in bookings if b.get("photographer_id") and not b.get("photographer_paid"))
+    # Piutang (outstanding) hanya dihitung untuk booking yang tidak cancelled
+    outstanding = sum(max((float(b.get("package_price", 0)) + float(b.get("extra_charge", 0))) - float(b.get("amount_paid", 0)), 0) for b in bookings if b.get("status") != "cancelled")
+    
+    # Fee fotografer hanya dihitung dari booking yang tidak cancelled dan memiliki fotografer
+    fee_total = sum(b.get("photographer_fee", 0) for b in bookings if b.get("photographer_id") and b.get("status") != "cancelled")
+    fee_unpaid = sum(b.get("photographer_fee", 0) for b in bookings if b.get("photographer_id") and not b.get("photographer_paid") and b.get("status") != "cancelled")
 
     per_pho = {}
     for b in bookings:
+        if b.get("status") == "cancelled":
+            continue
         name = b.get("photographer_name") or "Belum Ditugaskan"
         p = per_pho.setdefault(name, {"name": name, "sessions": 0, "revenue": 0.0, "fee": 0.0, "fee_unpaid": 0.0})
         p["sessions"] += 1
@@ -794,6 +801,8 @@ async def analytics(
 
     per_pkg = {}
     for b in bookings:
+        if b.get("status") == "cancelled":
+            continue
         p = per_pkg.setdefault(b["package_name"], {"name": b["package_name"], "count": 0, "revenue": 0.0})
         p["count"] += 1
         p["revenue"] += b["amount_paid"]
@@ -811,7 +820,7 @@ async def analytics(
     for b in bookings:
         status_counts[b["status"]] = status_counts.get(b["status"], 0) + 1
 
-    upcoming = sorted([b for b in bookings if b.get("shoot_date", "") >= datetime.now(timezone.utc).strftime("%Y-%m-%d")], key=lambda x: (x["shoot_date"], x["start_time"]))[:5]
+    upcoming = sorted([b for b in bookings if b.get("shoot_date", "") >= datetime.now(timezone.utc).strftime("%Y-%m-%d") and b.get("status") != "cancelled"], key=lambda x: (x["shoot_date"], x["start_time"]))[:5]
     for u in upcoming:
         u["balance_due"] = max((float(u.get("package_price", 0)) + float(u.get("extra_charge", 0))) - float(u.get("amount_paid", 0)), 0)
         u["gcal_link"] = gcal_link(u)
