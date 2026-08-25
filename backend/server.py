@@ -572,15 +572,18 @@ async def update_booking(booking_id: str, body: BookingUpdate, request: Request)
     
     upd = {k: v for k, v in body.model_dump().items() if v is not None}
     
+    # Penanganan mutlak untuk mengosongkan fotografer
     if "photographer_id" in upd:
-        if not upd["photographer_id"] or upd["photographer_id"] == "none":
+        pho_id = upd["photographer_id"]
+        if not pho_id or pho_id == "none" or pho_id == "" or pho_id == "null":
             upd["photographer_id"] = None
             upd["photographer_name"] = None
             upd["photographer_fee"] = 0.0
+            upd["photographer_paid"] = False
         else:
-            pho = await db.photographers.find_one({"photographer_id": upd["photographer_id"]}, {"_id": 0})
+            pho = await db.photographers.find_one({"photographer_id": pho_id}, {"_id": 0})
             upd["photographer_name"] = pho["name"] if pho else None
-            if pho and "photographer_fee" not in upd:
+            if pho and ("photographer_fee" not in upd or upd["photographer_fee"] == 0):
                 upd["photographer_fee"] = pho.get("fee_per_session", 0)
                 
     package_price = float(cur.get("package_price", 0))
@@ -593,7 +596,7 @@ async def update_booking(booking_id: str, body: BookingUpdate, request: Request)
     if "payment_type" not in upd:
         upd["payment_type"] = "full" if paid_amount >= total_tagihan else "dp"
 
-    # 1. Update ke MongoDB
+    # 1. Update ke MongoDB dengan memastikan nilai kosong benar-benar tersimpan
     await db.bookings.update_one({"booking_id": booking_id}, {"$set": upd})
     d = await db.bookings.find_one({"booking_id": booking_id}, {"_id": 0})
     
@@ -622,7 +625,7 @@ async def update_booking(booking_id: str, body: BookingUpdate, request: Request)
     except Exception as e:
         logger.error(f"Gagal sinkronisasi Sheets/Calendar saat update: {e}")
 
-    # 3. Sinkronisasi otomatis ke Notion (Update jika ada, buat baru jika belum)
+    # 3. Sinkronisasi otomatis ke Notion
     try:
         await update_notion_booking(d, d['package_name'])
     except Exception as e:
@@ -774,7 +777,6 @@ async def analytics(
     total_income = dp_income + full_income
     outstanding = sum(max((float(b.get("package_price", 0)) + float(b.get("extra_charge", 0))) - float(b.get("amount_paid", 0)), 0) for b in bookings)
     
-    # PERBAIKAN: Hanya menjumlahkan fee dari booking yang benar-benar memiliki fotografer (photographer_id terisi)
     fee_total = sum(b.get("photographer_fee", 0) for b in bookings if b.get("photographer_id"))
     fee_unpaid = sum(b.get("photographer_fee", 0) for b in bookings if b.get("photographer_id") and not b.get("photographer_paid"))
 
