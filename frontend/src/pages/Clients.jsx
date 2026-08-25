@@ -127,7 +127,7 @@ export default function Clients() {
         amount_paid: parseFloat(editPaid) || 0,
         payment_type: editPaymentType,
         photographer_paid: editPhoPaid,
-        photographer_fee: parseFloat(editPhoFee) || 0,
+        photographer_fee: photographerIdToSend ? (parseFloat(editPhoFee) || 0) : 0,
         extra_charge: parseFloat(editExtraCharge) || 0,
         extra_note: editExtraNote,
         shoot_date: editShootDate,
@@ -680,15 +680,14 @@ export default function Clients() {
                 <label className="text-xs font-bold text-moss-900">Tugaskan Fotografer</label>
                 <Select 
                   onValueChange={(val) => {
-                    const actualVal = val === "none" ? "" : val;
                     setEditPho(val);
-                    if (actualVal && actualVal !== "") {
-                      const found = safePhotographers.find(p => p.photographer_id === actualVal);
+                    if (val && val !== "none" && val !== "") {
+                      const found = safePhotographers.find(p => p.photographer_id === val);
                       if (found) {
                         setEditPhoFee(String(found.fee_per_session || 0));
                       }
                     } else {
-                      setEditPhoFee("");
+                      setEditPhoFee("0");
                     }
                   }} 
                   value={editPho}
