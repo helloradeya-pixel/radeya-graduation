@@ -41,7 +41,6 @@ export default function Clients() {
   const [viewMode, setViewMode] = useState("list");
   const [currentView, setCurrentView] = useState(Views.MONTH);
 
-  // State untuk tanggal aktif kalender
   const [calendarDate, setCalendarDate] = useState(new Date());
 
   const [selected, setSelected] = useState(null);
@@ -216,7 +215,6 @@ export default function Clients() {
     };
   });
 
-  // Gestur swipe geser bulan
   const handleTouchStart = (e) => {
     touchStartX.current = e.targetTouches[0].clientX;
   };
@@ -285,7 +283,7 @@ export default function Clients() {
                 <Button
                   variant="outline"
                   className={cn(
-                    "w-[220px] sm:w-[260px] justify-start text-left font-normal bg-white rounded-xl border-moss-900/10 text-xs h-9 shadow-sm shrink-0",
+                    "w-[220px] sm:w-[240px] justify-start text-left font-normal bg-white rounded-xl border-moss-900/10 text-xs h-9 shadow-sm shrink-0",
                     !dateRange && "text-muted-foreground"
                   )}
                 >
@@ -304,14 +302,14 @@ export default function Clients() {
                   )}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0 bg-white z-50 shadow-xl rounded-2xl border border-moss-900/10" align="start">
+              <PopoverContent className="w-auto p-0 bg-white z-50 shadow-xl rounded-2xl border border-moss-900/10 scale-95 origin-top-left" align="start">
                 <div className="flex flex-col sm:flex-row">
-                  <div className="p-3 border-b sm:border-b-0 sm:border-r border-neutral-100 flex flex-col gap-1.5 min-w-[130px]">
-                    <p className="text-[11px] font-bold text-muted-foreground uppercase px-2 mb-1">Periode Cepat</p>
-                    <Button variant="ghost" size="sm" className="justify-start text-xs h-8 px-2 font-normal hover:bg-moss-50" onClick={() => handlePreset("today")}>Hari Ini</Button>
-                    <Button variant="ghost" size="sm" className="justify-start text-xs h-8 px-2 font-normal hover:bg-moss-50" onClick={() => handlePreset("7days")}>7 Hari Terakhir</Button>
-                    <Button variant="ghost" size="sm" className="justify-start text-xs h-8 px-2 font-normal hover:bg-moss-50" onClick={() => handlePreset("thisMonth")}>Bulan Ini</Button>
-                    <Button variant="ghost" size="sm" className="justify-start text-xs h-8 px-2 font-normal hover:bg-moss-50 text-rose-600" onClick={() => handlePreset("all")}>Semua Waktu</Button>
+                  <div className="p-3 border-b sm:border-b-0 sm:border-r border-neutral-100 flex flex-col gap-1 min-w-[120px]">
+                    <p className="text-[10px] font-bold text-muted-foreground uppercase px-2 mb-1">Periode</p>
+                    <Button variant="ghost" size="sm" className="justify-start text-xs h-7 px-2 font-normal hover:bg-moss-50" onClick={() => handlePreset("today")}>Hari Ini</Button>
+                    <Button variant="ghost" size="sm" className="justify-start text-xs h-7 px-2 font-normal hover:bg-moss-50" onClick={() => handlePreset("7days")}>7 Hari Terakhir</Button>
+                    <Button variant="ghost" size="sm" className="justify-start text-xs h-7 px-2 font-normal hover:bg-moss-50" onClick={() => handlePreset("thisMonth")}>Bulan Ini</Button>
+                    <Button variant="ghost" size="sm" className="justify-start text-xs h-7 px-2 font-normal hover:bg-moss-50 text-rose-600" onClick={() => handlePreset("all")}>Semua Waktu</Button>
                   </div>
                   <div className="p-2">
                     <UICalendar
@@ -322,9 +320,10 @@ export default function Clients() {
                       onSelect={setDateRange}
                       numberOfMonths={1}
                       locale={id}
+                      className="text-xs"
                     />
                     <div className="flex items-center justify-end gap-2 p-2 border-t border-neutral-100">
-                      <Button size="sm" className="bg-moss-800 text-white hover:bg-moss-900 text-xs h-8 px-4 rounded-lg" onClick={() => setIsCalendarOpen(false)}>Terapkan</Button>
+                      <Button size="sm" className="bg-moss-800 text-white hover:bg-moss-900 text-xs h-7 px-3 rounded-lg" onClick={() => setIsCalendarOpen(false)}>Terapkan</Button>
                     </div>
                   </div>
                 </div>
@@ -332,26 +331,26 @@ export default function Clients() {
             </Popover>
 
             <Select onValueChange={setStatusFilter} value={statusFilter}>
-              <SelectTrigger className="w-[130px] bg-white shrink-0">
+              <SelectTrigger className="w-[130px] bg-white shrink-0 text-xs h-9">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Semua Status</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="confirmed">Confirmed</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-                <SelectItem value="cancelled">Cancelled</SelectItem>
+              <SelectContent className="bg-white z-50">
+                <SelectItem value="all" className="text-xs">Semua Status</SelectItem>
+                <SelectItem value="pending" className="text-xs">Pending</SelectItem>
+                <SelectItem value="confirmed" className="text-xs">Confirmed</SelectItem>
+                <SelectItem value="completed" className="text-xs">Completed</SelectItem>
+                <SelectItem value="cancelled" className="text-xs">Cancelled</SelectItem>
               </SelectContent>
             </Select>
 
             <Select onValueChange={setPaymentFilter} value={paymentFilter}>
-              <SelectTrigger className="w-[130px] bg-white shrink-0">
+              <SelectTrigger className="w-[130px] bg-white shrink-0 text-xs h-9">
                 <SelectValue placeholder="Pembayaran" />
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Semua Bayar</SelectItem>
-                <SelectItem value="dp">DP Saja</SelectItem>
-                <SelectItem value="full">Full Payment</SelectItem>
+              <SelectContent className="bg-white z-50">
+                <SelectItem value="all" className="text-xs">Semua Bayar</SelectItem>
+                <SelectItem value="dp" className="text-xs">DP Saja</SelectItem>
+                <SelectItem value="full" className="text-xs">Full Payment</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -376,7 +375,6 @@ export default function Clients() {
               onView={(newView) => setCurrentView(newView)}
               onNavigate={(newDate) => setCalendarDate(newDate)}
               style={{ height: "100%" }}
-              // Mengatur agar mode agenda menampilkan rentang tepat 1 bulan kalender penuh dari tanggal 1 s/d akhir bulan
               views={[Views.MONTH, Views.WEEK, Views.DAY, Views.AGENDA]}
               length={31}
               messages={{
