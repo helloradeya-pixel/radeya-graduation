@@ -141,27 +141,45 @@ export default function Dashboard() {
         ) : data ? (
           <div className="space-y-4">
             
-            {/* 1. KARTU METRIK UTAMA */}
+            {/* 1. KARTU METRIK UTAMA (Dual Basis: Kas & Potensi Omzet) */}
             <div className="grid grid-cols-1 gap-3">
+              
+              {/* Kartu Utama: Laba Bersih Potensial (Accrual Basis) */}
               <div className="bg-gradient-to-br from-moss-900 to-moss-950 text-white p-5 rounded-2xl shadow-sm relative overflow-hidden">
                 <div className="flex items-center justify-between">
-                  <p className="text-[11px] font-bold uppercase tracking-wider text-white/80">Net Profit (Bersih)</p>
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-white/80">Net Profit Bersih (Potensi Omzet)</p>
                   <div className="p-2 rounded-xl bg-white/10 text-white"><DollarSign className="h-4 w-4" /></div>
                 </div>
-                <p className="text-2xl sm:text-3xl font-extrabold mt-2 text-white">{rupiah(data.net_profit)}</p>
-                <p className="text-[11px] text-white/80 mt-1">Pendapatan bersih dikurangi total fee fotografer</p>
+                <p className="text-2xl sm:text-3xl font-extrabold mt-2 text-white">
+                  {rupiah(data.net_profit_accrual ?? data.net_profit)}
+                </p>
+                <p className="text-[11px] text-white/80 mt-1">Estimasi bersih jika semua piutang lunas dikurangi fee fotografer</p>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {/* Grid 4 Kartu Pendukung */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                
+                {/* Total Omzet Kotor */}
                 <div className="bg-white p-4 rounded-2xl border border-moss-900/10 shadow-sm">
                   <div className="flex items-center justify-between">
-                    <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Total Pendapatan</p>
-                    <div className="p-1.5 rounded-lg bg-green-50 text-green-700"><TrendingUp className="h-3.5 w-3.5" /></div>
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Total Omzet Kotor</p>
+                    <div className="p-1.5 rounded-lg bg-moss-50 text-moss-700"><TrendingUp className="h-3.5 w-3.5" /></div>
                   </div>
-                  <p className="text-xl font-bold text-moss-900 mt-2">{rupiah(data.total_income)}</p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">Akumulasi DP & Pelunasan</p>
+                  <p className="text-xl font-bold text-moss-900 mt-2">{rupiah(data.total_turnover || 0)}</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">Akumulasi seluruh nilai kontrak</p>
                 </div>
 
+                {/* Kas Masuk (Cash-In) */}
+                <div className="bg-white p-4 rounded-2xl border border-moss-900/10 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Kas Masuk (Aktual)</p>
+                    <div className="p-1.5 rounded-lg bg-green-50 text-green-700"><Wallet className="h-3.5 w-3.5" /></div>
+                  </div>
+                  <p className="text-xl font-bold text-green-700 mt-2">{rupiah(data.total_income)}</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">Uang riil DP & Pelunasan di kas</p>
+                </div>
+
+                {/* Piutang / Outstanding */}
                 <div className="bg-white p-4 rounded-2xl border border-moss-900/10 shadow-sm">
                   <div className="flex items-center justify-between">
                     <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Outstanding / Piutang</p>
@@ -171,6 +189,7 @@ export default function Dashboard() {
                   <p className="text-[10px] text-muted-foreground mt-0.5">Sisa tagihan belum dibayar</p>
                 </div>
 
+                {/* Fee Fotografer */}
                 <div className="bg-white p-4 rounded-2xl border border-moss-900/10 shadow-sm">
                   <div className="flex items-center justify-between">
                     <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Fee Fotografer</p>
@@ -179,6 +198,7 @@ export default function Dashboard() {
                   <p className="text-xl font-bold text-rose-600 mt-2">{rupiah(data.photographer_fee_total)}</p>
                   <p className="text-[10px] text-rose-700 mt-0.5">Belum lunas: {rupiah(data.photographer_fee_unpaid)}</p>
                 </div>
+
               </div>
             </div>
 
