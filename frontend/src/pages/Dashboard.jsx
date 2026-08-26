@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { AdminLayout } from "../components/AdminLayout";
 import { api, rupiah } from "../lib/api";
 import { toast } from "sonner";
-import { TrendingUp, Wallet, Users, Calendar as CalendarIcon, DollarSign } from "lucide-react";
+import { TrendingUp, Wallet, Users, Calendar as CalendarIcon, DollarSign, MessageSquare, Mail, Settings, ExternalLink } from "lucide-react";
 import { format, startOfMonth, endOfMonth, addMonths, subMonths } from "date-fns";
 import { id } from "date-fns/locale";
 
@@ -23,8 +23,10 @@ export default function Dashboard() {
   });
   const [isOpen, setIsOpen] = useState(false);
 
-  // State untuk popup rincian klien fotografer
+  // State untuk popup rincian klien fotografer & detail booking spesifik
   const [selectedPhotographer, setSelectedPhotographer] = useState(null);
+  const [selectedBookingDetail, setSelectedBookingDetail] = useState(null);
+  const [, setLoadingBooking] = useState(false);
 
   // Fungsi load data berdasarkan rentang tanggal ke backend
   const loadAnalytics = useCallback(async () => {
@@ -50,6 +52,23 @@ export default function Dashboard() {
   useEffect(() => {
     loadAnalytics();
   }, [loadAnalytics]);
+
+  // Fungsi untuk mengambil detail booking saat nama klien diklik
+  const handleClientClick = async (bookingId) => {
+    if (!bookingId) {
+      toast.error("ID Booking tidak ditemukan");
+      return;
+    }
+    setLoadingBooking(true);
+    try {
+      const { data: res } = await api.get(`/bookings/${bookingId}`);
+      setSelectedBookingDetail(res);
+    } catch {
+      toast.error("Gagal memuat detail booking");
+    } finally {
+      setLoadingBooking(false);
+    }
+  };
 
   // Tombol Shortcut Cepat (Gaya Meta Ads)
   const handlePreset = (preset) => {
@@ -299,7 +318,7 @@ export default function Dashboard() {
         ) : null}
       </div>
 
-      {/* POPUP / MODAL DETAIL JADWAL KLIEN FOTOGRAFER */}
+      {/* POPUP 1: DAFTAR KLIEN & JADWAL FOTOGRAFER */}
       {selectedPhotographer && (
         <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
           <div className="bg-white w-full max-w-lg rounded-2xl p-6 shadow-xl space-y-4 max-h-[85vh] overflow-y-auto">
@@ -321,9 +340,13 @@ export default function Dashboard() {
             <div className="space-y-3">
               {selectedPhotographer.clients && selectedPhotographer.clients.length > 0 ? (
                 selectedPhotographer.clients.map((client, idx) => (
-                  <div key={idx} className="p-3 rounded-xl border border-neutral-100 bg-neutral-50 flex justify-between items-center text-xs sm:text-sm">
+                  <div 
+                    key={idx} 
+                    onClick={() => handleClientClick(client.booking_id)}
+                    className="p-3 rounded-xl border border-neutral-100 bg-neutral-50 hover:bg-moss-50/60 cursor-pointer flex justify-between items-center text-xs sm:text-sm transition-colors"
+                  >
                     <div>
-                      <p className="font-bold text-moss-900">{client.client_name}</p>
+                      <p className="font-bold text-moss-900 underline decoration-moss-300">{client.client_name}</p>
                       <p className="text-muted-foreground text-[11px]">{client.package_name} • {client.date}</p>
                     </div>
                     <div className="text-right">
@@ -346,6 +369,83 @@ export default function Dashboard() {
                 size="sm" 
                 onClick={() => setSelectedPhotographer(null)}
                 className="bg-moss-900 text-white hover:bg-moss-800 text-xs h-9 px-4 rounded-xl"
+              >
+                Tutup
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* POPUP 2: DETAIL INFORMASI BOOKING LENGKAP */}
+      {selectedBookingDetail && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-lg rounded-2xl p-6 shadow-xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b pb-3">
+              <h3 className="font-bold text-moss-900 text-base">Detail Informasi Booking</h3>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setSelectedBookingDetail(null)}
+                className="h-8 w-8 p-0 rounded-full"
+              >
+                ✕
+              </Button>
+            </div>
+
+            {/* Kotak Rincian Informasi */}
+            <div className="p-4 rounded-2xl border border-moss-900/10 bg-neutral-50/50 space-y-2 text-xs sm:text-sm">
+              <p><span className="font-bold text-moss-900">No. Invoice:</span> {selectedBookingDetail.invoice_number}</p>
+              <p><span className="font-bold text-moss-900">Nama Client:</span> {selectedBookingDetail.full_name}</p>
+              <p><span className="font-bold text-moss-900">WhatsApp:</span> {selectedBookingDetail.whatsapp}</p>
+              <p><span className="font-bold text-moss-900">Kampus / Jurusan:</span> {selectedBookingDetail.university} — {selectedBookingDetail.study}</p>
+              <p><span className="font-bold text-moss-900">Paket Foto:</span> {selectedBookingDetail.package_name} ({rupiah(selectedBookingDetail.package_price)})</p>
+              <p><span className="font-bold text-moss-900">Jadwal Sesi:</span> {selectedBookingDetail.shoot_date} ({selectedBookingDetail.start_time} - {selectedBookingDetail.end_time} WIB)</p>
+              <p><span className="font-bold text-moss-900">Lokasi:</span> {selectedBookingDetail.location}</p>
+              <p><span className="font-bold text-moss-900">Status Booking:</span> <span className="text-moss-700 font-bold uppercase">{selectedBookingDetail.status}</span></p>
+              <p><span className="font-bold text-moss-900">Status Pembayaran:</span> <span className="uppercase font-bold">{selectedBookingDetail.payment_type}</span> ({rupiah(selectedBookingDetail.amount_paid)} dibayar)</p>
+              <p><span className="font-bold text-moss-900">Fotografer:</span> {selectedBookingDetail.photographer_name || "Belum Ditugaskan"}</p>
+            </div>
+
+            {/* Tombol Aksi Cepat */}
+            <div className="grid grid-cols-3 gap-2">
+              <Button 
+                onClick={() => window.open(selectedBookingDetail.whatsapp_link || `https://wa.me/${selectedBookingDetail.whatsapp}`, "_blank")}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-10 rounded-xl flex items-center justify-center gap-1.5 font-medium"
+              >
+                <MessageSquare className="h-4 w-4" /> WA
+              </Button>
+              <Button 
+                onClick={() => window.open(`mailto:${selectedBookingDetail.email}`, "_blank")}
+                variant="outline"
+                className="border-neutral-200 hover:bg-neutral-100 text-xs h-10 rounded-xl flex items-center justify-center gap-1.5 font-medium"
+              >
+                <Mail className="h-4 w-4" /> Email
+              </Button>
+              <Button 
+                onClick={() => toast.info("Gunakan menu Database untuk kelola booking")}
+                className="bg-moss-900 hover:bg-moss-800 text-white text-xs h-10 rounded-xl flex items-center justify-center gap-1.5 font-medium"
+              >
+                <Settings className="h-4 w-4" /> Kelola
+              </Button>
+            </div>
+
+            {/* Tombol Bukti Transfer */}
+            {selectedBookingDetail.proof_file_id && (
+              <Button 
+                onClick={() => window.open(`/api/files/${selectedBookingDetail.proof_file_id}`, "_blank")}
+                variant="outline"
+                className="w-full border-moss-900/20 text-moss-900 hover:bg-moss-50 text-xs h-10 rounded-xl flex items-center justify-center gap-2 font-medium"
+              >
+                <ExternalLink className="h-4 w-4" /> Lihat Bukti Transfer
+              </Button>
+            )}
+
+            {/* Tombol Tutup */}
+            <div className="pt-2">
+              <Button 
+                onClick={() => setSelectedBookingDetail(null)}
+                className="w-full bg-moss-900 hover:bg-moss-800 text-white text-xs h-10 rounded-xl"
               >
                 Tutup
               </Button>
