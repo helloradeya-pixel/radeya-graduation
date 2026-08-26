@@ -231,6 +231,7 @@ class BookingUpdate(BaseModel):
     shoot_date: Optional[str] = None
     start_time: Optional[str] = None
     end_time: Optional[str] = None
+    location: Optional[str] = None  # <-- Ditambahkan agar lokasi dapat diperbarui
 
 class ClientPaymentConfirm(BaseModel):
     amount_paid: float
