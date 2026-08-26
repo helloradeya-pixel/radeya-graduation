@@ -55,7 +55,7 @@ export default function Clients() {
   const [editShootDate, setEditShootDate] = useState("");
   const [editStartTime, setEditStartTime] = useState("");
   const [editEndTime, setEditEndTime] = useState("");
-  const [editLocation, setEditLocation] = useState(""); // <-- State baru untuk lokasi
+  const [editLocation, setEditLocation] = useState("");
 
   const [showReschedule, setShowReschedule] = useState(false);
   const [viewDetailOnly, setViewDetailOnly] = useState(null);
@@ -115,7 +115,7 @@ export default function Clients() {
     setEditShootDate(b.shoot_date || "");
     setEditStartTime(b.start_time || "");
     setEditEndTime(b.end_time || "");
-    setEditLocation(b.location || ""); // <-- Mengisi state lokasi saat modal dibuka
+    setEditLocation(b.location || "");
     setShowReschedule(false);
   };
 
@@ -135,7 +135,7 @@ export default function Clients() {
         shoot_date: editShootDate,
         start_time: editStartTime,
         end_time: editEndTime,
-        location: editLocation, // <-- Mengirim perubahan lokasi ke backend
+        location: editLocation,
       });
       toast.success("Booking dan jadwal berhasil diperbarui");
       setSelected(null);
@@ -601,19 +601,7 @@ export default function Clients() {
                 <p><span className="font-bold text-moss-900">Lokasi:</span> {selected.location}</p>
               </div>
 
-              {/* INPUT LOKASI / VENUE BARU */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-moss-900">Lokasi / Venue Foto</label>
-                <Input 
-                  type="text" 
-                  value={editLocation} 
-                  onChange={(e) => setEditLocation(e.target.value)} 
-                  placeholder="Misal: UTCC Pondok Cabe" 
-                  className="bg-white rounded-xl border-moss-900/20 h-10 text-xs shadow-sm" 
-                />
-              </div>
-
-              {/* TOGGLE RESCHEDULE */}
+              {/* TOGGLE RESCHEDULE (TANGGAL, JAM, & LOKASI) */}
               <div className="border border-moss-900/15 rounded-2xl overflow-hidden bg-white shadow-sm">
                 <button
                   type="button"
@@ -626,6 +614,17 @@ export default function Clients() {
 
                 {showReschedule && (
                   <div className="p-4 space-y-3 bg-white border-t border-moss-900/10">
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-medium text-muted-foreground">Lokasi / Venue Foto</label>
+                      <Input 
+                        type="text" 
+                        value={editLocation} 
+                        onChange={(e) => setEditLocation(e.target.value)} 
+                        placeholder="Misal: UTCC Pondok Cabe" 
+                        className="bg-white text-xs h-10 w-full rounded-xl border border-moss-900/20 shadow-sm" 
+                      />
+                    </div>
+
                     <div className="space-y-1">
                       <label className="text-[11px] font-medium text-muted-foreground">Tanggal Foto</label>
                       <Input 
