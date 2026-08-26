@@ -23,6 +23,9 @@ export default function Dashboard() {
   });
   const [isOpen, setIsOpen] = useState(false);
 
+  // State untuk popup rincian klien fotografer
+  const [selectedPhotographer, setSelectedPhotographer] = useState(null);
+
   // Fungsi load data berdasarkan rentang tanggal ke backend
   const loadAnalytics = useCallback(async () => {
     setLoading(true);
@@ -253,12 +256,12 @@ export default function Dashboard() {
               )}
             </div>
 
-            {/* 3. RINCIAN FEE FOTOGRAFER */}
+            {/* 3. RINCIAN FEE FOTOGRAFER (Interaktif dengan Popup) */}
             <div className="bg-white p-4 sm:p-6 rounded-2xl border border-moss-900/10 shadow-sm">
               <h3 className="font-bold text-moss-900 text-sm sm:text-base mb-1 flex items-center gap-2">
                 <Users className="h-4 w-4 text-moss-700" /> Beban Fee Fotografer
               </h3>
-              <p className="text-[11px] text-muted-foreground mb-3">Pantau kewajiban pembayaran fee ke fotografer.</p>
+              <p className="text-[11px] text-muted-foreground mb-3">Klik nama fotografer untuk melihat daftar klien & jadwal sesi.</p>
               
               <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
                 <table className="w-full text-xs sm:text-sm min-w-[450px]">
@@ -272,8 +275,14 @@ export default function Dashboard() {
                   </thead>
                   <tbody>
                     {data.per_photographer.map((p) => (
-                      <tr key={p.name} className="border-b border-neutral-50 last:border-0">
-                        <td className="py-3 font-semibold text-moss-900">{p.name}</td>
+                      <tr 
+                        key={p.name} 
+                        onClick={() => setSelectedPhotographer(p)}
+                        className="border-b border-neutral-50 last:border-0 hover:bg-moss-50/50 cursor-pointer transition-colors"
+                      >
+                        <td className="py-3 font-semibold text-moss-900 underline decoration-moss-300 underline-offset-2">
+                          {p.name}
+                        </td>
                         <td className="py-3">{p.sessions} Sesi</td>
                         <td className="py-3 font-medium">{rupiah(p.fee)}</td>
                         <td className={`py-3 text-right font-bold ${p.fee_unpaid > 0 ? 'text-rose-600' : 'text-green-600'}`}>
@@ -289,6 +298,61 @@ export default function Dashboard() {
           </div>
         ) : null}
       </div>
+
+      {/* POPUP / MODAL DETAIL JADWAL KLIEN FOTOGRAFER */}
+      {selectedPhotographer && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-lg rounded-2xl p-6 shadow-xl space-y-4 max-h-[85vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b pb-3">
+              <div>
+                <h3 className="font-bold text-moss-900 text-base">Jadwal Sesi: {selectedPhotographer.name}</h3>
+                <p className="text-xs text-muted-foreground">Total {selectedPhotographer.sessions} sesi ditangani</p>
+              </div>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setSelectedPhotographer(null)}
+                className="h-8 w-8 p-0 rounded-full"
+              >
+                ✕
+              </Button>
+            </div>
+
+            <div className="space-y-3">
+              {selectedPhotographer.clients && selectedPhotographer.clients.length > 0 ? (
+                selectedPhotographer.clients.map((client, idx) => (
+                  <div key={idx} className="p-3 rounded-xl border border-neutral-100 bg-neutral-50 flex justify-between items-center text-xs sm:text-sm">
+                    <div>
+                      <p className="font-bold text-moss-900">{client.client_name}</p>
+                      <p className="text-muted-foreground text-[11px]">{client.package_name} • {client.date}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-semibold text-moss-800">{rupiah(client.fee)}</p>
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${client.is_paid ? 'bg-green-100 text-green-700' : 'bg-rose-100 text-rose-700'}`}>
+                        {client.is_paid ? 'Fee Lunas' : 'Belum Lunas'}
+                      </span>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-xs text-muted-foreground text-center py-6">
+                  Belum ada data klien untuk fotografer ini pada periode tersebut.
+                </p>
+              )}
+            </div>
+
+            <div className="flex justify-end pt-2 border-t">
+              <Button 
+                size="sm" 
+                onClick={() => setSelectedPhotographer(null)}
+                className="bg-moss-900 text-white hover:bg-moss-800 text-xs h-9 px-4 rounded-xl"
+              >
+                Tutup
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </AdminLayout>
   );
 }
