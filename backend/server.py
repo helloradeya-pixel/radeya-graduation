@@ -806,7 +806,9 @@ async def analytics(
             if not is_paid_pho:
                 p["fee_unpaid"] += fee_val
             
+            # --- booking_id ditambahkan agar frontend bisa memanggil detail booking ---
             p["clients"].append({
+                "booking_id": b.get("booking_id"),
                 "client_name": b.get("full_name"),
                 "date": b.get("shoot_date"),
                 "package_name": b.get("package_name"),
@@ -883,14 +885,12 @@ async def startup():
     except Exception as e:
         logger.error(f"Storage init failed: {e}")
         
-    # --- PEMBUATAN INDEKS DATABASE OTOMATIS ---
     try:
         await db.bookings.create_index("shoot_date")
         await db.bookings.create_index("photographer_id")
         logger.info("Database indexes for shoot_date and photographer_id created successfully")
     except Exception as e:
         logger.error(f"Failed to create indexes: {e}")
-    # ------------------------------------------
 
     if await db.packages.count_documents({}) == 0:
         for p in DEFAULT_PACKAGES:
