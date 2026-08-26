@@ -3,7 +3,7 @@ import { AdminLayout } from "../components/AdminLayout";
 import { api, rupiah } from "../lib/api";
 import { toast } from "sonner";
 import { TrendingUp, Wallet, Users, Calendar as CalendarIcon, DollarSign } from "lucide-react";
-import { format, subDays, startOfMonth, endOfMonth } from "date-fns";
+import { format, startOfMonth, endOfMonth, addMonths, subMonths } from "date-fns";
 import { id } from "date-fns/locale";
 
 // Komponen UI shadcn
@@ -55,10 +55,20 @@ export default function Dashboard() {
       setDateRange({ from: undefined, to: undefined });
     } else if (preset === "today") {
       setDateRange({ from: today, to: today });
-    } else if (preset === "7days") {
-      setDateRange({ from: subDays(today, 6), to: today });
+    } else if (preset === "lastMonth") {
+      const lastMonthDate = subMonths(today, 1);
+      setDateRange({
+        from: startOfMonth(lastMonthDate),
+        to: endOfMonth(lastMonthDate),
+      });
     } else if (preset === "thisMonth") {
       setDateRange({ from: startOfMonth(today), to: endOfMonth(today) });
+    } else if (preset === "nextMonth") {
+      const nextMonthDate = addMonths(today, 1);
+      setDateRange({
+        from: startOfMonth(nextMonthDate),
+        to: endOfMonth(nextMonthDate),
+      });
     }
     setIsOpen(false);
   };
@@ -101,11 +111,14 @@ export default function Dashboard() {
                   <Button variant="ghost" size="sm" className="justify-start text-xs h-8 px-2 font-normal hover:bg-moss-50" onClick={() => handlePreset("today")}>
                     Hari Ini
                   </Button>
-                  <Button variant="ghost" size="sm" className="justify-start text-xs h-8 px-2 font-normal hover:bg-moss-50" onClick={() => handlePreset("7days")}>
-                    7 Hari Terakhir
+                  <Button variant="ghost" size="sm" className="justify-start text-xs h-8 px-2 font-normal hover:bg-moss-50" onClick={() => handlePreset("lastMonth")}>
+                    Bulan Lalu
                   </Button>
                   <Button variant="ghost" size="sm" className="justify-start text-xs h-8 px-2 font-normal hover:bg-moss-50" onClick={() => handlePreset("thisMonth")}>
                     Bulan Ini
+                  </Button>
+                  <Button variant="ghost" size="sm" className="justify-start text-xs h-8 px-2 font-normal hover:bg-moss-50" onClick={() => handlePreset("nextMonth")}>
+                    Bulan Berikutnya
                   </Button>
                   <Button variant="ghost" size="sm" className="justify-start text-xs h-8 px-2 font-normal hover:bg-moss-50 text-rose-600" onClick={() => handlePreset("all")}>
                     Semua Waktu
