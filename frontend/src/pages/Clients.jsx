@@ -55,6 +55,7 @@ export default function Clients() {
   const [editShootDate, setEditShootDate] = useState("");
   const [editStartTime, setEditStartTime] = useState("");
   const [editEndTime, setEditEndTime] = useState("");
+  const [editLocation, setEditLocation] = useState(""); // <-- State baru untuk lokasi
 
   const [showReschedule, setShowReschedule] = useState(false);
   const [viewDetailOnly, setViewDetailOnly] = useState(null);
@@ -114,6 +115,7 @@ export default function Clients() {
     setEditShootDate(b.shoot_date || "");
     setEditStartTime(b.start_time || "");
     setEditEndTime(b.end_time || "");
+    setEditLocation(b.location || ""); // <-- Mengisi state lokasi saat modal dibuka
     setShowReschedule(false);
   };
 
@@ -133,6 +135,7 @@ export default function Clients() {
         shoot_date: editShootDate,
         start_time: editStartTime,
         end_time: editEndTime,
+        location: editLocation, // <-- Mengirim perubahan lokasi ke backend
       });
       toast.success("Booking dan jadwal berhasil diperbarui");
       setSelected(null);
@@ -205,21 +208,18 @@ export default function Clients() {
       return true;
     })
     .sort((a, b) => {
-      // 1. Urutkan berdasarkan tanggal foto (dari yang terdekat)
       const dateA = new Date(a.shoot_date || "1970-01-01");
       const dateB = new Date(b.shoot_date || "1970-01-01");
       if (dateA - dateB !== 0) {
         return dateA - dateB;
       }
 
-      // 2. Jika tanggalnya sama, urutkan berdasarkan jam mulai (start_time)
       const timeA = a.start_time || "00:00";
       const timeB = b.start_time || "00:00";
       if (timeA.localeCompare(timeB) !== 0) {
         return timeA.localeCompare(timeB);
       }
 
-      // 3. Jika tanggal dan jamnya sama persis, urutkan berdasarkan nama client (A-Z)
       const nameA = a.full_name || "";
       const nameB = b.full_name || "";
       return nameA.localeCompare(nameB);
@@ -599,6 +599,18 @@ export default function Clients() {
                 <p><span className="font-bold text-moss-900">Paket:</span> {selected.package_name} ({rupiah(selected.package_price)})</p>
                 <p><span className="font-bold text-moss-900">Jadwal Saat Ini:</span> {fmtDate(selected.shoot_date)} ({(selected.start_time || "").substring(0, 5)} - {(selected.end_time || "").substring(0, 5)})</p>
                 <p><span className="font-bold text-moss-900">Lokasi:</span> {selected.location}</p>
+              </div>
+
+              {/* INPUT LOKASI / VENUE BARU */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-moss-900">Lokasi / Venue Foto</label>
+                <Input 
+                  type="text" 
+                  value={editLocation} 
+                  onChange={(e) => setEditLocation(e.target.value)} 
+                  placeholder="Misal: UTCC Pondok Cabe" 
+                  className="bg-white rounded-xl border-moss-900/20 h-10 text-xs shadow-sm" 
+                />
               </div>
 
               {/* TOGGLE RESCHEDULE */}
