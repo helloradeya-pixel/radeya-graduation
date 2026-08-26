@@ -794,7 +794,7 @@ async def analytics(
             "revenue": 0.0, 
             "fee": 0.0, 
             "fee_unpaid": 0.0,
-            "clients": [] # <-- Ditambahkan agar list klien fotografer tersedia untuk popup
+            "clients": [] 
         })
         p["sessions"] += 1
         p["revenue"] += b["amount_paid"]
@@ -806,7 +806,6 @@ async def analytics(
             if not is_paid_pho:
                 p["fee_unpaid"] += fee_val
             
-            # Masukkan detail klien, tanggal, dan status fee ke array clients
             p["clients"].append({
                 "client_name": b.get("full_name"),
                 "date": b.get("shoot_date"),
@@ -883,6 +882,16 @@ async def startup():
         logger.info("Storage initialized")
     except Exception as e:
         logger.error(f"Storage init failed: {e}")
+        
+    # --- PEMBUATAN INDEKS DATABASE OTOMATIS ---
+    try:
+        await db.bookings.create_index("shoot_date")
+        await db.bookings.create_index("photographer_id")
+        logger.info("Database indexes for shoot_date and photographer_id created successfully")
+    except Exception as e:
+        logger.error(f"Failed to create indexes: {e}")
+    # ------------------------------------------
+
     if await db.packages.count_documents({}) == 0:
         for p in DEFAULT_PACKAGES:
             await db.packages.insert_one({"package_id": f"pkg_{uuid.uuid4().hex[:10]}", **p})
