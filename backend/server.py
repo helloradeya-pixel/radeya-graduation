@@ -231,7 +231,7 @@ class BookingUpdate(BaseModel):
     shoot_date: Optional[str] = None
     start_time: Optional[str] = None
     end_time: Optional[str] = None
-    location: Optional[str] = None  # <-- Ditambahkan agar lokasi dapat diperbarui
+    location: Optional[str] = None
 
 class ClientPaymentConfirm(BaseModel):
     amount_paid: float
@@ -454,7 +454,6 @@ async def create_booking(
     }
     await db.bookings.insert_one(dict(doc))
     
-    # --- KIRIM DATA OTOMATIS KE GOOGLE SPREADSHEET & DRIVE ---
     sheet_synced = False
     drive_link = ""
     try:
@@ -496,7 +495,6 @@ async def create_booking(
     doc["sheet_synced"] = sheet_synced
     doc["drive_link"] = drive_link
 
-    # --- KIRIM DATA OTOMATIS KE NOTION ---
     try:
         await send_to_notion(doc, pkg["name"], drive_link=drive_link)
     except Exception as e:
@@ -574,7 +572,6 @@ async def update_booking(booking_id: str, body: BookingUpdate, request: Request)
     body_dict = body.model_dump()
     upd = {k: v for k, v in body_dict.items() if v is not None}
     
-    # Penanganan mutlak untuk mengosongkan fotografer secara eksplisit ke database
     if "photographer_id" in body_dict:
         pho_id = body_dict["photographer_id"]
         if not pho_id or pho_id == "none" or pho_id == "" or pho_id == "null":
@@ -598,11 +595,9 @@ async def update_booking(booking_id: str, body: BookingUpdate, request: Request)
     if "payment_type" not in upd:
         upd["payment_type"] = "full" if paid_amount >= total_tagihan else "dp"
 
-    # 1. Update ke MongoDB dengan parameter lengkap ($set)
     await db.bookings.update_one({"booking_id": booking_id}, {"$set": upd})
     d = await db.bookings.find_one({"booking_id": booking_id}, {"_id": 0})
     
-    # 2. Sinkronisasi otomatis ke Google Sheets & Calendar (via Webhook Apps Script)
     try:
         sheet_url = "https://script.google.com/macros/s/AKfycbzeRuDOGTgYNquypvAqPuvSoLKx1JRcCkDrVjohYdWmEo3dtKD5X46ruMkYV4d7VIHU/exec"
         payload = {
@@ -627,7 +622,6 @@ async def update_booking(booking_id: str, body: BookingUpdate, request: Request)
     except Exception as e:
         logger.error(f"Gagal sinkronisasi Sheets/Calendar saat update: {e}")
 
-    # 3. Sinkronisasi otomatis ke Notion
     try:
         await update_notion_booking(d, d['package_name'])
     except Exception as e:
@@ -794,13 +788,32 @@ async def analytics(
         if b.get("status") == "cancelled":
             continue
         name = b.get("photographer_name") or "Belum Ditugaskan"
-        p = per_pho.setdefault(name, {"name": name, "sessions": 0, "revenue": 0.0, "fee": 0.0, "fee_unpaid": 0.0})
+        p = per_pho.setdefault(name, {
+            "name": name, 
+            "sessions": 0, 
+            "revenue": 0.0, 
+            "fee": 0.0, 
+            "fee_unpaid": 0.0,
+            "clients": [] # <-- Ditambahkan agar list klien fotografer tersedia untuk popup
+        })
         p["sessions"] += 1
         p["revenue"] += b["amount_paid"]
+        
         if b.get("photographer_id"):
-            p["fee"] += b.get("photographer_fee", 0)
-            if not b.get("photographer_paid"):
-                p["fee_unpaid"] += b.get("photographer_fee", 0)
+            fee_val = b.get("photographer_fee", 0)
+            p["fee"] += fee_val
+            is_paid_pho = b.get("photographer_paid", False)
+            if not is_paid_pho:
+                p["fee_unpaid"] += fee_val
+            
+            # Masukkan detail klien, tanggal, dan status fee ke array clients
+            p["clients"].append({
+                "client_name": b.get("full_name"),
+                "date": b.get("shoot_date"),
+                "package_name": b.get("package_name"),
+                "fee": fee_val,
+                "is_paid": is_paid_pho
+            })
 
     per_pkg = {}
     for b in bookings:
@@ -837,9 +850,9 @@ async def analytics(
         "outstanding": outstanding,
         "photographer_fee_total": fee_total, 
         "photographer_fee_unpaid": fee_unpaid,
-        "net_profit": net_profit_cash,          # Backward compatibility (tetap ada)
-        "net_profit_cash": net_profit_cash,     # Net profit arus kas riil
-        "net_profit_accrual": net_profit_accrual, # Net profit potensi omzet
+        "net_profit": net_profit_cash,          
+        "net_profit_cash": net_profit_cash,     
+        "net_profit_accrual": net_profit_accrual, 
         "per_photographer": sorted(per_pho.values(), key=lambda x: -x["revenue"]),
         "per_package": sorted(per_pkg.values(), key=lambda x: -x["revenue"]),
         "monthly": sorted(monthly.values(), key=lambda x: x["month"]),
