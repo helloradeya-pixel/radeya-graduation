@@ -36,6 +36,8 @@ export default function Dashboard() {
     payment_type: "",
     amount_paid: 0,
     photographer_id: "",
+    photographer_fee: 0,
+    photographer_paid: false,
   });
   const [savingEdit, setSavingEdit] = useState(false);
 
@@ -83,6 +85,8 @@ export default function Dashboard() {
         payment_type: res.payment_type || "dp",
         amount_paid: res.amount_paid || 0,
         photographer_id: res.photographer_id || "none",
+        photographer_fee: res.photographer_fee || 0,
+        photographer_paid: res.photographer_paid || false,
       });
       setIsEditing(false); // Reset ke mode lihat
     } catch {
@@ -102,6 +106,8 @@ export default function Dashboard() {
         payment_type: editForm.payment_type,
         amount_paid: parseFloat(editForm.amount_paid) || 0,
         photographer_id: editForm.photographer_id === "none" ? null : editForm.photographer_id,
+        photographer_fee: parseFloat(editForm.photographer_fee) || 0,
+        photographer_paid: editForm.photographer_paid,
       };
 
       const { data: res } = await api.put(`/bookings/${selectedBookingDetail.booking_id}`, payload);
@@ -412,7 +418,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* POPUP 2: DETAIL INFORMASI & FORM EDIT BOOKING LANGSUNG */}
+      {/* POPUP 2: DETAIL INFORMASI & FORM EDIT BOOKING LENGKAP */}
       {selectedBookingDetail && (
         <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
           <div className="bg-white w-full max-w-lg rounded-2xl p-6 shadow-xl space-y-4 max-h-[90vh] overflow-y-auto">
@@ -445,6 +451,7 @@ export default function Dashboard() {
                   <p><span className="font-bold text-moss-900">Status Booking:</span> <span className="text-moss-700 font-bold uppercase">{selectedBookingDetail.status}</span></p>
                   <p><span className="font-bold text-moss-900">Status Pembayaran:</span> <span className="uppercase font-bold">{selectedBookingDetail.payment_type}</span> ({rupiah(selectedBookingDetail.amount_paid)} dibayar)</p>
                   <p><span className="font-bold text-moss-900">Fotografer:</span> {selectedBookingDetail.photographer_name || "Belum Ditugaskan"}</p>
+                  <p><span className="font-bold text-moss-900">Fee Fotografer:</span> {rupiah(selectedBookingDetail.photographer_fee)} ({selectedBookingDetail.photographer_paid ? "Fee Lunas" : "Belum Lunas"})</p>
                 </div>
 
                 {/* Tombol Aksi Cepat */}
@@ -492,7 +499,7 @@ export default function Dashboard() {
                 </div>
               </>
             ) : (
-              /* FORM EDIT LANGSUNG DI POPUP */
+              /* FORM EDIT LANGSUNG DI POPUP DENGAN STATUS FEE FOTOGRAFER */
               <div className="space-y-3 text-xs sm:text-sm">
                 <div>
                   <label className="font-bold text-moss-900 block mb-1">Status Booking</label>
@@ -509,7 +516,7 @@ export default function Dashboard() {
                 </div>
 
                 <div>
-                  <label className="font-bold text-moss-900 block mb-1">Status Pembayaran</label>
+                  <label className="font-bold text-moss-900 block mb-1">Status Pembayaran Klien</label>
                   <select 
                     value={editForm.payment_type} 
                     onChange={(e) => setEditForm({ ...editForm, payment_type: e.target.value })}
@@ -534,16 +541,48 @@ export default function Dashboard() {
                   <label className="font-bold text-moss-900 block mb-1">Fotografer Bertugas</label>
                   <select 
                     value={editForm.photographer_id} 
-                    onChange={(e) => setEditForm({ ...editForm, photographer_id: e.target.value })}
+                    onChange={(e) => {
+                      const selectedId = e.target.value;
+                      const foundPho = photographersList.find(p => p.photographer_id === selectedId);
+                      setEditForm({ 
+                        ...editForm, 
+                        photographer_id: selectedId,
+                        photographer_fee: foundPho ? foundPho.fee_per_session : editForm.photographer_fee
+                      });
+                    }}
                     className="w-full p-2.5 rounded-xl border border-neutral-200 bg-white text-xs"
                   >
                     <option value="none">-- Belum Ditugaskan --</option>
                     {photographersList.map((pho) => (
                       <option key={pho.photographer_id} value={pho.photographer_id}>
-                        {pho.name}
+                        {pho.name} (Fee: {rupiah(pho.fee_per_session)})
                       </option>
                     ))}
                   </select>
+                </div>
+
+                <div>
+                  <label className="font-bold text-moss-900 block mb-1">Fee Fotografer Sesi Ini (Rp)</label>
+                  <input 
+                    type="number" 
+                    value={editForm.photographer_fee} 
+                    onChange={(e) => setEditForm({ ...editForm, photographer_fee: e.target.value })}
+                    className="w-full p-2.5 rounded-xl border border-neutral-200 bg-white text-xs"
+                  />
+                </div>
+
+                {/* Kotak Centang Fee Fotografer Sudah Dibayar */}
+                <div className="flex items-center gap-2 p-2.5 rounded-xl border border-neutral-200 bg-neutral-50">
+                  <input 
+                    type="checkbox" 
+                    id="edit_pho_paid"
+                    checked={editForm.photographer_paid}
+                    onChange={(e) => setEditForm({ ...editForm, photographer_paid: e.target.checked })}
+                    className="h-4 w-4 rounded border-neutral-300 text-moss-900 focus:ring-moss-800"
+                  />
+                  <label htmlFor="edit_pho_paid" className="text-xs font-semibold text-moss-900 cursor-pointer">
+                    Fee Fotografer Sudah Dibayar (Lunas)
+                  </label>
                 </div>
 
                 {/* Tombol Simpan & Kembali */}
