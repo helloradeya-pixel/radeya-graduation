@@ -188,21 +188,42 @@ export default function Clients() {
   const safeBookings = Array.isArray(bookings) ? bookings : [];
   const safePhotographers = Array.isArray(photographers) ? photographers : [];
 
-  const filteredBookings = safeBookings.filter((b) => {
-    if (dateRange?.from && dateRange?.to && b.shoot_date) {
-      const shootDate = new Date(b.shoot_date);
-      shootDate.setHours(0, 0, 0, 0);
+  const filteredBookings = safeBookings
+    .filter((b) => {
+      if (dateRange?.from && dateRange?.to && b.shoot_date) {
+        const shootDate = new Date(b.shoot_date);
+        shootDate.setHours(0, 0, 0, 0);
 
-      const fromDate = new Date(dateRange.from);
-      fromDate.setHours(0, 0, 0, 0);
+        const fromDate = new Date(dateRange.from);
+        fromDate.setHours(0, 0, 0, 0);
 
-      const toDate = new Date(dateRange.to);
-      toDate.setHours(23, 59, 59, 999);
+        const toDate = new Date(dateRange.to);
+        toDate.setHours(23, 59, 59, 999);
 
-      if (shootDate < fromDate || shootDate > toDate) return false;
-    }
-    return true;
-  });
+        if (shootDate < fromDate || shootDate > toDate) return false;
+      }
+      return true;
+    })
+    .sort((a, b) => {
+      // 1. Urutkan berdasarkan tanggal foto (dari yang terdekat)
+      const dateA = new Date(a.shoot_date || "1970-01-01");
+      const dateB = new Date(b.shoot_date || "1970-01-01");
+      if (dateA - dateB !== 0) {
+        return dateA - dateB;
+      }
+
+      // 2. Jika tanggalnya sama, urutkan berdasarkan jam mulai (start_time)
+      const timeA = a.start_time || "00:00";
+      const timeB = b.start_time || "00:00";
+      if (timeA.localeCompare(timeB) !== 0) {
+        return timeA.localeCompare(timeB);
+      }
+
+      // 3. Jika tanggal dan jamnya sama persis, urutkan berdasarkan nama client (A-Z)
+      const nameA = a.full_name || "";
+      const nameB = b.full_name || "";
+      return nameA.localeCompare(nameB);
+    });
 
   const calendarEvents = safeBookings.map((b) => {
     const startTime = (b.start_time || "10:00").substring(0, 5);
