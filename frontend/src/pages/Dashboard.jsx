@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { AdminLayout } from "../components/AdminLayout";
 import { api, rupiah } from "../lib/api";
 import { toast } from "sonner";
-import { TrendingUp, Wallet, Users, Calendar as CalendarIcon, DollarSign, MessageSquare, Mail, Settings, ExternalLink } from "lucide-react";
+import { TrendingUp, Wallet, Users, Calendar as CalendarIcon, DollarSign, MessageSquare, Mail, Settings, ExternalLink, Save, ArrowLeft } from "lucide-react";
 import { format, startOfMonth, endOfMonth, addMonths, subMonths } from "date-fns";
 import { id } from "date-fns/locale";
 
@@ -28,6 +28,17 @@ export default function Dashboard() {
   const [selectedBookingDetail, setSelectedBookingDetail] = useState(null);
   const [, setLoadingBooking] = useState(false);
 
+  // State tambahan untuk Mode Edit Langsung di dalam Popup
+  const [isEditing, setIsEditing] = useState(false);
+  const [photographersList, setPhotographersList] = useState([]);
+  const [editForm, setEditForm] = useState({
+    status: "",
+    payment_type: "",
+    amount_paid: 0,
+    photographer_id: "",
+  });
+  const [savingEdit, setSavingEdit] = useState(false);
+
   // Fungsi load data berdasarkan rentang tanggal ke backend
   const loadAnalytics = useCallback(async () => {
     setLoading(true);
@@ -51,6 +62,10 @@ export default function Dashboard() {
 
   useEffect(() => {
     loadAnalytics();
+    // Load daftar fotografer untuk pilihan dropdown edit
+    api.get("/photographers").then((res) => {
+      setPhotographersList(res.data || []);
+    }).catch(() => {});
   }, [loadAnalytics]);
 
   // Fungsi untuk mengambil detail booking saat nama klien diklik
@@ -63,10 +78,41 @@ export default function Dashboard() {
     try {
       const { data: res } = await api.get(`/bookings/${bookingId}`);
       setSelectedBookingDetail(res);
+      setEditForm({
+        status: res.status || "pending",
+        payment_type: res.payment_type || "dp",
+        amount_paid: res.amount_paid || 0,
+        photographer_id: res.photographer_id || "none",
+      });
+      setIsEditing(false); // Reset ke mode lihat
     } catch {
       toast.error("Gagal memuat detail booking");
     } finally {
       setLoadingBooking(false);
+    }
+  };
+
+  // Fungsi untuk menyimpan perubahan data booking langsung dari popup
+  const handleSaveEdit = async () => {
+    if (!selectedBookingDetail) return;
+    setSavingEdit(true);
+    try {
+      const payload = {
+        status: editForm.status,
+        payment_type: editForm.payment_type,
+        amount_paid: parseFloat(editForm.amount_paid) || 0,
+        photographer_id: editForm.photographer_id === "none" ? null : editForm.photographer_id,
+      };
+
+      const { data: res } = await api.put(`/bookings/${selectedBookingDetail.booking_id}`, payload);
+      setSelectedBookingDetail(res);
+      setIsEditing(false);
+      toast.success("Perubahan booking berhasil disimpan!");
+      loadAnalytics(); // Refresh ringkasan finansial di belakang
+    } catch {
+      toast.error("Gagal menyimpan perubahan booking");
+    } finally {
+      setSavingEdit(false);
     }
   };
 
@@ -366,87 +412,159 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* POPUP 2: DETAIL INFORMASI BOOKING */}
+      {/* POPUP 2: DETAIL INFORMASI & FORM EDIT BOOKING LANGSUNG */}
       {selectedBookingDetail && (
         <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
           <div className="bg-white w-full max-w-lg rounded-2xl p-6 shadow-xl space-y-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b pb-3">
-              <h3 className="font-bold text-moss-900 text-base">Detail Informasi Booking</h3>
+              <h3 className="font-bold text-moss-900 text-base">
+                {isEditing ? "Edit Data Booking" : "Detail Informasi Booking"}
+              </h3>
               <Button 
                 variant="ghost" 
                 size="sm" 
-                onClick={() => setSelectedBookingDetail(null)}
+                onClick={() => { setSelectedBookingDetail(null); setIsEditing(false); }}
                 className="h-8 w-8 p-0 rounded-full"
               >
                 ✕
               </Button>
             </div>
 
-            {/* Kotak Rincian Informasi */}
-            <div className="p-4 rounded-2xl border border-moss-900/10 bg-neutral-50/50 space-y-2 text-xs sm:text-sm">
-              <p><span className="font-bold text-moss-900">No. Invoice:</span> {selectedBookingDetail.invoice_number}</p>
-              <p><span className="font-bold text-moss-900">Nama Client:</span> {selectedBookingDetail.full_name}</p>
-              <p><span className="font-bold text-moss-900">WhatsApp:</span> {selectedBookingDetail.whatsapp}</p>
-              <p><span className="font-bold text-moss-900">Kampus / Jurusan:</span> {selectedBookingDetail.university} — {selectedBookingDetail.study}</p>
-              <p><span className="font-bold text-moss-900">Paket Foto:</span> {selectedBookingDetail.package_name} ({rupiah(selectedBookingDetail.package_price)})</p>
-              <p><span className="font-bold text-moss-900">Jadwal Sesi:</span> {selectedBookingDetail.shoot_date} ({selectedBookingDetail.start_time} - {selectedBookingDetail.end_time} WIB)</p>
-              <p><span className="font-bold text-moss-900">Lokasi:</span> {selectedBookingDetail.location}</p>
-              <p><span className="font-bold text-moss-900">Status Booking:</span> <span className="text-moss-700 font-bold uppercase">{selectedBookingDetail.status}</span></p>
-              <p><span className="font-bold text-moss-900">Status Pembayaran:</span> <span className="uppercase font-bold">{selectedBookingDetail.payment_type}</span> ({rupiah(selectedBookingDetail.amount_paid)} dibayar)</p>
-              <p><span className="font-bold text-moss-900">Fotografer:</span> {selectedBookingDetail.photographer_name || "Belum Ditugaskan"}</p>
-              
-              {/* Status Fee Fotografer */}
-              <div className="pt-2 border-t border-neutral-200 mt-2 flex items-center justify-between">
-                <span className="font-bold text-moss-900">Fee Fotografer ({rupiah(selectedBookingDetail.photographer_fee || 0)}):</span>
-                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${selectedBookingDetail.photographer_paid ? 'bg-green-100 text-green-700' : 'bg-rose-100 text-rose-700'}`}>
-                  {selectedBookingDetail.photographer_paid ? 'Fee Lunas' : 'Belum Lunas'}
-                </span>
+            {/* KONDISI TAMPILAN: JIKA SEDANG EDIT ATAU LIHAT */}
+            {!isEditing ? (
+              <>
+                {/* Kotak Rincian Informasi */}
+                <div className="p-4 rounded-2xl border border-moss-900/10 bg-neutral-50/50 space-y-2 text-xs sm:text-sm">
+                  <p><span className="font-bold text-moss-900">No. Invoice:</span> {selectedBookingDetail.invoice_number}</p>
+                  <p><span className="font-bold text-moss-900">Nama Client:</span> {selectedBookingDetail.full_name}</p>
+                  <p><span className="font-bold text-moss-900">WhatsApp:</span> {selectedBookingDetail.whatsapp}</p>
+                  <p><span className="font-bold text-moss-900">Kampus / Jurusan:</span> {selectedBookingDetail.university} — {selectedBookingDetail.study}</p>
+                  <p><span className="font-bold text-moss-900">Paket Foto:</span> {selectedBookingDetail.package_name} ({rupiah(selectedBookingDetail.package_price)})</p>
+                  <p><span className="font-bold text-moss-900">Jadwal Sesi:</span> {selectedBookingDetail.shoot_date} ({selectedBookingDetail.start_time} - {selectedBookingDetail.end_time} WIB)</p>
+                  <p><span className="font-bold text-moss-900">Lokasi:</span> {selectedBookingDetail.location}</p>
+                  <p><span className="font-bold text-moss-900">Status Booking:</span> <span className="text-moss-700 font-bold uppercase">{selectedBookingDetail.status}</span></p>
+                  <p><span className="font-bold text-moss-900">Status Pembayaran:</span> <span className="uppercase font-bold">{selectedBookingDetail.payment_type}</span> ({rupiah(selectedBookingDetail.amount_paid)} dibayar)</p>
+                  <p><span className="font-bold text-moss-900">Fotografer:</span> {selectedBookingDetail.photographer_name || "Belum Ditugaskan"}</p>
+                </div>
+
+                {/* Tombol Aksi Cepat */}
+                <div className="grid grid-cols-3 gap-2">
+                  <Button 
+                    onClick={() => window.open(selectedBookingDetail.whatsapp_link || `https://wa.me/${selectedBookingDetail.whatsapp}`, "_blank")}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-10 rounded-xl flex items-center justify-center gap-1.5 font-medium"
+                  >
+                    <MessageSquare className="h-4 w-4" /> WA
+                  </Button>
+                  <Button 
+                    onClick={() => window.open(`mailto:${selectedBookingDetail.email}`, "_blank")}
+                    variant="outline"
+                    className="border-neutral-200 hover:bg-neutral-100 text-xs h-10 rounded-xl flex items-center justify-center gap-1.5 font-medium"
+                  >
+                    <Mail className="h-4 w-4" /> Email
+                  </Button>
+                  <Button 
+                    onClick={() => setIsEditing(true)}
+                    className="bg-moss-900 hover:bg-moss-800 text-white text-xs h-10 rounded-xl flex items-center justify-center gap-1.5 font-medium"
+                  >
+                    <Settings className="h-4 w-4" /> Kelola
+                  </Button>
+                </div>
+
+                {/* Tombol Bukti Transfer */}
+                {selectedBookingDetail.proof_file_id && (
+                  <Button 
+                    onClick={() => window.open(`/api/files/${selectedBookingDetail.proof_file_id}`, "_blank")}
+                    variant="outline"
+                    className="w-full border-moss-900/20 text-moss-900 hover:bg-moss-50 text-xs h-10 rounded-xl flex items-center justify-center gap-2 font-medium"
+                  >
+                    <ExternalLink className="h-4 w-4" /> Lihat Bukti Transfer
+                  </Button>
+                )}
+
+                {/* Tombol Tutup */}
+                <div className="pt-2">
+                  <Button 
+                    onClick={() => setSelectedBookingDetail(null)}
+                    className="w-full bg-moss-900 hover:bg-moss-800 text-white text-xs h-10 rounded-xl"
+                  >
+                    Tutup
+                  </Button>
+                </div>
+              </>
+            ) : (
+              /* FORM EDIT LANGSUNG DI POPUP */
+              <div className="space-y-3 text-xs sm:text-sm">
+                <div>
+                  <label className="font-bold text-moss-900 block mb-1">Status Booking</label>
+                  <select 
+                    value={editForm.status} 
+                    onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
+                    className="w-full p-2.5 rounded-xl border border-neutral-200 bg-white text-xs"
+                  >
+                    <option value="pending">Pending</option>
+                    <option value="confirmed">Confirmed</option>
+                    <option value="completed">Completed</option>
+                    <option value="cancelled">Cancelled</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="font-bold text-moss-900 block mb-1">Status Pembayaran</label>
+                  <select 
+                    value={editForm.payment_type} 
+                    onChange={(e) => setEditForm({ ...editForm, payment_type: e.target.value })}
+                    className="w-full p-2.5 rounded-xl border border-neutral-200 bg-white text-xs"
+                  >
+                    <option value="dp">DP (Down Payment)</option>
+                    <option value="full">Full (Lunas)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="font-bold text-moss-900 block mb-1">Jumlah Sudah Dibayar (Rp)</label>
+                  <input 
+                    type="number" 
+                    value={editForm.amount_paid} 
+                    onChange={(e) => setEditForm({ ...editForm, amount_paid: e.target.value })}
+                    className="w-full p-2.5 rounded-xl border border-neutral-200 bg-white text-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="font-bold text-moss-900 block mb-1">Fotografer Bertugas</label>
+                  <select 
+                    value={editForm.photographer_id} 
+                    onChange={(e) => setEditForm({ ...editForm, photographer_id: e.target.value })}
+                    className="w-full p-2.5 rounded-xl border border-neutral-200 bg-white text-xs"
+                  >
+                    <option value="none">-- Belum Ditugaskan --</option>
+                    {photographersList.map((pho) => (
+                      <option key={pho.photographer_id} value={pho.photographer_id}>
+                        {pho.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Tombol Simpan & Kembali */}
+                <div className="flex gap-2 pt-3">
+                  <Button 
+                    variant="outline"
+                    onClick={() => setIsEditing(false)}
+                    className="w-1/2 border-neutral-200 text-xs h-10 rounded-xl"
+                  >
+                    <ArrowLeft className="h-4 w-4 mr-1" /> Kembali
+                  </Button>
+                  <Button 
+                    onClick={handleSaveEdit}
+                    disabled={savingEdit}
+                    className="w-1/2 bg-moss-900 hover:bg-moss-800 text-white text-xs h-10 rounded-xl"
+                  >
+                    {savingEdit ? "Menyimpan..." : <><Save className="h-4 w-4 mr-1" /> Simpan</>}
+                  </Button>
+                </div>
               </div>
-            </div>
-
-            {/* Tombol Aksi Cepat */}
-            <div className="grid grid-cols-3 gap-2">
-              <Button 
-                onClick={() => window.open(selectedBookingDetail.whatsapp_link || `https://wa.me/${selectedBookingDetail.whatsapp}`, "_blank")}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-10 rounded-xl flex items-center justify-center gap-1.5 font-medium"
-              >
-                <MessageSquare className="h-4 w-4" /> WA
-              </Button>
-              <Button 
-                onClick={() => window.open(`mailto:${selectedBookingDetail.email}`, "_blank")}
-                variant="outline"
-                className="border-neutral-200 hover:bg-neutral-100 text-xs h-10 rounded-xl flex items-center justify-center gap-1.5 font-medium"
-              >
-                <Mail className="h-4 w-4" /> Email
-              </Button>
-              <Button 
-                onClick={() => toast.info("Gunakan menu Database untuk kelola booking")}
-                className="bg-moss-900 hover:bg-moss-800 text-white text-xs h-10 rounded-xl flex items-center justify-center gap-1.5 font-medium"
-              >
-                <Settings className="h-4 w-4" /> Kelola
-              </Button>
-            </div>
-
-            {/* Tombol Bukti Transfer */}
-            {selectedBookingDetail.proof_file_id && (
-              <Button 
-                onClick={() => window.open(`/api/files/${selectedBookingDetail.proof_file_id}`, "_blank")}
-                variant="outline"
-                className="w-full border-moss-900/20 text-moss-900 hover:bg-moss-50 text-xs h-10 rounded-xl flex items-center justify-center gap-2 font-medium"
-              >
-                <ExternalLink className="h-4 w-4" /> Lihat Bukti Transfer
-              </Button>
             )}
-
-            {/* Tombol Tutup */}
-            <div className="pt-2">
-              <Button 
-                onClick={() => setSelectedBookingDetail(null)}
-                className="w-full bg-moss-900 hover:bg-moss-800 text-white text-xs h-10 rounded-xl"
-              >
-                Tutup
-              </Button>
-            </div>
           </div>
         </div>
       )}
