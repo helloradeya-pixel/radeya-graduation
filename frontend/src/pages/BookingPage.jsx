@@ -17,8 +17,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "../components/ui/popove
 import { RadioGroup, RadioGroupItem } from "../components/ui/radio-group";
 import { api, rupiah } from "../lib/api";
 
-// Import fungsi tracking dari file .js yang baru dibuat
-import { trackLead } from "../lib/tracking";
+// Menggunakan trackPurchase agar Meta membaca ini sebagai event Purchase (Pembelian/DP) untuk ROAS
+import { trackPurchase } from "../lib/tracking";
 
 const HERO = "https://images.unsplash.com/photo-1561409958-c0e6ad782a81?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDQ2MzR8MHwxfHNlYXJjaHwxfHxvdXRkb29yJTIwZ3JhZHVhdGlvbiUyMHBob3RvfGVufDB8fHx8MTc4NjMzODI2Nnww&ixlib=rb-4.1.0&q=85";
 
@@ -91,14 +91,17 @@ export default function BookingPage() {
       const { data } = await api.post("/bookings", body);
 
       // ==========================================
-      // TRACKING EVENT KETIKA BOOKING SUKSES
-      // (f.whatsapp dan f.email dikirim untuk Advanced Matching Meta Pixel)
+      // TRACKING EVENT PURCHASE KETIKA BOOKING & DP SUKSES
       // ==========================================
-      trackLead('booking_wisuda', {
+      trackPurchase('booking_wisuda', {
         package_id: f.package_id,
         amount_paid: amount,
         university: f.university,
-      }, f.whatsapp, f.email);
+      }, {
+        full_name: f.full_name,
+        whatsapp: f.whatsapp,
+        email: f.email,
+      });
       // ==========================================
 
       setResult(data);
