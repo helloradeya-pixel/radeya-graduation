@@ -47,7 +47,6 @@ const metaTrack = (event, event_id, params = {}, userData = {}) => {
   const payload = {
     segment: 'graduation',
     ...params,
-    // Jika ada nominal uang, daftarkan secara eksplisit untuk standar Meta Ads
     ...(monetaryValue ? { value: Number(monetaryValue), currency: 'IDR' } : {}),
     user_data: finalUserData,
   };
@@ -75,17 +74,16 @@ export const trackWA = (label = 'unknown', extra = {}, wa = '') => {
   gaTrack('click_whatsapp', { event_label: label, ...extra });
 };
 
+// Digunakan untuk form minta pricelist / konsultasi di Landing Page (Bio IG)
 export const trackLead = (label = 'form_submit', extra = {}, customerData = {}) => {
   const event_id = generateEventId();
-
-  // Pisahkan nama otomatis (kata pertama = fn, selebihnya = ln)
   const { fn, ln } = splitName(customerData.full_name);
 
   const userData = {
     ph: customerData.whatsapp,
     em: customerData.email,
-    fn: fn, // Nama Depan
-    ln: ln, // Nama Belakang
+    fn: fn,
+    ln: ln,
   };
 
   metaTrack('Lead', event_id, {
@@ -94,6 +92,27 @@ export const trackLead = (label = 'form_submit', extra = {}, customerData = {}) 
   }, userData);
 
   gaTrack('generate_lead', { event_label: label, ...extra });
-  
+  return event_id;
+};
+
+// [BARU] Digunakan khusus untuk Form Booking DP agar Meta tahu ini adalah event 'Purchase' (Pembelian/DP)
+export const trackPurchase = (label = 'booking_dp', extra = {}, customerData = {}) => {
+  const event_id = generateEventId();
+  const { fn, ln } = splitName(customerData.full_name);
+
+  const userData = {
+    ph: customerData.whatsapp,
+    em: customerData.email,
+    fn: fn,
+    ln: ln,
+  };
+
+  metaTrack('Purchase', event_id, {
+    content_name: `Purchase_graduation_${label}`,
+    content_type: 'product',
+    ...extra,
+  }, userData);
+
+  gaTrack('purchase', { event_label: label, ...extra });
   return event_id;
 };
