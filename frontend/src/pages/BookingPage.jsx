@@ -92,12 +92,13 @@ export default function BookingPage() {
 
       // ==========================================
       // TRACKING EVENT KETIKA BOOKING SUKSES
+      // (f.whatsapp dan f.email dikirim untuk Advanced Matching Meta Pixel)
       // ==========================================
       trackLead('booking_wisuda', {
         package_id: f.package_id,
         amount_paid: amount,
         university: f.university,
-      }, f.whatsapp);
+      }, f.whatsapp, f.email);
       // ==========================================
 
       setResult(data);
