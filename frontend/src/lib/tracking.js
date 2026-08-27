@@ -41,9 +41,14 @@ const metaTrack = (event, event_id, params = {}, userData = {}) => {
     fbp: getFbp(),
   };
 
+  // Pisahkan nilai value dan currency agar terbaca sistem iklan untuk ROAS
+  const monetaryValue = params.amount_paid || params.value;
+  
   const payload = {
     segment: 'graduation',
     ...params,
+    // Jika ada nominal uang, daftarkan secara eksplisit untuk standar Meta Ads
+    ...(monetaryValue ? { value: Number(monetaryValue), currency: 'IDR' } : {}),
     user_data: finalUserData,
   };
 
