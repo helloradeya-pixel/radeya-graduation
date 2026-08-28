@@ -1,10 +1,11 @@
 import { NavLink, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Users, Settings, LogOut, Camera, Plus } from "lucide-react";
+import { LayoutDashboard, Users, Settings, LogOut, Camera, Plus, BarChart3 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { Button } from "../components/ui/button";
 
 const nav = [
   { to: "/dashboard", label: "Ringkasan", icon: LayoutDashboard, testid: "nav-dashboard" },
+  { to: "/analytics", label: "Grafik", icon: BarChart3, testid: "nav-analytics" }, // <-- 1. Tambahkan menu Grafik di sini
   { to: "/clients", label: "Database Client", icon: Users, testid: "nav-clients" },
   { to: "/settings", label: "Paket & Fotografer", icon: Settings, testid: "nav-settings" },
 ];
@@ -13,7 +14,6 @@ export const AdminLayout = ({ children, title, subtitle }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
-  // Fungsi handleLogout yang memastikan token terhapus & halaman dimuat ulang
   const handleLogout = () => {
     localStorage.removeItem("session_token");
     if (typeof logout === "function") {
@@ -90,7 +90,8 @@ export const AdminLayout = ({ children, title, subtitle }) => {
         <main className="px-4 sm:px-8 py-6 pb-28 lg:pb-12">{children}</main>
       </div>
 
-      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 border-t border-moss-900/10 bg-white/95 backdrop-blur-xl grid grid-cols-3">
+      {/* 2. Bagian bottom navigation mobile otomatis menyesuaikan grid kolom sejumlah item dalam array `nav` */}
+      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 border-t border-moss-900/10 bg-white/95 backdrop-blur-xl grid grid-cols-4">
         {nav.map((n) => (
           <NavLink
             key={n.to}
