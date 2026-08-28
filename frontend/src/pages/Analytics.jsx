@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-import api from '../lib/api'; // sesuaikan path file axios/api Anda
+import { api } from '../lib/api'; // sesuaikan path file axios/api Anda
 
 export default function Analytics() {
   const [monthlyData, setMonthlyData] = useState([]);
