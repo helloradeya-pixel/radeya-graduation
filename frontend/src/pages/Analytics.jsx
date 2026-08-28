@@ -91,12 +91,12 @@ export default function Analytics() {
           <div className="bg-white p-4 rounded-2xl border border-moss-900/10 shadow-sm">
             <div className="flex items-center gap-2 text-emerald-700 mb-1">
               <DollarSign className="h-4 w-4" />
-              <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Laba Bersih</span>
+              <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Net Profit Bersih</span>
             </div>
             <p className="text-base sm:text-lg font-bold text-emerald-700">
-              Rp {Math.round(data?.net_profit || 0).toLocaleString('id-ID')}
+              Rp {Math.round(data?.net_profit_accrual || 0).toLocaleString('id-ID')}
             </p>
-            <p className="text-[10px] text-neutral-400 mt-0.5">Setelah dikurangi fee fotografer</p>
+            <p className="text-[10px] text-neutral-400 mt-0.5">Potensi omzet dikurangi fee fotografer</p>
           </div>
 
           <div className="bg-white p-4 rounded-2xl border border-moss-900/10 shadow-sm">
