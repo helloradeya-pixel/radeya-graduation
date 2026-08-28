@@ -58,11 +58,15 @@ export default function Analytics() {
     count: p.count
   }));
 
+  const photographerData = (data?.per_photographer || []).filter(
+    pho => pho.name && pho.name !== "Belum Ditugaskan"
+  );
+
   return (
     <AdminLayout title="Grafik & Analisis" subtitle="Tren omzet, performa paket, dan ringkasan bisnis Radeyaphoto">
       <div className="space-y-6 pb-12">
         
-        {/* KPI Summary Cards (Ditambahkan Laba Bersih) */}
+        {/* KPI Summary Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
           <div className="bg-white p-4 rounded-2xl border border-moss-900/10 shadow-sm">
             <div className="flex items-center gap-2 text-moss-800 mb-1">
@@ -92,6 +96,7 @@ export default function Analytics() {
             <p className="text-base sm:text-lg font-bold text-emerald-700">
               Rp {Math.round(data?.net_profit || 0).toLocaleString('id-ID')}
             </p>
+            <p className="text-[10px] text-neutral-400 mt-0.5">Setelah dikurangi fee fotografer</p>
           </div>
 
           <div className="bg-white p-4 rounded-2xl border border-moss-900/10 shadow-sm">
@@ -174,30 +179,32 @@ export default function Analytics() {
             <p className="text-xs text-neutral-500 mb-4">Jumlah sesi dan kontribusi tim fotografer</p>
 
             <div className="space-y-4">
-              {(data?.per_photographer || []).map((pho) => (
-                <div key={pho.name} className="flex items-center justify-between p-3 rounded-xl bg-neutral-50 border border-neutral-100">
-                  <div className="flex items-center gap-3">
-                    <div className="h-9 w-9 rounded-full bg-moss-100 text-moss-800 flex items-center justify-center font-bold text-xs">
+              {photographerData.map((pho) => (
+                <div key={pho.name} className="flex items-start justify-between gap-2 p-3 rounded-xl bg-neutral-50 border border-neutral-100">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="h-9 w-9 rounded-full bg-moss-100 text-moss-800 flex items-center justify-center font-bold text-xs shrink-0">
                       {pho.name.slice(0, 2).toUpperCase()}
                     </div>
-                    <div>
-                      <p className="text-sm font-semibold text-neutral-800">{pho.name}</p>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-neutral-800 truncate">{pho.name}</p>
                       <p className="text-xs text-neutral-500">{pho.sessions} Sesi Selesai</p>
                     </div>
                   </div>
-                  <div className="text-right">
+                  <div className="text-right shrink-0">
                     <p className="text-sm font-bold text-neutral-900">
                       Rp {pho.revenue.toLocaleString('id-ID')}
                     </p>
                     {pho.fee_unpaid > 0 && (
-                      <span className="text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-medium">
-                        Fee belum dibayar: Rp {pho.fee_unpaid.toLocaleString('id-ID')}
-                      </span>
+                      <div className="mt-1">
+                        <span className="inline-block text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-medium leading-tight">
+                          Belum dibayar: Rp {pho.fee_unpaid.toLocaleString('id-ID')}
+                        </span>
+                      </div>
                     )}
                   </div>
                 </div>
               ))}
-              {(!data?.per_photographer || data.per_photographer.length === 0) && (
+              {photographerData.length === 0 && (
                 <p className="text-sm text-neutral-400 text-center py-6">Belum ada data penugasan fotografer.</p>
               )}
             </div>
