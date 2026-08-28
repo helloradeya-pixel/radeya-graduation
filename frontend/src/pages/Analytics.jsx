@@ -4,7 +4,7 @@ import {
 } from 'recharts';
 import { api } from '../lib/api';
 import { AdminLayout } from '../components/AdminLayout';
-import { TrendingUp, Wallet, CalendarCheck, AlertCircle } from 'lucide-react';
+import { TrendingUp, Wallet, CalendarCheck, AlertCircle, DollarSign } from 'lucide-react';
 
 const COLORS = ['#065f46', '#047857', '#10b981', '#34d399', '#6ee7b7'];
 
@@ -62,14 +62,14 @@ export default function Analytics() {
     <AdminLayout title="Grafik & Analisis" subtitle="Tren omzet, performa paket, dan ringkasan bisnis Radeyaphoto">
       <div className="space-y-6 pb-12">
         
-        {/* KPI Summary Cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        {/* KPI Summary Cards (Ditambahkan Laba Bersih) */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
           <div className="bg-white p-4 rounded-2xl border border-moss-900/10 shadow-sm">
             <div className="flex items-center gap-2 text-moss-800 mb-1">
               <TrendingUp className="h-4 w-4" />
               <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Omzet Kotor</span>
             </div>
-            <p className="text-lg sm:text-xl font-bold text-neutral-900">
+            <p className="text-base sm:text-lg font-bold text-neutral-900">
               Rp {Math.round(data?.total_turnover || 0).toLocaleString('id-ID')}
             </p>
           </div>
@@ -79,8 +79,18 @@ export default function Analytics() {
               <Wallet className="h-4 w-4" />
               <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Kas Masuk Riil</span>
             </div>
-            <p className="text-lg sm:text-xl font-bold text-moss-800">
+            <p className="text-base sm:text-lg font-bold text-moss-800">
               Rp {Math.round(data?.total_income || 0).toLocaleString('id-ID')}
+            </p>
+          </div>
+
+          <div className="bg-white p-4 rounded-2xl border border-moss-900/10 shadow-sm">
+            <div className="flex items-center gap-2 text-emerald-700 mb-1">
+              <DollarSign className="h-4 w-4" />
+              <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Laba Bersih</span>
+            </div>
+            <p className="text-base sm:text-lg font-bold text-emerald-700">
+              Rp {Math.round(data?.net_profit || 0).toLocaleString('id-ID')}
             </p>
           </div>
 
@@ -89,17 +99,17 @@ export default function Analytics() {
               <CalendarCheck className="h-4 w-4" />
               <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Total Sesi</span>
             </div>
-            <p className="text-lg sm:text-xl font-bold text-neutral-900">
+            <p className="text-base sm:text-lg font-bold text-neutral-900">
               {data?.total_bookings || 0} <span className="text-xs font-normal text-neutral-500">Booking</span>
             </p>
           </div>
 
-          <div className="bg-white p-4 rounded-2xl border border-moss-900/10 shadow-sm">
+          <div className="bg-white p-4 rounded-2xl border border-moss-900/10 shadow-sm col-span-2 sm:col-span-1">
             <div className="flex items-center gap-2 text-amber-600 mb-1">
               <AlertCircle className="h-4 w-4" />
               <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Piutang</span>
             </div>
-            <p className="text-lg sm:text-xl font-bold text-amber-600">
+            <p className="text-base sm:text-lg font-bold text-amber-600">
               Rp {Math.round(data?.outstanding || 0).toLocaleString('id-ID')}
             </p>
           </div>
