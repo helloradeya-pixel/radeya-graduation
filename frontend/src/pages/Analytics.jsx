@@ -4,7 +4,7 @@ import {
 } from 'recharts';
 import { api } from '../lib/api';
 import { AdminLayout } from '../components/AdminLayout';
-import { TrendingUp, Wallet, CalendarCheck, AlertCircle, DollarSign } from 'lucide-react';
+import { TrendingUp, Wallet, CalendarCheck, AlertCircle, DollarSign, Users } from 'lucide-react';
 
 const COLORS = ['#065f46', '#047857', '#10b981', '#34d399', '#6ee7b7'];
 
@@ -67,7 +67,7 @@ export default function Analytics() {
       <div className="space-y-6 pb-12">
         
         {/* KPI Summary Cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
           <div className="bg-white p-4 rounded-2xl border border-moss-900/10 shadow-sm">
             <div className="flex items-center gap-2 text-moss-800 mb-1">
               <TrendingUp className="h-4 w-4" />
@@ -96,7 +96,18 @@ export default function Analytics() {
             <p className="text-base sm:text-lg font-bold text-emerald-700">
               Rp {Math.round(data?.net_profit_accrual || 0).toLocaleString('id-ID')}
             </p>
-            <p className="text-[10px] text-neutral-400 mt-0.5">Potensi omzet dikurangi fee fotografer</p>
+            <p className="text-[10px] text-neutral-400 mt-0.5">Potensi omzet dikurangi fee</p>
+          </div>
+
+          <div className="bg-white p-4 rounded-2xl border border-moss-900/10 shadow-sm">
+            <div className="flex items-center gap-2 text-rose-700 mb-1">
+              <Users className="h-4 w-4" />
+              <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Total Fee FG</span>
+            </div>
+            <p className="text-base sm:text-lg font-bold text-rose-700">
+              Rp {Math.round(data?.photographer_fee_total || 0).toLocaleString('id-ID')}
+            </p>
+            <p className="text-[10px] text-neutral-400 mt-0.5">Belum lunas: Rp {Math.round(data?.photographer_fee_unpaid || 0).toLocaleString('id-ID')}</p>
           </div>
 
           <div className="bg-white p-4 rounded-2xl border border-moss-900/10 shadow-sm">
@@ -176,7 +187,7 @@ export default function Analytics() {
           {/* Performa Fotografer */}
           <div className="bg-white p-5 sm:p-6 rounded-2xl border border-moss-900/10 shadow-sm">
             <h3 className="text-base font-bold text-neutral-900 mb-1">Performa Fotografer</h3>
-            <p className="text-xs text-neutral-500 mb-4">Jumlah sesi dan kontribusi tim fotografer</p>
+            <p className="text-xs text-neutral-500 mb-4">Jumlah sesi dan total fee tim fotografer</p>
 
             <div className="space-y-4">
               {photographerData.map((pho) => (
@@ -192,7 +203,7 @@ export default function Analytics() {
                   </div>
                   <div className="text-right shrink-0">
                     <p className="text-sm font-bold text-neutral-900">
-                      Rp {pho.revenue.toLocaleString('id-ID')}
+                      Rp {pho.fee.toLocaleString('id-ID')}
                     </p>
                     {pho.fee_unpaid > 0 && (
                       <div className="mt-1">
