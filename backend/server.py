@@ -767,27 +767,30 @@ async def analytics(
         
     bookings = await db.bookings.find(query, {"_id": 0}).to_list(5000)
     
-    # 1. Komponen Pendapatan & Piutang
+    # 1. Komponen Pendapatan & Piutang (DP dari cancelled tetap masuk kas riil)
     dp_income = sum(b["amount_paid"] for b in bookings if b["payment_type"] == "dp")
     full_income = sum(b["amount_paid"] for b in bookings if b["payment_type"] == "full")
     total_income = dp_income + full_income
     
-    outstanding = sum(max((float(b.get("package_price", 0)) + float(b.get("extra_charge", 0))) - float(b.get("amount_paid", 0)), 0) for b in bookings if b.get("status") != "cancelled")
+    active_bookings = [b for b in bookings if b.get("status") != "cancelled"]
+    
+    outstanding = sum(max((float(b.get("package_price", 0)) + float(b.get("extra_charge", 0))) - float(b.get("amount_paid", 0)), 0) for b in active_bookings)
     total_turnover = total_income + outstanding # Total Omzet Kotor
     
-    # 2. Komponen Beban (Fee Fotografer)
-    fee_total = sum(b.get("photographer_fee", 0) for b in bookings if b.get("photographer_id") and b.get("status") != "cancelled")
-    fee_unpaid = sum(b.get("photographer_fee", 0) for b in bookings if b.get("photographer_id") and not b.get("photographer_paid") and b.get("status") != "cancelled")
+    # 2. Komponen Beban (Fee Fotografer hanya dari booking aktif)
+    fee_total = sum(b.get("photographer_fee", 0) for b in active_bookings if b.get("photographer_id"))
+    fee_unpaid = sum(b.get("photographer_fee", 0) for b in active_bookings if b.get("photographer_id") and not b.get("photographer_paid"))
 
-    # 3. Perhitungan Laba Bersih (Dual Basis)
-    net_profit_cash = total_income - fee_total       # Berdasarkan uang kas riil masuk
-    net_profit_accrual = total_turnover - fee_total  # Berdasarkan potensi omzet jika semua lunas
+    # 3. Perhitungan Laba Bersih
+    net_profit_cash = total_income - fee_total       
+    net_profit_accrual = total_turnover - fee_total  
 
     per_pho = {}
-    for b in bookings:
-        if b.get("status") == "cancelled":
+    for b in active_bookings:
+        name = b.get("photographer_name")
+        if not name: # Abaikan jika belum ada fotografer / kosong
             continue
-        name = b.get("photographer_name") or "Belum Ditugaskan"
+            
         p = per_pho.setdefault(name, {
             "name": name, 
             "sessions": 0, 
@@ -806,7 +809,6 @@ async def analytics(
             if not is_paid_pho:
                 p["fee_unpaid"] += fee_val
             
-            # --- booking_id ditambahkan agar frontend bisa memanggil detail booking ---
             p["clients"].append({
                 "booking_id": b.get("booking_id"),
                 "client_name": b.get("full_name"),
@@ -817,9 +819,7 @@ async def analytics(
             })
 
     per_pkg = {}
-    for b in bookings:
-        if b.get("status") == "cancelled":
-            continue
+    for b in active_bookings:
         p = per_pkg.setdefault(b["package_name"], {"name": b["package_name"], "count": 0, "revenue": 0.0})
         p["count"] += 1
         p["revenue"] += b["amount_paid"]
@@ -837,7 +837,7 @@ async def analytics(
     for b in bookings:
         status_counts[b["status"]] = status_counts.get(b["status"], 0) + 1
 
-    upcoming = sorted([b for b in bookings if b.get("shoot_date", "") >= datetime.now(timezone.utc).strftime("%Y-%m-%d") and b.get("status") != "cancelled"], key=lambda x: (x["shoot_date"], x["start_time"]))[:5]
+    upcoming = sorted([b for b in active_bookings if b.get("shoot_date", "") >= datetime.now(timezone.utc).strftime("%Y-%m-%d")], key=lambda x: (x["shoot_date"], x["start_time"]))[:5]
     for u in upcoming:
         u["balance_due"] = max((float(u.get("package_price", 0)) + float(u.get("extra_charge", 0))) - float(u.get("amount_paid", 0)), 0)
         u["gcal_link"] = gcal_link(u)
@@ -854,7 +854,7 @@ async def analytics(
         "net_profit": net_profit_cash,          
         "net_profit_cash": net_profit_cash,     
         "net_profit_accrual": net_profit_accrual, 
-        "per_photographer": sorted(per_pho.values(), key=lambda x: -x["revenue"]),
+        "per_photographer": sorted(per_pho.values(), key=lambda x: -x["fee"]),
         "per_package": sorted(per_pkg.values(), key=lambda x: -x["revenue"]),
         "monthly": sorted(monthly.values(), key=lambda x: x["month"]),
         "status_counts": status_counts, 
