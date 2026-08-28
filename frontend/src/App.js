@@ -10,6 +10,7 @@ import Dashboard from "./pages/Dashboard";
 import Clients from "./pages/Clients";
 import Settings from "./pages/Settings";
 import InvoicePage from "./pages/InvoicePage"; 
+import Analytics from "./pages/Analytics"; // <-- 1. Import halaman Analytics yang baru dibuat
 import Meta from "./components/Meta";
 
 function AppRouter() {
@@ -30,6 +31,7 @@ function AppRouter() {
       {/* 4. Area Dashboard & Manajemen (Pendek dan Praktis) */}
       <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
       <Route path="/clients" element={<ProtectedRoute><Clients /></ProtectedRoute>} />
+      <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} /> {/* <-- 2. Tambahkan Route ke Analytics */}
       <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
       
       <Route path="*" element={<Navigate to="/" replace />} />
