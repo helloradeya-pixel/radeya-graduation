@@ -58,8 +58,9 @@ export default function Analytics() {
     count: p.count
   }));
 
+  // Menyaring agar "Belum Ditugaskan" atau string kosong tidak tampil di daftar performa fotografer
   const photographerData = (data?.per_photographer || []).filter(
-    pho => pho.name && pho.name !== "Belum Ditugaskan"
+    pho => pho.name && pho.name !== "Belum Ditugaskan" && pho.name.trim() !== ""
   );
 
   return (
