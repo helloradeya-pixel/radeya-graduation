@@ -147,6 +147,11 @@ export default function Dashboard() {
     setIsOpen(false);
   };
 
+  // Menyaring data fotografer agar baris "Belum Ditugaskan" atau kosong tidak ikut tampil
+  const filteredPhotographers = (data?.per_photographer || []).filter(
+    (p) => p.name && p.name !== "Belum Ditugaskan" && p.name.trim() !== ""
+  );
+
   return (
     <AdminLayout title="Ringkasan Finansial" subtitle="Analisis pendapatan & rincian fee fotografer">
       <div className="space-y-4 pb-20">
@@ -334,7 +339,7 @@ export default function Dashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {data.per_photographer.map((p) => (
+                    {filteredPhotographers.map((p) => (
                       <tr 
                         key={p.name} 
                         onClick={() => setSelectedPhotographer(p)}
@@ -350,6 +355,13 @@ export default function Dashboard() {
                         </td>
                       </tr>
                     ))}
+                    {filteredPhotographers.length === 0 && (
+                      <tr>
+                        <td colSpan="4" className="text-center text-xs text-muted-foreground py-6">
+                          Belum ada data penugasan fotografer yang aktif.
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
