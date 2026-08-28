@@ -1,11 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { 
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, 
-  PieChart, Pie, Cell 
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid 
 } from 'recharts';
 import { api } from '../lib/api';
 import { AdminLayout } from '../components/AdminLayout';
-import { TrendingUp, Wallet, Users, CalendarCheck, Package, AlertCircle } from 'lucide-react';
+import { TrendingUp, Wallet, CalendarCheck, AlertCircle } from 'lucide-react';
 
 const COLORS = ['#065f46', '#047857', '#10b981', '#34d399', '#6ee7b7'];
 
@@ -37,7 +36,6 @@ export default function Analytics() {
     );
   }
 
-  // Format data bulanan agar rapi dibaca di sumbu X
   const monthlyFormatted = (data?.monthly || []).map(item => {
     let displayMonth = item.month;
     try {
