@@ -820,9 +820,11 @@ async def analytics(
 
     per_pkg = {}
     for b in active_bookings:
+        # Pendapatan paket mencakup harga paket ditambah extra charge
+        pkg_revenue = float(b.get("package_price", 0)) + float(b.get("extra_charge", 0))
         p = per_pkg.setdefault(b["package_name"], {"name": b["package_name"], "count": 0, "revenue": 0.0})
         p["count"] += 1
-        p["revenue"] += b["amount_paid"]
+        p["revenue"] += pkg_revenue
 
     monthly = {}
     for b in bookings:
