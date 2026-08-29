@@ -4,7 +4,7 @@ import {
 } from 'recharts';
 import { api } from '../lib/api';
 import { AdminLayout } from '../components/AdminLayout';
-import { TrendingUp, Wallet, CalendarCheck, AlertCircle, DollarSign, Users, PieChart, Percent, ArrowUpRight } from 'lucide-react';
+import { TrendingUp, Wallet, CalendarCheck, AlertCircle, DollarSign, Users, Percent, ArrowUpRight, CheckCircle2, Clock } from 'lucide-react';
 
 const COLORS = ['#065f46', '#047857', '#10b981', '#34d399', '#6ee7b7'];
 
@@ -63,8 +63,9 @@ export default function Analytics() {
     pho => pho.name && pho.name !== "Belum Ditugaskan" && pho.name.trim() !== ""
   );
 
-  // Perhitungan Keuangan Tambahan ala Akuntansi Profesional
+  // Perhitungan Keuangan & Metrik Profesional
   const totalTurnover = data?.total_turnover || 0;
+  const totalIncome = data?.total_income || 0;
   const netProfit = data?.net_profit_accrual || 0;
   const totalBookings = data?.total_bookings || 0;
   
@@ -74,6 +75,15 @@ export default function Analytics() {
   // Average Order Value (AOV) / Rata-rata nilai per booking aktif
   const activeBookingsCount = packageData.reduce((acc, curr) => acc + curr.count, 0);
   const averageOrderValue = activeBookingsCount > 0 ? totalTurnover / activeBookingsCount : 0;
+
+  // Rasio Kas Cair (Kas Masuk / Omzet Kotor * 100)
+  const cashCollectionRate = totalTurnover > 0 ? ((totalIncome / totalTurnover) * 100).toFixed(1) : 0;
+
+  // Statistik Pembayaran (DP vs Full)
+  const dpCount = data?.status_counts ? (data.dp_income > 0 ? Object.values(data.status_counts).reduce((a,b)=>a+b,0) : 0) : 0; 
+  // Mengambil total kas DP dan Full dari data bulanan atau langsung kalkulasi
+  const totalDpIncome = data?.dp_income || 0;
+  const totalFullIncome = data?.full_income || 0;
 
   return (
     <AdminLayout title="Grafik & Analisis" subtitle="Laporan performa finansial, omzet, dan operasional Radeyaphoto">
@@ -97,7 +107,7 @@ export default function Analytics() {
               <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Kas Masuk Riil</span>
             </div>
             <p className="text-base sm:text-lg font-bold text-moss-800">
-              Rp {Math.round(data?.total_income || 0).toLocaleString('id-ID')}
+              Rp {Math.round(totalIncome).toLocaleString('id-ID')}
             </p>
           </div>
 
@@ -144,13 +154,13 @@ export default function Analytics() {
           </div>
         </div>
 
-        {/* Baris Tambahan: Indikator Akuntansi & Performa Bisnis */}
+        {/* Baris Indikator Profesional & Kesehatan Keuangan */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="bg-white p-4 rounded-2xl border border-moss-900/10 shadow-sm flex items-center justify-between">
             <div>
               <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1">Profit Margin (Rasio Laba)</p>
               <p className="text-xl font-extrabold text-emerald-700">{profitMargin}%</p>
-              <p className="text-[10px] text-neutral-400 mt-0.5">Efisiensi keuntungan bersih dari omzet</p>
+              <p className="text-[10px] text-neutral-400 mt-0.5">Keuntungan bersih dari total omzet</p>
             </div>
             <div className="p-3 rounded-xl bg-emerald-50 text-emerald-700">
               <Percent className="h-5 w-5" />
@@ -161,7 +171,7 @@ export default function Analytics() {
             <div>
               <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1">Rata-rata Nilai Sesi (AOV)</p>
               <p className="text-xl font-extrabold text-moss-900">Rp {Math.round(averageOrderValue).toLocaleString('id-ID')}</p>
-              <p className="text-[10px] text-neutral-400 mt-0.5">Pendapatan rata-rata per transaksi klien</p>
+              <p className="text-[10px] text-neutral-400 mt-0.5">Belanja rata-rata per klien</p>
             </div>
             <div className="p-3 rounded-xl bg-moss-50 text-moss-800">
               <ArrowUpRight className="h-5 w-5" />
@@ -170,12 +180,12 @@ export default function Analytics() {
 
           <div className="bg-white p-4 rounded-2xl border border-moss-900/10 shadow-sm flex items-center justify-between">
             <div>
-              <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1">Status Sesi Aktif</p>
-              <p className="text-xl font-extrabold text-neutral-900">{activeBookingsCount} <span className="text-xs font-normal text-neutral-500">Sesi</span></p>
-              <p className="text-[10px] text-neutral-400 mt-0.5">Sesi valid di luar pembatalan</p>
+              <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1">Rasio Kas Cair</p>
+              <p className="text-xl font-extrabold text-blue-700">{cashCollectionRate}%</p>
+              <p className="text-[10px] text-neutral-400 mt-0.5">Persentase uang yang sudah masuk kas</p>
             </div>
-            <div className="p-3 rounded-xl bg-neutral-100 text-neutral-700">
-              <PieChart className="h-5 w-5" />
+            <div className="p-3 rounded-xl bg-blue-50 text-blue-700">
+              <CheckCircle2 className="h-5 w-5" />
             </div>
           </div>
         </div>
