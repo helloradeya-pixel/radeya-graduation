@@ -4,7 +4,7 @@ import {
 } from 'recharts';
 import { api } from '../lib/api';
 import { AdminLayout } from '../components/AdminLayout';
-import { TrendingUp, Wallet, CalendarCheck, AlertCircle, DollarSign, Users, Percent, ArrowUpRight, CheckCircle2, Clock } from 'lucide-react';
+import { TrendingUp, Wallet, CalendarCheck, AlertCircle, DollarSign, Users, Percent, ArrowUpRight, CheckCircle2 } from 'lucide-react';
 
 const COLORS = ['#065f46', '#047857', '#10b981', '#34d399', '#6ee7b7'];
 
@@ -78,12 +78,6 @@ export default function Analytics() {
 
   // Rasio Kas Cair (Kas Masuk / Omzet Kotor * 100)
   const cashCollectionRate = totalTurnover > 0 ? ((totalIncome / totalTurnover) * 100).toFixed(1) : 0;
-
-  // Statistik Pembayaran (DP vs Full)
-  const dpCount = data?.status_counts ? (data.dp_income > 0 ? Object.values(data.status_counts).reduce((a,b)=>a+b,0) : 0) : 0; 
-  // Mengambil total kas DP dan Full dari data bulanan atau langsung kalkulasi
-  const totalDpIncome = data?.dp_income || 0;
-  const totalFullIncome = data?.full_income || 0;
 
   return (
     <AdminLayout title="Grafik & Analisis" subtitle="Laporan performa finansial, omzet, dan operasional Radeyaphoto">
