@@ -18,7 +18,12 @@ export default function InvoicePage() {
     try {
       const { data } = await api.get(`/bookings/${id}`);
       setInvoice(data);
-      setAmountPaid(data.balance_due > 0 ? data.balance_due : "");
+      
+      const pkgPrice = parseFloat(data.package_price || 0);
+      const extra = parseFloat(data.extra_charge || 0);
+      const calcBalance = Math.max((pkgPrice + extra) - parseFloat(data.amount_paid || 0), 0);
+      
+      setAmountPaid(calcBalance > 0 ? calcBalance : "");
     } catch {
       toast.error("Invoice tidak ditemukan");
     } finally {
@@ -65,6 +70,7 @@ export default function InvoicePage() {
   const packagePrice = parseFloat(invoice.package_price || 0);
   const extraCharge = parseFloat(invoice.extra_charge || 0);
   const totalKeseluruhan = packagePrice + extraCharge;
+  const balanceDue = Math.max(totalKeseluruhan - parseFloat(invoice.amount_paid || 0), 0);
 
   const adminWhatsApp = "628211251570";
   const waText = encodeURIComponent(
@@ -80,8 +86,8 @@ export default function InvoicePage() {
           <p className="text-xs text-muted-foreground">{invoice.invoice_number}</p>
         </div>
         <div className="text-right">
-          <span className={`text-xs px-2.5 py-1 rounded font-semibold uppercase ${invoice.balance_due <= 0 ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}`}>
-            {invoice.balance_due <= 0 ? 'Lunas (Full)' : 'DP / Belum Lunas'}
+          <span className={`text-xs px-2.5 py-1 rounded font-semibold uppercase ${balanceDue <= 0 ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}`}>
+            {balanceDue <= 0 ? 'Lunas (Full)' : 'DP / Belum Lunas'}
           </span>
         </div>
       </div>
@@ -122,11 +128,11 @@ export default function InvoicePage() {
         </div>
         <div className="flex justify-between text-amber-700 font-bold text-base border-t pt-2">
           <span>Sisa Tagihan:</span>
-          <span>{rupiah(invoice.balance_due)}</span>
+          <span>{rupiah(balanceDue)}</span>
         </div>
       </div>
 
-      {invoice.balance_due > 0 ? (
+      {balanceDue > 0 ? (
         <form onSubmit={handleSubmitPelunasan} className="space-y-4 border-t pt-4">
           <h3 className="font-semibold text-sm">Konfirmasi Pelunasan / Pembayaran</h3>
           <div>
