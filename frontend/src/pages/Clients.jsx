@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Popover, PopoverContent, PopoverTrigger } from "../components/ui/popover";
 import { Calendar as UICalendar } from "../components/ui/calendar";
 import { toast } from "sonner";
-import { format, subDays, startOfMonth, endOfMonth } from "date-fns";
+import { format, subDays, startOfMonth, endOfMonth, addMonths, subMonths } from "date-fns";
 import { id } from "date-fns/locale";
 import { cn } from "../lib/utils";
 
@@ -94,10 +94,20 @@ export default function Clients() {
       setDateRange({ from: undefined, to: undefined });
     } else if (preset === "today") {
       setDateRange({ from: today, to: today });
-    } else if (preset === "7days") {
-      setDateRange({ from: subDays(today, 6), to: today });
+    } else if (preset === "lastMonth") {
+      const lastMonthDate = subMonths(today, 1);
+      setDateRange({
+        from: startOfMonth(lastMonthDate),
+        to: endOfMonth(lastMonthDate),
+      });
     } else if (preset === "thisMonth") {
       setDateRange({ from: startOfMonth(today), to: endOfMonth(today) });
+    } else if (preset === "nextMonth") {
+      const nextMonthDate = addMonths(today, 1);
+      setDateRange({
+        from: startOfMonth(nextMonthDate),
+        to: endOfMonth(nextMonthDate),
+      });
     }
     setIsCalendarOpen(false);
   };
@@ -327,12 +337,13 @@ export default function Clients() {
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0 bg-white z-50 shadow-xl rounded-2xl border border-moss-900/10 scale-95 origin-top-left" align="start">
                 <div className="flex flex-col sm:flex-row">
-                  <div className="p-3 border-b sm:border-b-0 sm:border-r border-neutral-100 flex flex-col gap-1 min-w-[120px]">
-                    <p className="text-[10px] font-bold text-muted-foreground uppercase px-2 mb-1">Periode</p>
-                    <Button variant="ghost" size="sm" className="justify-start text-xs h-7 px-2 font-normal hover:bg-moss-50" onClick={() => handlePreset("today")}>Hari Ini</Button>
-                    <Button variant="ghost" size="sm" className="justify-start text-xs h-7 px-2 font-normal hover:bg-moss-50" onClick={() => handlePreset("7days")}>7 Hari Terakhir</Button>
-                    <Button variant="ghost" size="sm" className="justify-start text-xs h-7 px-2 font-normal hover:bg-moss-50" onClick={() => handlePreset("thisMonth")}>Bulan Ini</Button>
-                    <Button variant="ghost" size="sm" className="justify-start text-xs h-7 px-2 font-normal hover:bg-moss-50 text-rose-600" onClick={() => handlePreset("all")}>Semua Waktu</Button>
+                  <div className="p-3 border-b sm:border-b-0 sm:border-r border-neutral-100 flex flex-col gap-1.5 min-w-[140px]">
+                    <p className="text-[11px] font-bold text-muted-foreground uppercase px-2 mb-1">Periode</p>
+                    <Button variant="ghost" size="sm" className="justify-start text-xs h-8 px-2 font-normal hover:bg-moss-50" onClick={() => handlePreset("today")}>Hari Ini</Button>
+                    <Button variant="ghost" size="sm" className="justify-start text-xs h-8 px-2 font-normal hover:bg-moss-50" onClick={() => handlePreset("lastMonth")}>Bulan Lalu</Button>
+                    <Button variant="ghost" size="sm" className="justify-start text-xs h-8 px-2 font-normal hover:bg-moss-50" onClick={() => handlePreset("thisMonth")}>Bulan Ini</Button>
+                    <Button variant="ghost" size="sm" className="justify-start text-xs h-8 px-2 font-normal hover:bg-moss-50" onClick={() => handlePreset("nextMonth")}>Bulan Berikutnya</Button>
+                    <Button variant="ghost" size="sm" className="justify-start text-xs h-8 px-2 font-normal hover:bg-moss-50 text-rose-600" onClick={() => handlePreset("all")}>Semua Waktu</Button>
                   </div>
                   <div className="p-2">
                     <UICalendar
@@ -780,13 +791,7 @@ export default function Clients() {
                 />
               </div>
 
-              <div className="flex items-center justify-between pt-2">
-                <button
-                  onClick={() => window.open(`${process.env.REACT_APP_BACKEND_URL}/api/files/${selected.proof_file_id}`, "_blank")}
-                  className="text-xs text-moss-800 underline font-semibold flex items-center gap-1"
-                >
-                  <ExternalLink className="h-3.5 w-3.5" /> Lihat Bukti Transfer Asli
-                </button>
+              <div className="flex items-center justify-end pt-2">
                 <button
                   onClick={() => removeBooking(selected.booking_id)}
                   className="text-xs text-destructive hover:underline font-semibold flex items-center gap-1"
