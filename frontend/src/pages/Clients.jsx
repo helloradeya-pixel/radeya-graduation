@@ -238,8 +238,8 @@ export default function Clients() {
   const calendarEvents = safeBookings.map((b) => {
     const startTime = (b.start_time || "10:00").substring(0, 5);
     const endTime = (b.end_time || "11:00").substring(0, 5);
-    const phoText = b.photographer_name ? ` [FG: ${b.photographer_name}]` : " [FG: Belum Ada]";
-    const locationText = b.location ? ` — ${b.location}` : "";
+    const phoText = b.photographer_name ? `\n📷 FG: ${b.photographer_name}` : "\n📷 FG: Belum Ada";
+    const locationText = b.location ? `\n📍 ${b.location}` : "";
     return {
       id: b.booking_id,
       title: `${b.full_name} (${b.package_name})${locationText}${phoText}`,
@@ -799,7 +799,7 @@ export default function Clients() {
               <div className="flex items-center justify-end pt-2">
                 <button
                   onClick={() => removeBooking(selected.booking_id)}
-                  className="text-xs text-destructive hover:underline font-semibold flex items-center gap-1"
+                  className="text-xs text-destructive hover:update font-semibold flex items-center gap-1"
                 >
                   <Trash2 className="h-3.5 w-3.5" /> Hapus Booking
                 </button>
