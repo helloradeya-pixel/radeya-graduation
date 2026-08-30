@@ -66,8 +66,8 @@ export default function Clients() {
   const loadData = useCallback(async () => {
     try {
       const params = {
-        status: statusFilter,
-        payment_type: paymentFilter,
+        status: statusFilter !== "all" ? statusFilter : undefined,
+        payment_type: paymentFilter !== "all" ? paymentFilter : undefined,
         q: search || undefined,
       };
 
@@ -310,29 +310,31 @@ export default function Clients() {
         </div>
 
         {viewMode === "list" && (
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar w-full">
             <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
                   className={cn(
-                    "w-[220px] sm:w-[240px] justify-start text-left font-normal bg-white rounded-xl border-moss-900/10 text-xs h-9 shadow-sm shrink-0",
+                    "w-[200px] sm:w-[240px] justify-start text-left font-normal bg-white rounded-xl border-moss-900/10 text-xs h-9 shadow-sm shrink-0",
                     !dateRange && "text-muted-foreground"
                   )}
                 >
-                  <CalendarIcon className="mr-2 h-3.5 w-3.5 text-moss-700" />
-                  {dateRange?.from ? (
-                    dateRange.to ? (
-                      <>
-                        {format(dateRange.from, "d MMM yyyy", { locale: id })} -{" "}
-                        {format(dateRange.to, "d MMM yyyy", { locale: id })}
-                      </>
+                  <CalendarIcon className="mr-2 h-3.5 w-3.5 text-moss-700 shrink-0" />
+                  <span className="truncate">
+                    {dateRange?.from ? (
+                      dateRange.to ? (
+                        <>
+                          {format(dateRange.from, "d MMM yyyy", { locale: id })} -{" "}
+                          {format(dateRange.to, "d MMM yyyy", { locale: id })}
+                        </>
+                      ) : (
+                        format(dateRange.from, "d MMM yyyy", { locale: id })
+                      )
                     ) : (
-                      format(dateRange.from, "d MMM yyyy", { locale: id })
-                    )
-                  ) : (
-                    <span>Semua Waktu</span>
-                  )}
+                      <span>Semua Waktu</span>
+                    )}
+                  </span>
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-[320px] sm:w-[560px] p-0 bg-white z-50 shadow-xl rounded-2xl border border-moss-900/10" align="start">
