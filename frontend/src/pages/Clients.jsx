@@ -335,10 +335,10 @@ export default function Clients() {
                   )}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0 bg-white z-50 shadow-xl rounded-2xl border border-moss-900/10 scale-95 origin-top-left" align="start">
+              <PopoverContent className="w-auto p-0 bg-white z-50 shadow-xl rounded-2xl border border-moss-900/10" align="start">
                 <div className="flex flex-col sm:flex-row">
                   <div className="p-3 border-b sm:border-b-0 sm:border-r border-neutral-100 flex flex-col gap-1.5 min-w-[140px]">
-                    <p className="text-[11px] font-bold text-muted-foreground uppercase px-2 mb-1">Periode</p>
+                    <p className="text-[11px] font-bold text-muted-foreground uppercase px-2 mb-1">Periode Cepat</p>
                     <Button variant="ghost" size="sm" className="justify-start text-xs h-8 px-2 font-normal hover:bg-moss-50" onClick={() => handlePreset("today")}>Hari Ini</Button>
                     <Button variant="ghost" size="sm" className="justify-start text-xs h-8 px-2 font-normal hover:bg-moss-50" onClick={() => handlePreset("lastMonth")}>Bulan Lalu</Button>
                     <Button variant="ghost" size="sm" className="justify-start text-xs h-8 px-2 font-normal hover:bg-moss-50" onClick={() => handlePreset("thisMonth")}>Bulan Ini</Button>
@@ -357,7 +357,7 @@ export default function Clients() {
                       className="text-xs"
                     />
                     <div className="flex items-center justify-end gap-2 p-2 border-t border-neutral-100">
-                      <Button size="sm" className="bg-moss-800 text-white hover:bg-moss-900 text-xs h-7 px-3 rounded-lg" onClick={() => setIsCalendarOpen(false)}>Terapkan</Button>
+                      <Button size="sm" className="bg-moss-900 text-white hover:bg-moss-800 text-xs h-8 px-4 rounded-lg" onClick={() => setIsCalendarOpen(false)}>Terapkan</Button>
                     </div>
                   </div>
                 </div>
