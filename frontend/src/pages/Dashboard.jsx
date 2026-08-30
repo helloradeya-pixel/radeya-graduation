@@ -182,10 +182,10 @@ export default function Dashboard() {
                 )}
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-auto p-0 bg-white z-50 shadow-xl rounded-2xl border border-moss-900/10" align="end">
+            <PopoverContent className="w-[320px] sm:w-[560px] p-0 bg-white z-50 shadow-xl rounded-2xl border border-moss-900/10" align="end">
               <div className="flex flex-col sm:flex-row">
-                <div className="p-3 border-b sm:border-b-0 sm:border-r border-neutral-100 flex flex-col gap-1.5 min-w-[140px]">
-                  <p className="text-[11px] font-bold text-muted-foreground uppercase px-2 mb-1">Periode Cepat</p>
+                <div className="p-3 border-b sm:border-b-0 sm:border-r border-neutral-100 flex flex-col gap-1.5 min-w-[150px] shrink-0">
+                  <p className="text-[11px] font-bold text-muted-foreground uppercase px-2 mb-1">PERIODE CEPAT</p>
                   <Button variant="ghost" size="sm" className="justify-start text-xs h-8 px-2 font-normal hover:bg-moss-50" onClick={() => handlePreset("today")}>
                     Hari Ini
                   </Button>
@@ -203,7 +203,7 @@ export default function Dashboard() {
                   </Button>
                 </div>
 
-                <div className="p-2">
+                <div className="p-2 flex-1 overflow-x-auto">
                   <Calendar
                     initialFocus
                     mode="range"
@@ -212,6 +212,7 @@ export default function Dashboard() {
                     onSelect={setDateRange}
                     numberOfMonths={1}
                     locale={id}
+                    className="text-xs w-full flex justify-center"
                   />
                   <div className="flex items-center justify-end gap-2 p-2 border-t border-neutral-100">
                     <Button size="sm" className="bg-moss-900 text-white hover:bg-moss-800 text-xs h-8 px-4 rounded-lg" onClick={() => setIsOpen(false)}>
