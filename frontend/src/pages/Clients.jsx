@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from "react";
+Import { useEffect, useState, useCallback, useRef } from "react";
 import { Search, Mail, Eye, Trash2, MessageSquare, Table, Calendar as CalendarIcon, ExternalLink, ChevronDown, ChevronUp, Settings } from "lucide-react";
 import { AdminLayout } from "../components/AdminLayout";
 import { api, rupiah, fmtDate } from "../lib/api";
@@ -337,32 +337,31 @@ export default function Clients() {
                   </span>
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-[320px] sm:w-[580px] p-0 bg-white z-50 shadow-xl rounded-2xl border border-moss-900/10" align="start">
-                <div className="flex flex-col sm:flex-row">
-                  <div className="p-3 border-b sm:border-b-0 sm:border-r border-neutral-100 flex flex-col gap-1.5 min-w-[160px] shrink-0">
-                    <p className="text-[11px] font-bold text-muted-foreground uppercase px-2 mb-1">PERIODE CEPAT</p>
-                    <Button variant="ghost" size="sm" className="justify-start text-xs h-8 px-2 font-normal hover:bg-moss-50 hover:text-moss-900" onClick={() => handlePreset("today")}>Hari Ini</Button>
-                    <Button variant="ghost" size="sm" className="justify-start text-xs h-8 px-2 font-normal hover:bg-moss-50 hover:text-moss-900" onClick={() => handlePreset("lastMonth")}>Bulan Lalu</Button>
-                    <Button variant="ghost" size="sm" className="justify-start text-xs h-8 px-2 font-normal hover:bg-moss-50 hover:text-moss-900" onClick={() => handlePreset("thisMonth")}>Bulan Ini</Button>
-                    <Button variant="ghost" size="sm" className="justify-start text-xs h-8 px-2 font-normal hover:bg-moss-50 hover:text-moss-900" onClick={() => handlePreset("nextMonth")}>Bulan Berikutnya</Button>
-                    <Button variant="ghost" size="sm" className="justify-start text-xs h-8 px-2 font-normal hover:bg-moss-50 text-rose-600 hover:text-rose-700" onClick={() => handlePreset("all")}>Semua Waktu</Button>
+              <PopoverContent className="w-[320px] sm:w-[350px] p-3 bg-white z-50 shadow-xl rounded-2xl border border-moss-900/10" align="start">
+                <div className="flex flex-col gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 pb-2 border-b border-neutral-100">
+                    <Button variant="ghost" size="sm" className="justify-center text-[11px] h-7 px-1 font-normal hover:bg-moss-50 hover:text-moss-900" onClick={() => handlePreset("today")}>Hari Ini</Button>
+                    <Button variant="ghost" size="sm" className="justify-center text-[11px] h-7 px-1 font-normal hover:bg-moss-50 hover:text-moss-900" onClick={() => handlePreset("lastMonth")}>Bulan Lalu</Button>
+                    <Button variant="ghost" size="sm" className="justify-center text-[11px] h-7 px-1 font-normal hover:bg-moss-50 hover:text-moss-900" onClick={() => handlePreset("thisMonth")}>Bulan Ini</Button>
+                    <Button variant="ghost" size="sm" className="justify-center text-[11px] h-7 px-1 font-normal hover:bg-moss-50 hover:text-moss-900" onClick={() => handlePreset("nextMonth")}>Bulan Berikutnya</Button>
+                    <Button variant="ghost" size="sm" className="justify-center text-[11px] h-7 px-1 font-normal hover:bg-moss-50 text-rose-600 hover:text-rose-700 col-span-2 sm:col-span-2" onClick={() => handlePreset("all")}>Semua Waktu</Button>
                   </div>
-                  <div className="p-3 flex-1 flex flex-col justify-between">
-                    <div>
-                      <UICalendar
-                        initialFocus
-                        mode="range"
-                        defaultMonth={dateRange?.from}
-                        selected={dateRange}
-                        onSelect={setDateRange}
-                        numberOfMonths={1}
-                        locale={id}
-                        className="text-xs w-full flex justify-center"
-                      />
-                    </div>
-                    <div className="flex items-center justify-end gap-2 pt-3 border-t border-neutral-100 mt-2">
-                      <Button size="sm" className="bg-moss-900 text-white hover:bg-moss-800 text-xs h-8 px-4 rounded-lg" onClick={() => setIsCalendarOpen(false)}>Terapkan</Button>
-                    </div>
+                  
+                  <div className="w-full flex justify-center">
+                    <UICalendar
+                      initialFocus
+                      mode="range"
+                      defaultMonth={dateRange?.from}
+                      selected={dateRange}
+                      onSelect={setDateRange}
+                      numberOfMonths={1}
+                      locale={id}
+                      className="text-xs w-full"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-end gap-2 pt-2 border-t border-neutral-100">
+                    <Button size="sm" className="bg-moss-900 text-white hover:bg-moss-800 text-xs h-8 px-4 rounded-lg w-full" onClick={() => setIsCalendarOpen(false)}>Terapkan</Button>
                   </div>
                 </div>
               </PopoverContent>
