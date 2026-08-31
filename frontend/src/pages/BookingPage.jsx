@@ -69,6 +69,11 @@ export default function BookingPage() {
       });
   }, []);
 
+  const getCookie = (name) => {
+    if (typeof document === 'undefined') return '';
+    return document.cookie.split('; ').find(row => row.startsWith(name + '='))?.split('=')[1] || '';
+  };
+
   const submit = async (e) => {
     e.preventDefault();
     if (!f.package_id) return toast.error("Pilih paket foto dulu ya");
@@ -87,6 +92,10 @@ export default function BookingPage() {
       body.append("shoot_date", format(date, "yyyy-MM-dd"));
       body.append("amount_paid", String(amount));
       body.append("proof_file_id", up.file_id);
+      
+      // Kirim cookie fbc dan fbp ke backend agar CAPI mendeteksi klik iklan yang sama
+      body.append("fbc", getCookie('_fbc') || localStorage.getItem('fbc') || "");
+      body.append("fbp", getCookie('_fbp') || localStorage.getItem('fbp') || "");
 
       const { data } = await api.post("/bookings", body);
 
