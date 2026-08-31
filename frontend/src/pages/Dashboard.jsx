@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { AdminLayout } from "../components/AdminLayout";
 import { api, rupiah } from "../lib/api";
 import { toast } from "sonner";
-import { TrendingUp, Wallet, Users, Calendar as CalendarIcon, DollarSign, MessageSquare, Mail, Settings, ExternalLink, Save, ArrowLeft, Trash2 } from "lucide-react";
+import { TrendingUp, Wallet, Users, Calendar as CalendarIcon, DollarSign, MessageSquare, Mail, Settings, ExternalLink, Save, ArrowLeft } from "lucide-react";
 import { format, startOfMonth, endOfMonth, addMonths, subMonths } from "date-fns";
 import { id } from "date-fns/locale";
 
@@ -27,13 +27,6 @@ export default function Dashboard() {
   const [selectedPhotographer, setSelectedPhotographer] = useState(null);
   const [selectedBookingDetail, setSelectedBookingDetail] = useState(null);
   const [, setLoadingBooking] = useState(false);
-
-  // State untuk Modal Catat Prive
-  const [priveModalOpen, setPriveModalOpen] = useState(false);
-  const [priveAmount, setPriveAmount] = useState("");
-  const [priveNotes, setPriveNotes] = useState("");
-  const [priveList, setPriveList] = useState([]);
-  const [loadingPrive, setLoadingPrive] = useState(false);
 
   // State tambahan untuk Mode Edit Langsung di dalam Popup
   const [isEditing, setIsEditing] = useState(false);
@@ -69,57 +62,13 @@ export default function Dashboard() {
     }
   }, [dateRange]);
 
-  // Fungsi load daftar prive
-  const loadPrive = async () => {
-    try {
-      const { data: res } = await api.get("/prive");
-      setPriveList(res || []);
-    } catch {
-      // ignore
-    }
-  };
-
   useEffect(() => {
     loadAnalytics();
-    loadPrive();
     // Load daftar fotografer untuk pilihan dropdown edit
     api.get("/photographers").then((res) => {
       setPhotographersList(res.data || []);
     }).catch(() => {});
   }, [loadAnalytics]);
-
-  // Fungsi simpan Prive
-  const handleSavePrive = async () => {
-    if (!priveAmount || isNaN(priveAmount) || Number(priveAmount) <= 0) {
-      return toast.error("Masukkan nominal prive yang valid");
-    }
-    setLoadingPrive(true);
-    try {
-      await api.post("/prive", { amount: parseFloat(priveAmount), notes: priveNotes || "Keperluan pribadi" });
-      toast.success("Penarikan pribadi berhasil dicatat!");
-      setPriveAmount("");
-      setPriveNotes("");
-      setPriveModalOpen(false);
-      loadAnalytics(); // Refresh ringkasan kas masuk
-      loadPrive(); // Refresh daftar prive
-    } catch {
-      toast.error("Gagal mencatat penarikan pribadi");
-    } finally {
-      setLoadingPrive(false);
-    }
-  };
-
-  // Fungsi hapus Prive
-  const handleDeletePrive = async (priveId) => {
-    try {
-      await api.delete(`/prive/${priveId}`);
-      toast.success("Catatan prive berhasil dihapus");
-      loadAnalytics();
-      loadPrive();
-    } catch {
-      toast.error("Gagal menghapus catatan prive");
-    }
-  };
 
   // Fungsi untuk mengambil detail booking saat nama klien diklik
   const handleClientClick = async (bookingId) => {
@@ -207,16 +156,8 @@ export default function Dashboard() {
     <AdminLayout title="Ringkasan Finansial" subtitle="Analisis pendapatan & rincian fee fotografer">
       <div className="space-y-4 pb-20">
         
-        {/* Tombol Catat Prive & Filter Rentang Tanggal */}
-        <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3">
-          <Button
-            onClick={() => setPriveModalOpen(true)}
-            variant="outline"
-            className="bg-white rounded-xl border-moss-900/10 text-xs h-10 shadow-sm text-rose-700 hover:bg-rose-50 font-medium justify-center"
-          >
-            - Catat Prive / Tarik Pribadi
-          </Button>
-
+        {/* Filter Rentang Tanggal */}
+        <div className="flex flex-col sm:flex-row justify-end items-stretch sm:items-center gap-3">
           <Popover open={isOpen} onOpenChange={setIsOpen}>
             <PopoverTrigger asChild>
               <Button
@@ -312,7 +253,7 @@ export default function Dashboard() {
                     <div className="p-1.5 rounded-lg bg-green-50 text-green-700"><Wallet className="h-3.5 w-3.5" /></div>
                   </div>
                   <p className="text-xl font-bold text-green-700 mt-2">{rupiah(data.total_income)}</p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">Sudah dikurangi Prive / Tarik Pribadi</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">Total DP & Pelunasan sesi</p>
                 </div>
 
                 <div className="bg-white p-4 rounded-2xl border border-moss-900/10 shadow-sm">
@@ -422,90 +363,6 @@ export default function Dashboard() {
           </div>
         ) : null}
       </div>
-
-      {/* POPUP MODAL: CATAT / RIWAYAT PRIVE */}
-      {priveModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-xl space-y-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b pb-3">
-              <h3 className="font-bold text-moss-900 text-base">Catat & Riwayat Prive (Tarik Pribadi)</h3>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => setPriveModalOpen(false)}
-                className="h-8 w-8 p-0 rounded-full"
-              >
-                ✕
-              </Button>
-            </div>
-
-            <div className="space-y-3 text-xs">
-              <div>
-                <label className="font-bold text-moss-900 block mb-1">Nominal Penarikan (Rp)</label>
-                <input 
-                  type="number" 
-                  value={priveAmount} 
-                  onChange={(e) => setPriveAmount(e.target.value)}
-                  placeholder="Contoh: 150000"
-                  className="w-full p-2.5 rounded-xl border border-neutral-200 bg-white"
-                />
-              </div>
-              <div>
-                <label className="font-bold text-moss-900 block mb-1">Keterangan / Keperluan</label>
-                <input 
-                  type="text" 
-                  value={priveNotes} 
-                  onChange={(e) => setPriveNotes(e.target.value)}
-                  placeholder="Contoh: Keperluan rumah / bensin"
-                  className="w-full p-2.5 rounded-xl border border-neutral-200 bg-white"
-                />
-              </div>
-              <Button 
-                onClick={handleSavePrive}
-                disabled={loadingPrive}
-                className="w-full bg-rose-700 hover:bg-rose-800 text-white text-xs h-10 rounded-xl font-medium"
-              >
-                {loadingPrive ? "Menyimpan..." : "Simpan Catatan Prive"}
-              </Button>
-            </div>
-
-            {/* Daftar Riwayat Prive */}
-            <div className="pt-3 border-t space-y-2">
-              <p className="font-bold text-moss-900 text-xs">Riwayat Prive Terbaru:</p>
-              <div className="space-y-2 max-h-40 overflow-y-auto">
-                {priveList.map((prv) => (
-                  <div key={prv.prive_id} className="flex justify-between items-center p-2.5 rounded-xl bg-neutral-50 border border-neutral-100 text-xs">
-                    <div>
-                      <p className="font-bold text-rose-700">{rupiah(prv.amount)}</p>
-                      <p className="text-muted-foreground text-[10px]">{prv.notes} • {format(new Date(prv.created_at), "d MMM yyyy", { locale: id })}</p>
-                    </div>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={() => handleDeletePrive(prv.prive_id)}
-                      className="h-7 w-7 p-0 text-rose-600 hover:bg-rose-50 rounded-lg"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                ))}
-                {priveList.length === 0 && (
-                  <p className="text-center text-muted-foreground text-[11px] py-4">Belum ada catatan prive.</p>
-                )}
-              </div>
-            </div>
-
-            <div className="pt-2">
-              <Button 
-                onClick={() => setPriveModalOpen(false)}
-                className="w-full bg-moss-900 hover:bg-moss-800 text-white text-xs h-9 rounded-xl"
-              >
-                Tutup
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* POPUP 1: DAFTAR KLIEN & JADWAL FOTOGRAFER */}
       {selectedPhotographer && (
