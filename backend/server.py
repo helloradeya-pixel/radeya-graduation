@@ -115,8 +115,8 @@ async def send_email(to: str, subject: str, html: str, reply_to: Optional[str] =
     
     return resp.json().get("id")
 
-# Fungsi Kirim CAPI Server-Side ke Meta
-async def send_capi_purchase(booking: dict):
+# Fungsi Kirim CAPI Server-Side ke Meta (Dilengkapi fbc, fbp, & external_id)
+async def send_capi_purchase(booking: dict, fbc: str = "", fbp: str = ""):
     pixel_id = os.environ.get("META_PIXEL_ID")
     access_token = os.environ.get("META_ACCESS_TOKEN")
     if not pixel_id or not access_token:
@@ -127,6 +127,18 @@ async def send_capi_purchase(booking: dict):
     
     email_hash = hashlib.sha256(booking.get("email", "").strip().lower().encode('utf-8')).hexdigest() if booking.get("email") else None
     phone_hash = hashlib.sha256("".join(filter(str.isdigit, booking.get("whatsapp", ""))).encode('utf-8')).hexdigest() if booking.get("whatsapp") else None
+    external_id_hash = hashlib.sha256(booking.get("invoice_number", "").strip().encode('utf-8')).hexdigest() if booking.get("invoice_number") else None
+
+    user_data = {
+        "em": [email_hash] if email_hash else [],
+        "ph": [phone_hash] if phone_hash else [],
+        "external_id": [external_id_hash] if external_id_hash else []
+    }
+
+    if fbc:
+        user_data["fbc"] = fbc
+    if fbp:
+        user_data["fbp"] = fbp
 
     payload = {
         "data": [
@@ -135,10 +147,7 @@ async def send_capi_purchase(booking: dict):
                 "event_time": int(datetime.now(timezone.utc).timestamp()),
                 "action_source": "website",
                 "event_source_url": f"https://booking.radeyaphoto.my.id/invoice/{booking['booking_id']}",
-                "user_data": {
-                    "em": [email_hash] if email_hash else [],
-                    "ph": [phone_hash] if phone_hash else [],
-                },
+                "user_data": user_data,
                 "custom_data": {
                     "currency": "IDR",
                     "value": float(booking.get("amount_paid", 0)),
@@ -476,6 +485,7 @@ async def create_booking(
     start_time: str = Form(...), end_time: str = Form(...),
     payment_type: Literal["dp", "full"] = Form(...), amount_paid: float = Form(...),
     proof_file_id: str = Form(...), notes: str = Form(""),
+    fbc: str = Form(""), fbp: str = Form(""),
 ):
     pkg = await db.packages.find_one({"package_id": package_id}, {"_id": 0})
     if not pkg:
@@ -501,9 +511,9 @@ async def create_booking(
     }
     await db.bookings.insert_one(dict(doc))
     
-    # Panggil CAPI server-side ke Meta
+    # Panggil CAPI server-side ke Meta dengan fbc dan fbp
     try:
-        await send_capi_purchase(doc)
+        await send_capi_purchase(doc, fbc=fbc, fbp=fbp)
     except Exception as e:
         logger.error(f"Gagal kirim CAPI: {e}")
 
@@ -824,7 +834,7 @@ async def analytics(
     full_income = sum(b["amount_paid"] for b in bookings if b["payment_type"] == "full")
     total_income = dp_income + full_income
     
-    active_bookings = [b for b in bookings if b.get("status") != "cancelled"]
+    active_bookings = [b for b in bookings if b.get("status"] != "cancelled"]
     
     outstanding = sum(max((float(b.get("package_price", 0)) + float(b.get("extra_charge", 0))) - float(b.get("amount_paid", 0)), 0) for b in active_bookings)
     total_turnover = total_income + outstanding
