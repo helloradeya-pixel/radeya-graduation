@@ -99,7 +99,7 @@ export default function Analytics() {
   const totalFeeSudahBayar = (data?.photographer_fee_total || 0) - (data?.photographer_fee_unpaid || 0);
   const realAccountBalance = totalIncome - totalFeeSudahBayar;
 
-  // Pengelompokan Keuangan Riil Rekening Per Tahun (Sinkron Total Global)
+  // Pengelompokan Keuangan Riil Rekening Per Tahun (Sinkron Total Global & Otomatis Full untuk Single Year)
   const yearlyMap = {};
   (data?.monthly || []).forEach(item => {
     const year = item.month ? item.month.split('-')[0] : '2026';
@@ -107,22 +107,25 @@ export default function Analytics() {
       yearlyMap[year] = { 
         year, 
         jumlahBooking: 0, 
-        totalPendapatanBulan: 0 
+        totalDp: 0, 
+        totalPelunasan: 0 
       };
     }
     yearlyMap[year].jumlahBooking += (item.bookings || 0);
-    yearlyMap[year].totalPendapatanBulan += ((item.dp || 0) + (item.full || 0));
+    yearlyMap[year].totalDp += (item.dp || 0);
+    yearlyMap[year].totalPelunasan += (item.full || 0);
   });
 
-  const totalOmzetKotor = totalTurnover > 0 ? totalTurnover : 1;
   const yearlyData = Object.values(yearlyMap).map(y => {
-    const porsiTahun = y.totalPendapatanBulan / totalOmzetKotor;
+    const isSingleYear = Object.keys(yearlyMap).length === 1;
+    const omzetTahunIni = y.totalDp + y.totalPelunasan;
+    const porsiTahun = isSingleYear ? 1 : (omzetTahunIni / (totalTurnover || 1));
 
     return {
-      year: y.year,
-      jumlahBooking: y.jumlahBooking,
-      saldoRekeningRiil: realAccountBalance * porsiTahun,
-      piutangBelumLunas: (data?.outstanding || 0) * porsiTahun
+      ...y,
+      pendapatanKotor: omzetTahunIni,
+      saldoRekeningRiil: isSingleYear ? realAccountBalance : realAccountBalance * porsiTahun,
+      piutangBelumLunas: isSingleYear ? (data?.outstanding || 0) : (data?.outstanding || 0) * porsiTahun
     };
   }).sort((a, b) => a.year.localeCompare(b.year));
 
@@ -148,12 +151,16 @@ export default function Analytics() {
     count: p.count
   }));
 
+  // Menyaring agar "Belum Ditugaskan" atau string kosong tidak tampil di daftar performa fotografer
   const photographerData = (data?.per_photographer || []).filter(
     pho => pho.name && pho.name !== "Belum Ditugaskan" && pho.name.trim() !== ""
   );
 
+  // Average Order Value (AOV) / Rata-rata nilai per booking aktif
   const activeBookingsCount = packageData.reduce((acc, curr) => acc + curr.count, 0);
   const averageOrderValue = activeBookingsCount > 0 ? totalTurnover / activeBookingsCount : 0;
+
+  // Rasio Kas Cair (Kas Masuk / Omzet Kotor * 100)
   const cashCollectionRate = totalTurnover > 0 ? ((totalIncome / totalTurnover) * 100).toFixed(1) : 0;
 
   return (
@@ -186,7 +193,7 @@ export default function Analytics() {
           <div className="bg-white p-4 rounded-2xl border border-emerald-500/35 shadow-sm bg-emerald-50/20 col-span-2 sm:col-span-1">
             <div className="flex items-center gap-2 text-emerald-700 mb-1">
               <Landmark className="h-4 w-4" />
-              <span className="text-xs font-semibold text-emerald-800 uppercase tracking-wider">Saldo Rekening (Nyata)</span>
+              <span className="text-xs font-semibold text-emerald-800 uppercase tracking-wider">Saldo Rekening (BCA)</span>
             </div>
             <p className="text-base sm:text-lg font-bold text-emerald-700">
               Rp {Math.round(realAccountBalance).toLocaleString('id-ID')}
@@ -251,11 +258,11 @@ export default function Analytics() {
           </div>
         </div>
 
-        {/* LAPORAN KEUANGAN RIIL REKENING PER TAHUN */}
+        {/* LAPORAN KEUANGAN REKENING PER TAHUN */}
         <div className="bg-white p-5 sm:p-6 rounded-2xl border border-moss-900/10 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h3 className="text-base font-bold text-neutral-900">Rekap Keuangan Riil Per Tahun</h3>
+              <h3 className="text-base font-bold text-neutral-900">Rekap Keuangan Rekening Per Tahun</h3>
               <p className="text-xs text-neutral-500">Saldo bersih rekening nyata dan sisa piutang klien per tahun</p>
             </div>
           </div>
@@ -266,7 +273,7 @@ export default function Analytics() {
                   <tr className="text-left text-neutral-500 border-b border-neutral-100">
                     <th className="pb-3 font-semibold">Tahun</th>
                     <th className="pb-3 font-semibold">Sesi</th>
-                    <th className="pb-3 font-semibold text-emerald-700">Saldo Riil Rekening</th>
+                    <th className="pb-3 font-semibold text-emerald-700">Saldo Rekening (BCA)</th>
                     <th className="pb-3 font-semibold text-amber-600 text-right">Piutang Belum Lunas</th>
                   </tr>
                 </thead>
