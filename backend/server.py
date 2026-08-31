@@ -834,7 +834,7 @@ async def analytics(
     full_income = sum(b["amount_paid"] for b in bookings if b["payment_type"] == "full")
     total_income = dp_income + full_income
     
-    active_bookings = [b for b in bookings if b.get("status"] != "cancelled"]
+    active_bookings = [b for b in bookings if b.get("status") != "cancelled"]
     
     outstanding = sum(max((float(b.get("package_price", 0)) + float(b.get("extra_charge", 0))) - float(b.get("amount_paid", 0)), 0) for b in active_bookings)
     total_turnover = total_income + outstanding
