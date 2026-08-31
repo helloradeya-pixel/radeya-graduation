@@ -1,6 +1,7 @@
 import os
 import uuid
 import logging
+import hashlib
 from pathlib import Path
 from datetime import datetime, timezone, timedelta
 from typing import List, Optional, Literal
@@ -113,6 +114,52 @@ async def send_email(to: str, subject: str, html: str, reply_to: Optional[str] =
         raise HTTPException(status_code=502, detail=f"Gagal mengirim email: {resp.text}")
     
     return resp.json().get("id")
+
+# Fungsi Kirim CAPI Server-Side ke Meta
+async def send_capi_purchase(booking: dict):
+    pixel_id = os.environ.get("META_PIXEL_ID")
+    access_token = os.environ.get("META_ACCESS_TOKEN")
+    if not pixel_id or not access_token:
+        logger.warning("Meta Pixel ID atau Access Token CAPI belum disetel di .env")
+        return
+
+    url = f"https://graph.facebook.com/v19.0/{pixel_id}/events"
+    
+    email_hash = hashlib.sha256(booking.get("email", "").strip().lower().encode('utf-8')).hexdigest() if booking.get("email") else None
+    phone_hash = hashlib.sha256("".join(filter(str.isdigit, booking.get("whatsapp", ""))).encode('utf-8')).hexdigest() if booking.get("whatsapp") else None
+
+    payload = {
+        "data": [
+            {
+                "event_name": "Purchase",
+                "event_time": int(datetime.now(timezone.utc).timestamp()),
+                "action_source": "website",
+                "event_source_url": f"https://booking.radeyaphoto.my.id/invoice/{booking['booking_id']}",
+                "user_data": {
+                    "em": [email_hash] if email_hash else [],
+                    "ph": [phone_hash] if phone_hash else [],
+                },
+                "custom_data": {
+                    "currency": "IDR",
+                    "value": float(booking.get("amount_paid", 0)),
+                    "order_id": booking.get("invoice_number"),
+                    "package_id": booking.get("package_id"),
+                    "university": booking.get("university")
+                }
+            }
+        ],
+        "access_token": access_token
+    }
+
+    async with httpx.AsyncClient(timeout=10) as client_http:
+        try:
+            resp = await client_http.post(url, json=payload)
+            if resp.status_code >= 400:
+                logger.error(f"CAPI Error: {resp.text}")
+            else:
+                logger.info(f"CAPI Purchase berhasil dikirim untuk invoice {booking.get('invoice_number')}!")
+        except Exception as e:
+            logger.error(f"Gagal koneksi ke CAPI Meta: {e}")
 
 # Fungsi Kirim ke Notion (Create baru)
 async def send_to_notion(booking_data: dict, pkg_name: str, drive_link: str = ""):
@@ -454,6 +501,12 @@ async def create_booking(
     }
     await db.bookings.insert_one(dict(doc))
     
+    # Panggil CAPI server-side ke Meta
+    try:
+        await send_capi_purchase(doc)
+    except Exception as e:
+        logger.error(f"Gagal kirim CAPI: {e}")
+
     sheet_synced = False
     drive_link = ""
     try:
@@ -767,7 +820,6 @@ async def analytics(
         
     bookings = await db.bookings.find(query, {"_id": 0}).to_list(5000)
     
-    # 1. Komponen Pendapatan & Piutang (DP dari cancelled tetap masuk kas riil)
     dp_income = sum(b["amount_paid"] for b in bookings if b["payment_type"] == "dp")
     full_income = sum(b["amount_paid"] for b in bookings if b["payment_type"] == "full")
     total_income = dp_income + full_income
@@ -775,20 +827,18 @@ async def analytics(
     active_bookings = [b for b in bookings if b.get("status") != "cancelled"]
     
     outstanding = sum(max((float(b.get("package_price", 0)) + float(b.get("extra_charge", 0))) - float(b.get("amount_paid", 0)), 0) for b in active_bookings)
-    total_turnover = total_income + outstanding # Total Omzet Kotor
+    total_turnover = total_income + outstanding
     
-    # 2. Komponen Beban (Fee Fotografer hanya dari booking aktif)
     fee_total = sum(b.get("photographer_fee", 0) for b in active_bookings if b.get("photographer_id"))
     fee_unpaid = sum(b.get("photographer_fee", 0) for b in active_bookings if b.get("photographer_id") and not b.get("photographer_paid"))
 
-    # 3. Perhitungan Laba Bersih
     net_profit_cash = total_income - fee_total       
     net_profit_accrual = total_turnover - fee_total  
 
     per_pho = {}
     for b in active_bookings:
         name = b.get("photographer_name")
-        if not name: # Abaikan jika belum ada fotografer / kosong
+        if not name:
             continue
             
         p = per_pho.setdefault(name, {
@@ -820,7 +870,6 @@ async def analytics(
 
     per_pkg = {}
     for b in active_bookings:
-        # Pendapatan paket mencakup harga paket ditambah extra charge
         pkg_revenue = float(b.get("package_price", 0)) + float(b.get("extra_charge", 0))
         p = per_pkg.setdefault(b["package_name"], {"name": b["package_name"], "count": 0, "revenue": 0.0})
         p["count"] += 1
