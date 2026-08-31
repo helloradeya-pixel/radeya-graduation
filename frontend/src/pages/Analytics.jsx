@@ -4,7 +4,13 @@ import {
 } from 'recharts';
 import { api } from '../lib/api';
 import { AdminLayout } from '../components/AdminLayout';
-import { TrendingUp, Wallet, CalendarCheck, AlertCircle, DollarSign, Users, Percent, ArrowUpRight, CheckCircle2 } from 'lucide-react';
+import { TrendingUp, Wallet, CalendarCheck, AlertCircle, DollarSign, Users, Percent, ArrowUpRight, CheckCircle2, Trash2 } from 'lucide-react';
+import { format } from 'date-fns';
+import { id } from 'date-fns/locale';
+
+// Komponen UI shadcn
+import { Button } from '../components/ui/button';
+import { toast } from 'sonner';
 
 const COLORS = ['#065f46', '#047857', '#10b981', '#34d399', '#6ee7b7'];
 
@@ -12,19 +18,69 @@ export default function Analytics() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    async function fetchAnalytics() {
-      try {
-        const res = await api.get('/analytics/summary');
-        setData(res.data);
-      } catch (err) {
-        console.error("Gagal memuat data analitik", err);
-      } finally {
-        setLoading(false);
-      }
+  // State untuk Modal Catat & Kelola Prive di halaman Analitik
+  const [priveModalOpen, setPriveModalOpen] = useState(false);
+  const [priveAmount, setPriveAmount] = useState("");
+  const [priveNotes, setPriveNotes] = useState("");
+  const [priveList, setPriveList] = useState([]);
+  const [loadingPrive, setLoadingPrive] = useState(false);
+
+  const fetchAnalytics = async () => {
+    try {
+      const res = await api.get('/analytics/summary');
+      setData(res.data);
+    } catch (err) {
+      console.error("Gagal memuat data analitik", err);
+    } finally {
+      setLoading(false);
     }
+  };
+
+  const loadPrive = async () => {
+    try {
+      const { data: res } = await api.get("/prive");
+      setPriveList(res || []);
+    } catch {
+      // ignore
+    }
+  };
+
+  useEffect(() => {
     fetchAnalytics();
+    loadPrive();
   }, []);
+
+  // Fungsi simpan Prive
+  const handleSavePrive = async () => {
+    if (!priveAmount || isNaN(priveAmount) || Number(priveAmount) <= 0) {
+      return toast.error("Masukkan nominal prive yang valid");
+    }
+    setLoadingPrive(true);
+    try {
+      await api.post("/prive", { amount: parseFloat(priveAmount), notes: priveNotes || "Keperluan pribadi" });
+      toast.success("Penarikan pribadi berhasil dicatat!");
+      setPriveAmount("");
+      setPriveNotes("");
+      fetchAnalytics(); // Refresh ringkasan kas masuk aktual
+      loadPrive(); // Refresh daftar prive
+    } catch {
+      toast.error("Gagal mencatat penarikan pribadi");
+    } finally {
+      setLoadingPrive(false);
+    }
+  };
+
+  // Fungsi hapus Prive
+  const handleDeletePrive = async (priveId) => {
+    try {
+      await api.delete(`/prive/${priveId}`);
+      toast.success("Catatan prive berhasil dihapus");
+      fetchAnalytics();
+      loadPrive();
+    } catch {
+      toast.error("Gagal menghapus catatan prive");
+    }
+  };
 
   if (loading) {
     return (
@@ -35,6 +91,22 @@ export default function Analytics() {
       </AdminLayout>
     );
   }
+
+  // Pengelompokan Pendapatan Berdasarkan Tahun (untuk Laporan Tahunan)
+  const yearlyMap = {};
+  (data?.monthly || []).forEach(item => {
+    // item.month berformat "YYYY-MM"
+    const year = item.month ? item.month.split('-')[0] : '2026';
+    if (!yearlyMap[year]) {
+      yearlyMap[year] = { year, totalPendapatan: 0, jumlahBooking: 0, dp: 0, full: 0 };
+    }
+    yearlyMap[year].totalPendapatan += (item.dp + item.full);
+    yearlyMap[year].jumlahBooking += item.bookings;
+    yearlyMap[year].dp += item.dp;
+    yearlyMap[year].full += item.full;
+  });
+
+  const yearlyData = Object.values(yearlyMap).sort((a, b) => a.year.localeCompare(b.year));
 
   const monthlyFormatted = (data?.monthly || []).map(item => {
     let displayMonth = item.month;
@@ -83,6 +155,17 @@ export default function Analytics() {
     <AdminLayout title="Grafik & Analisis" subtitle="Laporan performa finansial, omzet, dan operasional Radeyaphoto">
       <div className="space-y-6 pb-12">
         
+        {/* Tombol Akses Prive / Penarikan Pribadi di pojok atas halaman Analitik */}
+        <div className="flex justify-end">
+          <Button
+            onClick={() => setPriveModalOpen(true)}
+            variant="outline"
+            className="bg-white rounded-xl border-moss-900/10 text-xs h-10 shadow-sm text-rose-700 hover:bg-rose-50 font-medium px-4"
+          >
+            - Catat Prive / Tarik Pribadi
+          </Button>
+        </div>
+
         {/* KPI Summary Cards - Baris Utama Finansial */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
           <div className="bg-white p-4 rounded-2xl border border-moss-900/10 shadow-sm">
@@ -103,6 +186,7 @@ export default function Analytics() {
             <p className="text-base sm:text-lg font-bold text-moss-800">
               Rp {Math.round(totalIncome).toLocaleString('id-ID')}
             </p>
+            <p className="text-[10px] text-neutral-400 mt-0.5">Sudah dikurangi Prive</p>
           </div>
 
           <div className="bg-white p-4 rounded-2xl border border-moss-900/10 shadow-sm">
@@ -182,6 +266,46 @@ export default function Analytics() {
               <CheckCircle2 className="h-5 w-5" />
             </div>
           </div>
+        </div>
+
+        {/* LAPORAN TOTAL PENDAPATAN PER TAHUN (PEMBARUAN OTOMATIS TAHUN BERIKUTNYA) */}
+        <div className="bg-white p-5 sm:p-6 rounded-2xl border border-moss-900/10 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-base font-bold text-neutral-900">Rekap Pendapatan Per Tahun</h3>
+              <p className="text-xs text-neutral-500">Akumulasi performa bisnis tahunan yang diperbarui otomatis untuk tahun-tahun berikutnya</p>
+            </div>
+          </div>
+          {yearlyData.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs sm:text-sm">
+                <thead>
+                  <tr className="text-left text-neutral-500 border-b border-neutral-100">
+                    <th className="pb-3 font-semibold">Tahun Laporan</th>
+                    <th className="pb-3 font-semibold">Total Sesi</th>
+                    <th className="pb-3 font-semibold">Total DP</th>
+                    <th className="pb-3 font-semibold">Total Pelunasan</th>
+                    <th className="pb-3 font-semibold text-right">Pendapatan Tahunan</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {yearlyData.map((y) => (
+                    <tr key={y.year} className="border-b border-neutral-50 last:border-0">
+                      <td className="py-3.5 font-extrabold text-moss-900 text-sm">{y.year}</td>
+                      <td className="py-3.5">{y.jumlahBooking} Sesi</td>
+                      <td className="py-3.5">Rp {y.dp.toLocaleString('id-ID')}</td>
+                      <td className="py-3.5">Rp {y.full.toLocaleString('id-ID')}</td>
+                      <td className="py-3.5 text-right font-extrabold text-emerald-700 text-sm">
+                        Rp {y.totalPendapatan.toLocaleString('id-ID')}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="text-xs text-neutral-400 py-6 text-center">Belum ada data rekap tahunan.</p>
+          )}
         </div>
 
         {/* Grafik Utama: Tren Pendapatan Bulanan */}
@@ -277,6 +401,91 @@ export default function Analytics() {
         </div>
 
       </div>
+
+      {/* POPUP MODAL: CATAT & KELOLA PRIVE (TARIK PRIBADI) KHUSUS DI HALAMAN ANALITIK */}
+      {priveModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b pb-3">
+              <h3 className="font-bold text-moss-900 text-base">Catat & Riwayat Prive (Tarik Pribadi)</h3>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setPriveModalOpen(false)}
+                className="h-8 w-8 p-0 rounded-full"
+              >
+                ✕
+              </Button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="font-bold text-moss-900 block mb-1">Nominal Penarikan (Rp)</label>
+                <input 
+                  type="number" 
+                  value={priveAmount} 
+                  onChange={(e) => setPriveAmount(e.target.value)}
+                  placeholder="Contoh: 150000"
+                  className="w-full p-2.5 rounded-xl border border-neutral-200 bg-white"
+                />
+              </div>
+              <div>
+                <label className="font-bold text-moss-900 block mb-1">Keterangan / Keperluan</label>
+                <input 
+                  type="text" 
+                  value={priveNotes} 
+                  onChange={(e) => setPriveNotes(e.target.value)}
+                  placeholder="Contoh: Keperluan rumah / bensin"
+                  className="w-full p-2.5 rounded-xl border border-neutral-200 bg-white"
+                />
+              </div>
+              <Button 
+                onClick={handleSavePrive}
+                disabled={loadingPrive}
+                className="w-full bg-rose-700 hover:bg-rose-800 text-white text-xs h-10 rounded-xl font-medium"
+              >
+                {loadingPrive ? "Menyimpan..." : "Simpan Catatan Prive"}
+              </Button>
+            </div>
+
+            {/* Daftar Riwayat Prive */}
+            <div className="pt-3 border-t space-y-2">
+              <p className="font-bold text-moss-900 text-xs">Riwayat Prive Terbaru:</p>
+              <div className="space-y-2 max-h-40 overflow-y-auto">
+                {priveList.map((prv) => (
+                  <div key={prv.prive_id} className="flex justify-between items-center p-2.5 rounded-xl bg-neutral-50 border border-neutral-100 text-xs">
+                    <div>
+                      <p className="font-bold text-rose-700">Rp {Number(prv.amount).toLocaleString('id-ID')}</p>
+                      <p className="text-neutral-500 text-[10px]">{prv.notes} • {format(new Date(prv.created_at), "d MMM yyyy", { locale: id })}</p>
+                    </div>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => handleDeletePrive(prv.prive_id)}
+                      className="h-7 w-7 p-0 text-rose-600 hover:bg-rose-50 rounded-lg"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                ))}
+                {priveList.length === 0 && (
+                  <p className="text-center text-neutral-400 text-[11px] py-4">Belum ada catatan prive.</p>
+                )}
+              </div>
+            </div>
+
+            <div className="pt-2">
+              <Button 
+                onClick={() => setPriveModalOpen(false)}
+                className="w-full bg-moss-900 hover:bg-moss-800 text-white text-xs h-9 rounded-xl"
+              >
+                Tutup
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </AdminLayout>
   );
 }
