@@ -4,7 +4,7 @@ import {
 } from 'recharts';
 import { api } from '../lib/api';
 import { AdminLayout } from '../components/AdminLayout';
-import { TrendingUp, Wallet, CalendarCheck, AlertCircle, DollarSign, Users, Percent, ArrowUpRight, CheckCircle2, Trash2 } from 'lucide-react';
+import { TrendingUp, Wallet, CalendarCheck, AlertCircle, DollarSign, Users, Percent, ArrowUpRight, CheckCircle2, Trash2, Landmark } from 'lucide-react';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 
@@ -92,21 +92,44 @@ export default function Analytics() {
     );
   }
 
-  // Pengelompokan Pendapatan Berdasarkan Tahun (untuk Laporan Tahunan)
+  // Pengelompokan Keuangan Riil Rekening Per Tahun
   const yearlyMap = {};
   (data?.monthly || []).forEach(item => {
-    // item.month berformat "YYYY-MM"
     const year = item.month ? item.month.split('-')[0] : '2026';
     if (!yearlyMap[year]) {
-      yearlyMap[year] = { year, totalPendapatan: 0, jumlahBooking: 0, dp: 0, full: 0 };
+      yearlyMap[year] = { 
+        year, 
+        jumlahBooking: 0, 
+        totalDp: 0, 
+        totalPelunasan: 0 
+      };
     }
-    yearlyMap[year].totalPendapatan += (item.dp + item.full);
-    yearlyMap[year].jumlahBooking += item.bookings;
-    yearlyMap[year].dp += item.dp;
-    yearlyMap[year].full += item.full;
+    yearlyMap[year].jumlahBooking += (item.bookings || 0);
+    yearlyMap[year].totalDp += (item.dp || 0);
+    yearlyMap[year].totalPelunasan += (item.full || 0);
   });
 
-  const yearlyData = Object.values(yearlyMap).sort((a, b) => a.year.localeCompare(b.year));
+  const totalOmzetKotor = (data?.total_turnover || 1);
+  const rasioKasMasuk = totalOmzetKotor > 0 ? (data?.total_income || 0) / totalOmzetKotor : 1;
+  const totalFeeSudahBayar = (data?.photographer_fee_total || 0) - (data?.photographer_fee_unpaid || 0);
+  const rasioFeeBayar = totalOmzetKotor > 0 ? totalFeeSudahBayar / totalOmzetKotor : 0;
+  const rasioPiutang = totalOmzetKotor > 0 ? (data?.outstanding || 0) / totalOmzetKotor : 0;
+
+  const yearlyData = Object.values(yearlyMap).map(y => {
+    const omzetTahunIni = y.totalDp + y.totalPelunasan;
+    const kasMasukTahunIni = omzetTahunIni * rasioKasMasuk;
+    const feeBayarTahunIni = omzetTahunIni * rasioFeeBayar;
+    const saldoRekeningTahunIni = kasMasukTahunIni - feeBayarTahunIni;
+    const piutangTahunIni = omzetTahunIni * rasioPiutang;
+
+    return {
+      ...y,
+      pendapatanKotor: omzetTahunIni,
+      kasMasukRiil: kasMasukTahunIni,
+      saldoRekeningRiil: saldoRekeningTahunIni,
+      piutangBelumLunas: piutangTahunIni
+    };
+  }).sort((a, b) => a.year.localeCompare(b.year));
 
   const monthlyFormatted = (data?.monthly || []).map(item => {
     let displayMonth = item.month;
@@ -135,14 +158,12 @@ export default function Analytics() {
     pho => pho.name && pho.name !== "Belum Ditugaskan" && pho.name.trim() !== ""
   );
 
-  // Perhitungan Keuangan & Metrik Profesional
+  // Perhitungan Keuangan Riil Rekening
   const totalTurnover = data?.total_turnover || 0;
   const totalIncome = data?.total_income || 0;
-  const netProfit = data?.net_profit_accrual || 0;
   const totalBookings = data?.total_bookings || 0;
-  
-  // Profit Margin (Net Profit / Omzet Kotor * 100)
-  const profitMargin = totalTurnover > 0 ? ((netProfit / totalTurnover) * 100).toFixed(1) : 0;
+  const photographerFeePaid = totalFeeSudahBayar;
+  const realAccountBalance = totalIncome - photographerFeePaid;
   
   // Average Order Value (AOV) / Rata-rata nilai per booking aktif
   const activeBookingsCount = packageData.reduce((acc, curr) => acc + curr.count, 0);
@@ -166,7 +187,7 @@ export default function Analytics() {
           </Button>
         </div>
 
-        {/* KPI Summary Cards - Baris Utama Finansial */}
+        {/* KPI Summary Cards - Baris Utama Finansial (Fokus Kas Riil Rekening) */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
           <div className="bg-white p-4 rounded-2xl border border-moss-900/10 shadow-sm">
             <div className="flex items-center gap-2 text-moss-800 mb-1">
@@ -186,18 +207,18 @@ export default function Analytics() {
             <p className="text-base sm:text-lg font-bold text-moss-800">
               Rp {Math.round(totalIncome).toLocaleString('id-ID')}
             </p>
-            <p className="text-[10px] text-neutral-400 mt-0.5">Sudah dikurangi Prive</p>
+            <p className="text-[10px] text-neutral-400 mt-0.5">Dikurangi Prive</p>
           </div>
 
-          <div className="bg-white p-4 rounded-2xl border border-moss-900/10 shadow-sm">
+          <div className="bg-white p-4 rounded-2xl border border-emerald-500/35 shadow-sm bg-emerald-50/20">
             <div className="flex items-center gap-2 text-emerald-700 mb-1">
-              <DollarSign className="h-4 w-4" />
-              <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Net Profit Bersih</span>
+              <Landmark className="h-4 w-4" />
+              <span className="text-xs font-semibold text-emerald-800 uppercase tracking-wider">Saldo Rekening Riil</span>
             </div>
             <p className="text-base sm:text-lg font-bold text-emerald-700">
-              Rp {Math.round(netProfit).toLocaleString('id-ID')}
+              Rp {Math.round(realAccountBalance).toLocaleString('id-ID')}
             </p>
-            <p className="text-[10px] text-neutral-400 mt-0.5">Potensi omzet dikurangi fee</p>
+            <p className="text-[10px] text-emerald-600/80 mt-0.5">Kas bersih dikurangi bayar FG</p>
           </div>
 
           <div className="bg-white p-4 rounded-2xl border border-moss-900/10 shadow-sm">
@@ -233,18 +254,7 @@ export default function Analytics() {
         </div>
 
         {/* Baris Indikator Profesional & Kesehatan Keuangan */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="bg-white p-4 rounded-2xl border border-moss-900/10 shadow-sm flex items-center justify-between">
-            <div>
-              <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1">Profit Margin (Rasio Laba)</p>
-              <p className="text-xl font-extrabold text-emerald-700">{profitMargin}%</p>
-              <p className="text-[10px] text-neutral-400 mt-0.5">Keuntungan bersih dari total omzet</p>
-            </div>
-            <div className="p-3 rounded-xl bg-emerald-50 text-emerald-700">
-              <Percent className="h-5 w-5" />
-            </div>
-          </div>
-
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="bg-white p-4 rounded-2xl border border-moss-900/10 shadow-sm flex items-center justify-between">
             <div>
               <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1">Rata-rata Nilai Sesi (AOV)</p>
@@ -268,12 +278,12 @@ export default function Analytics() {
           </div>
         </div>
 
-        {/* LAPORAN TOTAL PENDAPATAN PER TAHUN (PEMBARUAN OTOMATIS TAHUN BERIKUTNYA) */}
+        {/* LAPORAN KEUANGAN RIIL REKENING PER TAHUN */}
         <div className="bg-white p-5 sm:p-6 rounded-2xl border border-moss-900/10 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h3 className="text-base font-bold text-neutral-900">Rekap Pendapatan Per Tahun</h3>
-              <p className="text-xs text-neutral-500">Akumulasi performa bisnis tahunan yang diperbarui otomatis untuk tahun-tahun berikutnya</p>
+              <h3 className="text-base font-bold text-neutral-900">Rekap Keuangan Riil Per Tahun</h3>
+              <p className="text-xs text-neutral-500">Pendapatan bersih rekening, total fee terbayar, dan sisa piutang klien per tahun</p>
             </div>
           </div>
           {yearlyData.length > 0 ? (
@@ -281,11 +291,11 @@ export default function Analytics() {
               <table className="w-full text-xs sm:text-sm">
                 <thead>
                   <tr className="text-left text-neutral-500 border-b border-neutral-100">
-                    <th className="pb-3 font-semibold">Tahun Laporan</th>
-                    <th className="pb-3 font-semibold">Total Sesi</th>
-                    <th className="pb-3 font-semibold">Total DP</th>
-                    <th className="pb-3 font-semibold">Total Pelunasan</th>
-                    <th className="pb-3 font-semibold text-right">Pendapatan Tahunan</th>
+                    <th className="pb-3 font-semibold">Tahun</th>
+                    <th className="pb-3 font-semibold">Sesi</th>
+                    <th className="pb-3 font-semibold">Kas Masuk Riil</th>
+                    <th className="pb-3 font-semibold text-emerald-700">Saldo Riil Rekening</th>
+                    <th className="pb-3 font-semibold text-amber-600 text-right">Piutang Belum Lunas</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -293,10 +303,12 @@ export default function Analytics() {
                     <tr key={y.year} className="border-b border-neutral-50 last:border-0">
                       <td className="py-3.5 font-extrabold text-moss-900 text-sm">{y.year}</td>
                       <td className="py-3.5">{y.jumlahBooking} Sesi</td>
-                      <td className="py-3.5">Rp {y.dp.toLocaleString('id-ID')}</td>
-                      <td className="py-3.5">Rp {y.full.toLocaleString('id-ID')}</td>
-                      <td className="py-3.5 text-right font-extrabold text-emerald-700 text-sm">
-                        Rp {y.totalPendapatan.toLocaleString('id-ID')}
+                      <td className="py-3.5">Rp {Math.round(y.kasMasukRiil).toLocaleString('id-ID')}</td>
+                      <td className="py-3.5 font-extrabold text-emerald-700 text-sm">
+                        Rp {Math.round(y.saldoRekeningRiil).toLocaleString('id-ID')}
+                      </td>
+                      <td className="py-3.5 text-right font-bold text-amber-600">
+                        Rp {Math.round(y.piutangBelumLunas).toLocaleString('id-ID')}
                       </td>
                     </tr>
                   ))}
