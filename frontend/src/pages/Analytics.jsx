@@ -4,7 +4,7 @@ import {
 } from 'recharts';
 import { api } from '../lib/api';
 import { AdminLayout } from '../components/AdminLayout';
-import { TrendingUp, Wallet, CalendarCheck, AlertCircle, Users, ArrowUpRight, CheckCircle2, Trash2, Landmark } from 'lucide-react';
+import { TrendingUp, CalendarCheck, AlertCircle, Users, ArrowUpRight, CheckCircle2, Trash2, Landmark } from 'lucide-react';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 
@@ -61,8 +61,8 @@ export default function Analytics() {
       toast.success("Penarikan pribadi berhasil dicatat!");
       setPriveAmount("");
       setPriveNotes("");
-      fetchAnalytics(); // Refresh ringkasan kas masuk aktual
-      loadPrive(); // Refresh daftar prive
+      fetchAnalytics(); 
+      loadPrive(); 
     } catch {
       toast.error("Gagal mencatat penarikan pribadi");
     } finally {
@@ -92,7 +92,14 @@ export default function Analytics() {
     );
   }
 
-  // Pengelompokan Keuangan Riil Rekening Per Tahun
+  // Perhitungan Keuangan Riil Rekening Global
+  const totalTurnover = data?.total_turnover || 0;
+  const totalIncome = data?.total_income || 0;
+  const totalBookings = data?.total_bookings || 0;
+  const totalFeeSudahBayar = (data?.photographer_fee_total || 0) - (data?.photographer_fee_unpaid || 0);
+  const realAccountBalance = totalIncome - totalFeeSudahBayar;
+
+  // Pengelompokan Keuangan Riil Rekening Per Tahun (Sinkron Total Global)
   const yearlyMap = {};
   (data?.monthly || []).forEach(item => {
     const year = item.month ? item.month.split('-')[0] : '2026';
@@ -100,34 +107,22 @@ export default function Analytics() {
       yearlyMap[year] = { 
         year, 
         jumlahBooking: 0, 
-        totalDp: 0, 
-        totalPelunasan: 0 
+        totalPendapatanBulan: 0 
       };
     }
     yearlyMap[year].jumlahBooking += (item.bookings || 0);
-    yearlyMap[year].totalDp += (item.dp || 0);
-    yearlyMap[year].totalPelunasan += (item.full || 0);
+    yearlyMap[year].totalPendapatanBulan += ((item.dp || 0) + (item.full || 0));
   });
 
-  const totalOmzetKotor = (data?.total_turnover || 1);
-  const rasioKasMasuk = totalOmzetKotor > 0 ? (data?.total_income || 0) / totalOmzetKotor : 1;
-  const totalFeeSudahBayar = (data?.photographer_fee_total || 0) - (data?.photographer_fee_unpaid || 0);
-  const rasioFeeBayar = totalOmzetKotor > 0 ? totalFeeSudahBayar / totalOmzetKotor : 0;
-  const rasioPiutang = totalOmzetKotor > 0 ? (data?.outstanding || 0) / totalOmzetKotor : 0;
-
+  const totalOmzetKotor = totalTurnover > 0 ? totalTurnover : 1;
   const yearlyData = Object.values(yearlyMap).map(y => {
-    const omzetTahunIni = y.totalDp + y.totalPelunasan;
-    const kasMasukTahunIni = omzetTahunIni * rasioKasMasuk;
-    const feeBayarTahunIni = omzetTahunIni * rasioFeeBayar;
-    const saldoRekeningTahunIni = kasMasukTahunIni - feeBayarTahunIni;
-    const piutangTahunIni = omzetTahunIni * rasioPiutang;
+    const porsiTahun = y.totalPendapatanBulan / totalOmzetKotor;
 
     return {
-      ...y,
-      pendapatanKotor: omzetTahunIni,
-      kasMasukRiil: kasMasukTahunIni,
-      saldoRekeningRiil: saldoRekeningTahunIni,
-      piutangBelumLunas: piutangTahunIni
+      year: y.year,
+      jumlahBooking: y.jumlahBooking,
+      saldoRekeningRiil: realAccountBalance * porsiTahun,
+      piutangBelumLunas: (data?.outstanding || 0) * porsiTahun
     };
   }).sort((a, b) => a.year.localeCompare(b.year));
 
@@ -153,23 +148,12 @@ export default function Analytics() {
     count: p.count
   }));
 
-  // Menyaring agar "Belum Ditugaskan" atau string kosong tidak tampil di daftar performa fotografer
   const photographerData = (data?.per_photographer || []).filter(
     pho => pho.name && pho.name !== "Belum Ditugaskan" && pho.name.trim() !== ""
   );
 
-  // Perhitungan Keuangan Riil Rekening
-  const totalTurnover = data?.total_turnover || 0;
-  const totalIncome = data?.total_income || 0;
-  const totalBookings = data?.total_bookings || 0;
-  const photographerFeePaid = totalFeeSudahBayar;
-  const realAccountBalance = totalIncome - photographerFeePaid;
-  
-  // Average Order Value (AOV) / Rata-rata nilai per booking aktif
   const activeBookingsCount = packageData.reduce((acc, curr) => acc + curr.count, 0);
   const averageOrderValue = activeBookingsCount > 0 ? totalTurnover / activeBookingsCount : 0;
-
-  // Rasio Kas Cair (Kas Masuk / Omzet Kotor * 100)
   const cashCollectionRate = totalTurnover > 0 ? ((totalIncome / totalTurnover) * 100).toFixed(1) : 0;
 
   return (
@@ -187,8 +171,8 @@ export default function Analytics() {
           </Button>
         </div>
 
-        {/* KPI Summary Cards - Baris Utama Finansial (Fokus Kas Riil Rekening) */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+        {/* KPI Summary Cards - Fokus Saldo Rekening Nyata */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
           <div className="bg-white p-4 rounded-2xl border border-moss-900/10 shadow-sm">
             <div className="flex items-center gap-2 text-moss-800 mb-1">
               <TrendingUp className="h-4 w-4" />
@@ -199,26 +183,15 @@ export default function Analytics() {
             </p>
           </div>
 
-          <div className="bg-white p-4 rounded-2xl border border-moss-900/10 shadow-sm">
-            <div className="flex items-center gap-2 text-moss-800 mb-1">
-              <Wallet className="h-4 w-4" />
-              <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Kas Masuk Riil</span>
-            </div>
-            <p className="text-base sm:text-lg font-bold text-moss-800">
-              Rp {Math.round(totalIncome).toLocaleString('id-ID')}
-            </p>
-            <p className="text-[10px] text-neutral-400 mt-0.5">Dikurangi Prive</p>
-          </div>
-
-          <div className="bg-white p-4 rounded-2xl border border-emerald-500/35 shadow-sm bg-emerald-50/20">
+          <div className="bg-white p-4 rounded-2xl border border-emerald-500/35 shadow-sm bg-emerald-50/20 col-span-2 sm:col-span-1">
             <div className="flex items-center gap-2 text-emerald-700 mb-1">
               <Landmark className="h-4 w-4" />
-              <span className="text-xs font-semibold text-emerald-800 uppercase tracking-wider">Saldo Rekening Riil</span>
+              <span className="text-xs font-semibold text-emerald-800 uppercase tracking-wider">Saldo Rekening (Nyata)</span>
             </div>
             <p className="text-base sm:text-lg font-bold text-emerald-700">
               Rp {Math.round(realAccountBalance).toLocaleString('id-ID')}
             </p>
-            <p className="text-[10px] text-emerald-600/80 mt-0.5">Kas bersih dikurangi bayar FG</p>
+            <p className="text-[10px] text-emerald-600/80 mt-0.5">Uang masuk - Prive - Bayar FG</p>
           </div>
 
           <div className="bg-white p-4 rounded-2xl border border-moss-900/10 shadow-sm">
@@ -283,7 +256,7 @@ export default function Analytics() {
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="text-base font-bold text-neutral-900">Rekap Keuangan Riil Per Tahun</h3>
-              <p className="text-xs text-neutral-500">Pendapatan bersih rekening, total fee terbayar, dan sisa piutang klien per tahun</p>
+              <p className="text-xs text-neutral-500">Saldo bersih rekening nyata dan sisa piutang klien per tahun</p>
             </div>
           </div>
           {yearlyData.length > 0 ? (
@@ -293,7 +266,6 @@ export default function Analytics() {
                   <tr className="text-left text-neutral-500 border-b border-neutral-100">
                     <th className="pb-3 font-semibold">Tahun</th>
                     <th className="pb-3 font-semibold">Sesi</th>
-                    <th className="pb-3 font-semibold">Kas Masuk Riil</th>
                     <th className="pb-3 font-semibold text-emerald-700">Saldo Riil Rekening</th>
                     <th className="pb-3 font-semibold text-amber-600 text-right">Piutang Belum Lunas</th>
                   </tr>
@@ -303,7 +275,6 @@ export default function Analytics() {
                     <tr key={y.year} className="border-b border-neutral-50 last:border-0">
                       <td className="py-3.5 font-extrabold text-moss-900 text-sm">{y.year}</td>
                       <td className="py-3.5">{y.jumlahBooking} Sesi</td>
-                      <td className="py-3.5">Rp {Math.round(y.kasMasukRiil).toLocaleString('id-ID')}</td>
                       <td className="py-3.5 font-extrabold text-emerald-700 text-sm">
                         Rp {Math.round(y.saldoRekeningRiil).toLocaleString('id-ID')}
                       </td>
