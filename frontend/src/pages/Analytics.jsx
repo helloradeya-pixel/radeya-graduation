@@ -4,7 +4,7 @@ import {
 } from 'recharts';
 import { api } from '../lib/api';
 import { AdminLayout } from '../components/AdminLayout';
-import { TrendingUp, Wallet, CalendarCheck, AlertCircle, DollarSign, Users, Percent, ArrowUpRight, CheckCircle2, Trash2, Landmark } from 'lucide-react';
+import { TrendingUp, Wallet, CalendarCheck, AlertCircle, Users, ArrowUpRight, CheckCircle2, Trash2, Landmark } from 'lucide-react';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 
