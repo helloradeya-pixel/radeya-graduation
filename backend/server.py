@@ -293,6 +293,10 @@ class ClientPaymentConfirm(BaseModel):
     amount_paid: float
     proof_file_id: str
 
+class PriveIn(BaseModel):
+    amount: float
+    notes: Optional[str] = "Keperluan pribadi"
+
 def now_iso():
     return datetime.now(timezone.utc).isoformat()
 
@@ -441,6 +445,30 @@ async def download_file(file_id: str):
     data, ct = get_object(rec["storage_path"])
     return FastResponse(content=data, media_type=rec.get("content_type", ct))
 
+# --- ENDPOINT PRIVE / PENARIKAN PRIBADI ---
+@api_router.post("/prive")
+async def add_prive(body: PriveIn, request: Request):
+    await get_current_user(request)
+    doc = {
+        "prive_id": f"prv_{uuid.uuid4().hex[:10]}",
+        "amount": float(body.amount),
+        "notes": body.notes,
+        "created_at": now_iso()
+    }
+    await db.prive_records.insert_one(doc)
+    return {"ok": True, "message": "Prive berhasil dicatat"}
+
+@api_router.get("/prive")
+async def list_prive(request: Request):
+    await get_current_user(request)
+    return await db.prive_records.find({}, {"_id": 0}).sort("created_at", -1).to_list(100)
+
+@api_router.delete("/prive/{prive_id}")
+async def delete_prive(prive_id: str, request: Request):
+    await get_current_user(request)
+    await db.prive_records.delete_one({"prive_id": prive_id})
+    return {"ok": True}
+
 def gcal_link(b: dict) -> str:
     from urllib.parse import quote_plus
     d = b["shoot_date"].replace("-", "")
@@ -571,7 +599,7 @@ async def create_booking(
            f"Universitas: {university}\nProdi: {study}\n\nPaket: {pkg['name']} (Rp {pkg['price']:,.0f})\n"
            f"Tanggal: {shoot_date}\nJam: {start_time} - {end_time}\nLokasi: {location}\n\n"
            f"Pembayaran: {'DP' if actual_payment_type == 'dp' else 'Full Payment'} - Rp {float(amount_paid):,.0f}\n"
-           f"Sisa Tagihan: Rp {balance_due_calc:,.0f}\n"
+           f"Sisa Pembayaran: Rp {balance_due_calc:,.0f}\n"
            f"No. Invoice: {doc['invoice_number']}\n\n"
            f"⚠️ *Batas waktu pelunasan paling lambat H-1*\n"
            f"Bisa ditransfer ke: *BCA 2952093623 a/n Yulviana Kusnia*\n\n"
@@ -781,7 +809,7 @@ def invoice_html(b: dict) -> str:
 <tr><td style="padding-top:10px;font-weight:bold;border-top:1px solid #e4e4e7">Total Keseluruhan:</td>
 <td align="right" style="padding-top:10px;font-weight:bold;border-top:1px solid #e4e4e7">{rupiah(total_tagihan)}</td></tr>
 <tr><td style="padding-top:4px;color:#71717a">Sudah Dibayar:</td><td align="right" style="padding-top:4px;color:#71717a">{rupiah(b['amount_paid'])}</td></tr>
-<tr><td style="padding-top:8px;font-weight:bold;font-size:16px;color:#c2410c;border-top:1px solid #e4e4e7">Sisa Tagihan:</td>
+<tr><td style="padding-top:8px;font-weight:bold;font-size:16px;color:#c2410c;border-top:1px solid #e4e4e7">Sisa Pembayaran:</td>
 <td align="right" style="padding-top:8px;font-weight:bold;font-size:16px;color:#c2410c;border-top:1px solid #e4e4e7">{rupiah(b.get('balance_due', 0))}</td></tr>
 </table>
 
@@ -832,12 +860,19 @@ async def analytics(
     
     dp_income = sum(b["amount_paid"] for b in bookings if b["payment_type"] == "dp")
     full_income = sum(b["amount_paid"] for b in bookings if b["payment_type"] == "full")
-    total_income = dp_income + full_income
+    raw_total_income = dp_income + full_income
+
+    # Ambil data prive / penarikan pribadi untuk mengurangi kas riil
+    prive_docs = await db.prive_records.find({}, {"_id": 0}).to_list(5000)
+    total_prive = sum(p["amount"] for p in prive_docs)
+    
+    # Kas masuk bersih setelah dikurangi prive pribadi
+    total_income = max(raw_total_income - total_prive, 0)
     
     active_bookings = [b for b in bookings if b.get("status") != "cancelled"]
     
     outstanding = sum(max((float(b.get("package_price", 0)) + float(b.get("extra_charge", 0))) - float(b.get("amount_paid", 0)), 0) for b in active_bookings)
-    total_turnover = total_income + outstanding
+    total_turnover = raw_total_income + outstanding
     
     fee_total = sum(b.get("photographer_fee", 0) for b in active_bookings if b.get("photographer_id"))
     fee_unpaid = sum(b.get("photographer_fee", 0) for b in active_bookings if b.get("photographer_id") and not b.get("photographer_paid"))
