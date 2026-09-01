@@ -687,8 +687,8 @@ async def update_booking(booking_id: str, body: BookingUpdate, request: Request)
                 upd["photographer_fee"] = pho.get("fee_per_session", 0)
                 
     package_price = float(cur.get("package_price", 0))
-    extra_time = float(upd.get("extra_time_charge", cur.get("extra_time_charge", cur.get("extra_time_charge", 0))))
-    video = float(upd.get("video_charge", cur.get("video_charge", cur.get("video_charge", 0))))
+    extra_time = float(upd.get("extra_time_charge", cur.get("extra_time_charge", 0)))
+    video = float(upd.get("video_charge", cur.get("video_charge", 0)))
     paid_amount = float(upd.get("amount_paid", cur.get("amount_paid", 0)))
     
     total_tagihan = package_price + extra_time + video
@@ -896,7 +896,7 @@ async def analytics(
     
     total_income = max(raw_total_income - total_prive, 0)
     
-    active_bookings = [b for b in bookings if b.get("status"] != "cancelled"]
+    active_bookings = [b for b in bookings if b.get("status") != "cancelled"]
     
     outstanding = sum(max((float(b.get("package_price", 0)) + float(b.get("extra_time_charge", 0)) + float(b.get("video_charge", 0))) - float(b.get("amount_paid", 0)), 0) for b in active_bookings)
     total_turnover = raw_total_income + outstanding
