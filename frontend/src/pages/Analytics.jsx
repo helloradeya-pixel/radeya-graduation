@@ -181,7 +181,7 @@ export default function Analytics() {
           </Button>
         </div>
 
-        {/* KPI Summary Cards - Ditata rapi 2 kolom di HP agar tidak berantakan */}
+        {/* KPI Summary Cards - Ditata rapi 2 kolom di HP */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           <div className="bg-white p-4 rounded-2xl border border-moss-900/10 shadow-sm">
             <div className="flex items-center gap-2 text-moss-800 mb-1">
@@ -285,7 +285,7 @@ export default function Analytics() {
               <table className="w-full text-xs sm:text-sm">
                 <thead>
                   <tr className="text-left text-neutral-500 border-b border-neutral-100">
-                    <th className="pb-3 font-semibold">Tahun</th>
+                    <th className="pb-3 font-semibold w-24">Tahun</th>
                     <th className="pb-3 font-semibold">Sesi</th>
                     <th className="pb-3 font-semibold text-emerald-700">Saldo Rekening (BCA)</th>
                     <th className="pb-3 font-semibold text-amber-600 text-right">Piutang Belum Lunas</th>
@@ -295,7 +295,7 @@ export default function Analytics() {
                   {yearlyData.map((y) => (
                     <tr key={y.year} className="border-b border-neutral-50 last:border-0">
                       <td className="py-3.5 font-extrabold text-moss-900 text-sm">{y.year}</td>
-                      <td className="py-3.5">{y.jumlahBooking} Sesi</td>
+                      <td className="py-3.5 text-neutral-600 font-medium">{y.jumlahBooking} Sesi</td>
                       <td className="py-3.5 font-extrabold text-emerald-700 text-sm">
                         Rp {Math.round(y.saldoRekeningRiil).toLocaleString('id-ID')}
                       </td>
