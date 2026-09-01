@@ -113,6 +113,31 @@ export default function BookingPage() {
       });
       // ==========================================
 
+      // ==========================================
+      // GOOGLE ANALYTICS (GA4) TRACKING
+      // ==========================================
+      if (typeof window !== 'undefined' && window.gtag) {
+        window.gtag('event', 'generate_lead', {
+          currency: 'IDR',
+          value: amount,
+          package_name: pkg?.name || f.package_id,
+          university: f.university,
+        });
+        
+        window.gtag('event', 'purchase', {
+          transaction_id: data.invoice_number || `booking_${Date.now()}`,
+          value: amount,
+          currency: 'IDR',
+          items: [{
+            item_id: f.package_id,
+            item_name: pkg?.name || 'Paket Foto Wisuda',
+            price: amount,
+            quantity: 1
+          }]
+        });
+      }
+      // ==========================================
+
       setResult(data);
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (err) {
