@@ -20,8 +20,9 @@ export default function InvoicePage() {
       setInvoice(data);
       
       const pkgPrice = parseFloat(data.package_price || 0);
-      const extra = parseFloat(data.extra_charge || 0);
-      const calcBalance = Math.max((pkgPrice + extra) - parseFloat(data.amount_paid || 0), 0);
+      const extraTime = parseFloat(data.extra_time_charge || 0);
+      const videoCharge = parseFloat(data.video_charge || 0);
+      const calcBalance = Math.max((pkgPrice + extraTime + videoCharge) - parseFloat(data.amount_paid || 0), 0);
       
       setAmountPaid(calcBalance > 0 ? calcBalance : "");
     } catch {
@@ -68,8 +69,10 @@ export default function InvoicePage() {
   if (!invoice) return <div className="p-10 text-center">Invoice tidak valid.</div>;
 
   const packagePrice = parseFloat(invoice.package_price || 0);
-  const extraCharge = parseFloat(invoice.extra_charge || 0);
-  const totalKeseluruhan = packagePrice + extraCharge;
+  const extraTimeCharge = parseFloat(invoice.extra_time_charge || 0);
+  const videoCharge = parseFloat(invoice.video_charge || 0);
+  
+  const totalKeseluruhan = packagePrice + extraTimeCharge + videoCharge;
   const balanceDue = Math.max(totalKeseluruhan - parseFloat(invoice.amount_paid || 0), 0);
 
   const adminWhatsApp = "628211251570";
@@ -112,12 +115,21 @@ export default function InvoicePage() {
           <span>Harga Paket:</span>
           <span className="font-medium">{rupiah(packagePrice)}</span>
         </div>
-        {extraCharge > 0 && (
+
+        {extraTimeCharge > 0 && (
           <div className="flex justify-between text-amber-700">
-            <span>Extra Time / Biaya Tambahan {invoice.extra_note ? `(${invoice.extra_note})` : ''}:</span>
-            <span className="font-medium">+{rupiah(extraCharge)}</span>
+            <span>Extra Time {invoice.extra_time_note ? `(${invoice.extra_time_note})` : ''}:</span>
+            <span className="font-medium">+{rupiah(extraTimeCharge)}</span>
           </div>
         )}
+
+        {videoCharge > 0 && (
+          <div className="flex justify-between text-amber-700">
+            <span>Penambahan Video {invoice.video_note ? `(${invoice.video_note})` : ''}:</span>
+            <span className="font-medium">+{rupiah(videoCharge)}</span>
+          </div>
+        )}
+
         <div className="flex justify-between font-bold border-t pt-2">
           <span>Total Keseluruhan:</span>
           <span>{rupiah(totalKeseluruhan)}</span>
