@@ -115,7 +115,6 @@ async def send_email(to: str, subject: str, html: str, reply_to: Optional[str] =
     
     return resp.json().get("id")
 
-# Fungsi Kirim CAPI Server-Side ke Meta (Dilengkapi fbc, fbp, & external_id)
 async def send_capi_purchase(booking: dict, fbc: str = "", fbp: str = ""):
     pixel_id = os.environ.get("META_PIXEL_ID")
     access_token = os.environ.get("META_ACCESS_TOKEN")
@@ -170,7 +169,6 @@ async def send_capi_purchase(booking: dict, fbc: str = "", fbp: str = ""):
         except Exception as e:
             logger.error(f"Gagal koneksi ke CAPI Meta: {e}")
 
-# Fungsi Kirim ke Notion (Create baru)
 async def send_to_notion(booking_data: dict, pkg_name: str, drive_link: str = ""):
     if not NOTION_API_KEY or not NOTION_DATABASE_ID:
         logger.warning("Notion API Key atau Database ID belum disetel.")
@@ -212,7 +210,6 @@ async def send_to_notion(booking_data: dict, pkg_name: str, drive_link: str = ""
         except Exception as e:
             logger.error(f"Gagal koneksi ke Notion: {e}")
 
-# Fungsi Update Data ke Notion
 async def update_notion_booking(booking_data: dict, pkg_name: str):
     if not NOTION_API_KEY or not NOTION_DATABASE_ID:
         return
@@ -445,7 +442,6 @@ async def download_file(file_id: str):
     data, ct = get_object(rec["storage_path"])
     return FastResponse(content=data, media_type=rec.get("content_type", ct))
 
-# --- ENDPOINT PRIVE / PENARIKAN PRIBADI ---
 @api_router.post("/prive")
 async def add_prive(body: PriveIn, request: Request):
     await get_current_user(request)
@@ -512,7 +508,7 @@ async def create_booking(
     package_id: str = Form(...), shoot_date: str = Form(...), location: str = Form(...),
     start_time: str = Form(...), end_time: str = Form(...),
     payment_type: Literal["dp", "full"] = Form(...), amount_paid: float = Form(...),
-    proof_file_id: str = Form(...), notes: str = Form(""),
+    proof_file_id: str = Form(...), notes: Optional[str] = Form(""),
     fbc: str = Form(""), fbp: str = Form(""),
 ):
     pkg = await db.packages.find_one({"package_id": package_id}, {"_id": 0})
@@ -522,6 +518,7 @@ async def create_booking(
     
     actual_payment_type = "full" if float(amount_paid) >= pkg["price"] else payment_type
     balance_due_calc = max(pkg["price"] - float(amount_paid), 0)
+    cleaned_notes = (notes or "").strip()
     
     doc = {
         "booking_id": booking_id, "invoice_number": await next_invoice_number(),
@@ -532,14 +529,13 @@ async def create_booking(
         "shoot_date": shoot_date, "location": location, "start_time": start_time, "end_time": end_time,
         "payment_type": actual_payment_type, "amount_paid": float(amount_paid),
         "balance_due": balance_due_calc,
-        "proof_file_id": proof_file_id, "notes": notes,
+        "proof_file_id": proof_file_id, "notes": cleaned_notes,
         "drive_link": "", "status": "pending", "photographer_id": None, "photographer_name": None,
         "photographer_fee": 0.0, "photographer_paid": False,
         "invoice_sent": False, "created_at": now_iso(),
     }
     await db.bookings.insert_one(dict(doc))
     
-    # Panggil CAPI server-side ke Meta dengan fbc dan fbp
     try:
         await send_capi_purchase(doc, fbc=fbc, fbp=fbp)
     except Exception as e:
@@ -563,7 +559,7 @@ async def create_booking(
             "location": location,
             "payment_type": "DP" if actual_payment_type == "dp" else "Full Payment",
             "amount_paid": float(amount_paid),
-            "notes": notes if notes else "-",
+            "notes": cleaned_notes if cleaned_notes else "-",
             "status": "pending"
         }
         async with httpx.AsyncClient(timeout=15, follow_redirects=True) as sheet_client:
@@ -597,7 +593,8 @@ async def create_booking(
     invoice_web_url = f"https://booking.radeyaphoto.my.id/invoice/{booking_id}"
     msg = (f"*BOOKING FOTO GRADUATION*\n\nNama: {full_name}\nEmail: {email}\nIG: {instagram}\nWA: {whatsapp}\n"
            f"Universitas: {university}\nProdi: {study}\n\nPaket: {pkg['name']} (Rp {pkg['price']:,.0f})\n"
-           f"Tanggal: {shoot_date}\nJam: {start_time} - {end_time}\nLokasi: {location}\n\n"
+           f"Tanggal: {shoot_date}\nJam: {start_time} - {end_time}\nLokasi: {location}\n"
+           f"Catatan: {cleaned_notes if cleaned_notes else '-'}\n\n"
            f"Pembayaran: {'DP' if actual_payment_type == 'dp' else 'Full Payment'} - Rp {float(amount_paid):,.0f}\n"
            f"Sisa Pembayaran: Rp {balance_due_calc:,.0f}\n"
            f"No. Invoice: {doc['invoice_number']}\n\n"
@@ -773,6 +770,8 @@ def invoice_html(b: dict) -> str:
     <span style="color:#71717a;font-size:12px">{b.get('extra_note', 'Tambahan waktu sesi')}</span></td>
     <td align="right" style="padding:8px 0;border-bottom:1px solid #eee">{rupiah(extra)}</td></tr>""" if extra > 0 else ""
 
+    notes_section = f"""<p style="margin:4px 0;"><span style="font-weight:600;">Catatan:</span> {b.get('notes', '-')}</p>""" if b.get('notes') else ""
+
     rows = f"""
     <tr><td style="padding:8px 0;border-bottom:1px solid #eee">{b['package_name']}<br>
     <span style="color:#71717a;font-size:12px">{b['shoot_date']} · {b['start_time']}-{b['end_time']} · {b['location']}</span></td>
@@ -793,6 +792,7 @@ def invoice_html(b: dict) -> str:
   <p style="margin:4px 0;"><span style="font-weight:600;">Paket:</span> {b['package_name']} ({rupiah(pkg_price)})</p>
   <p style="margin:4px 0;"><span style="font-weight:600;">Jadwal:</span> {b['shoot_date']} ({b['start_time']} - {b['end_time']})</p>
   <p style="margin:4px 0;"><span style="font-weight:600;">Lokasi:</span> {b['location']}</p>
+  {notes_section}
   <hr style="border:none;border-top:1px solid #e4e4e7;margin:8px 0">
   
   <div style="background:#f8fafc;padding:12px;border-radius:6px;border:1px solid #e2e8f0;margin:12px 0;font-size:12px;">
@@ -862,11 +862,9 @@ async def analytics(
     full_income = sum(b["amount_paid"] for b in bookings if b["payment_type"] == "full")
     raw_total_income = dp_income + full_income
 
-    # Ambil data prive / penarikan pribadi untuk mengurangi kas riil
     prive_docs = await db.prive_records.find({}, {"_id": 0}).to_list(5000)
     total_prive = sum(p["amount"] for p in prive_docs)
     
-    # Kas masuk bersih setelah dikurangi prive pribadi
     total_income = max(raw_total_income - total_prive, 0)
     
     active_bookings = [b for b in bookings if b.get("status") != "cancelled"]
