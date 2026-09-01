@@ -99,6 +99,10 @@ export default function Analytics() {
   const totalFeeSudahBayar = (data?.photographer_fee_total || 0) - (data?.photographer_fee_unpaid || 0);
   const realAccountBalance = totalIncome - totalFeeSudahBayar;
 
+  // Perhitungan Dana Aman / Laba Bersih untuk Prive
+  const totalFeeFotografer = data?.photographer_fee_total || 0;
+  const safePriveLimit = realAccountBalance - (data?.photographer_fee_unpaid || 0);
+
   // Pengelompokan Keuangan Riil Rekening Per Tahun (Sinkron Total Global & Otomatis Full untuk Single Year)
   const yearlyMap = {};
   (data?.monthly || []).forEach(item => {
@@ -178,7 +182,7 @@ export default function Analytics() {
           </Button>
         </div>
 
-        {/* KPI Summary Cards - Fokus Saldo Rekening Nyata */}
+        {/* KPI Summary Cards - Fokus Saldo Rekening Nyata & Batas Aman Prive */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
           <div className="bg-white p-4 rounded-2xl border border-moss-900/10 shadow-sm">
             <div className="flex items-center gap-2 text-moss-800 mb-1">
@@ -201,6 +205,17 @@ export default function Analytics() {
             <p className="text-[10px] text-emerald-600/80 mt-0.5">Uang masuk - Prive - Bayar FG</p>
           </div>
 
+          <div className="bg-white p-4 rounded-2xl border border-indigo-500/35 shadow-sm bg-indigo-50/20 col-span-2 sm:col-span-1">
+            <div className="flex items-center gap-2 text-indigo-700 mb-1">
+              <CheckCircle2 className="h-4 w-4" />
+              <span className="text-xs font-semibold text-indigo-800 uppercase tracking-wider">Aman Ditarik (Prive)</span>
+            </div>
+            <p className={`text-base sm:text-lg font-bold ${safePriveLimit < 0 ? 'text-rose-600' : 'text-indigo-700'}`}>
+              Rp {Math.round(safePriveLimit).toLocaleString('id-ID')}
+            </p>
+            <p className="text-[10px] text-indigo-600/80 mt-0.5">Saldo dikurangi hutang fee FG</p>
+          </div>
+
           <div className="bg-white p-4 rounded-2xl border border-moss-900/10 shadow-sm">
             <div className="flex items-center gap-2 text-rose-700 mb-1">
               <Users className="h-4 w-4" />
@@ -219,16 +234,6 @@ export default function Analytics() {
             </div>
             <p className="text-base sm:text-lg font-bold text-neutral-900">
               {totalBookings} <span className="text-xs font-normal text-neutral-500">Booking</span>
-            </p>
-          </div>
-
-          <div className="bg-white p-4 rounded-2xl border border-moss-900/10 shadow-sm col-span-2 sm:col-span-1">
-            <div className="flex items-center gap-2 text-amber-600 mb-1">
-              <AlertCircle className="h-4 w-4" />
-              <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Piutang</span>
-            </div>
-            <p className="text-base sm:text-lg font-bold text-amber-600">
-              Rp {Math.round(data?.outstanding || 0).toLocaleString('id-ID')}
             </p>
           </div>
         </div>
