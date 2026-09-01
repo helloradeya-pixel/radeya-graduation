@@ -4,7 +4,7 @@ import {
 } from 'recharts';
 import { api } from '../lib/api';
 import { AdminLayout } from '../components/AdminLayout';
-import { TrendingUp, CalendarCheck, AlertCircle, Users, ArrowUpRight, CheckCircle2, Trash2, Landmark } from 'lucide-react';
+import { TrendingUp, CalendarCheck, Users, ArrowUpRight, CheckCircle2, Trash2, Landmark } from 'lucide-react';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 
@@ -100,7 +100,6 @@ export default function Analytics() {
   const realAccountBalance = totalIncome - totalFeeSudahBayar;
 
   // Perhitungan Dana Aman / Laba Bersih untuk Prive
-  const totalFeeFotografer = data?.photographer_fee_total || 0;
   const safePriveLimit = realAccountBalance - (data?.photographer_fee_unpaid || 0);
 
   // Pengelompokan Keuangan Riil Rekening Per Tahun (Sinkron Total Global & Otomatis Full untuk Single Year)
