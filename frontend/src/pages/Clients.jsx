@@ -50,8 +50,13 @@ export default function Clients() {
   const [editPaymentType, setEditPaymentType] = useState("dp");
   const [editPhoPaid, setEditPhoPaid] = useState(false);
   const [editPhoFee, setEditPhoFee] = useState("");
-  const [editExtraCharge, setEditExtraCharge] = useState("");
-  const [editExtraNote, setEditExtraNote] = useState("");
+  
+  // State terpisah untuk Extra Time dan Penambahan Video
+  const [editExtraTimeCharge, setEditExtraTimeCharge] = useState("");
+  const [editExtraTimeNote, setEditExtraTimeNote] = useState("");
+  const [editVideoCharge, setEditVideoCharge] = useState("");
+  const [editVideoNote, setEditVideoNote] = useState("");
+
   const [editShootDate, setEditShootDate] = useState("");
   const [editStartTime, setEditStartTime] = useState("");
   const [editEndTime, setEditEndTime] = useState("");
@@ -120,8 +125,13 @@ export default function Clients() {
     setEditPaymentType(b.payment_type || "dp");
     setEditPhoPaid(b.photographer_paid || false);
     setEditPhoFee(b.photographer_fee !== undefined && b.photographer_fee !== null ? String(b.photographer_fee) : "");
-    setEditExtraCharge(b.extra_charge ? String(b.extra_charge) : "");
-    setEditExtraNote(b.extra_note || "");
+    
+    // Inisialisasi field Extra Time & Video terpisah
+    setEditExtraTimeCharge(b.extra_time_charge ? String(b.extra_time_charge) : "");
+    setEditExtraTimeNote(b.extra_time_note || "");
+    setEditVideoCharge(b.video_charge ? String(b.video_charge) : "");
+    setEditVideoNote(b.video_note || "");
+
     setEditShootDate(b.shoot_date || "");
     setEditStartTime(b.start_time || "");
     setEditEndTime(b.end_time || "");
@@ -140,8 +150,13 @@ export default function Clients() {
         payment_type: editPaymentType,
         photographer_paid: editPhoPaid,
         photographer_fee: photographerIdToSend ? (parseFloat(editPhoFee) || 0) : 0,
-        extra_charge: parseFloat(editExtraCharge) || 0,
-        extra_note: editExtraNote,
+        
+        // Kirim field terpisah ke backend
+        extra_time_charge: parseFloat(editExtraTimeCharge) || 0,
+        extra_time_note: editExtraTimeNote,
+        video_charge: parseFloat(editVideoCharge) || 0,
+        video_note: editVideoNote,
+
         shoot_date: editShootDate,
         start_time: editStartTime,
         end_time: editEndTime,
@@ -559,6 +574,14 @@ export default function Clients() {
                 <p><span className="font-bold text-moss-900">WhatsApp:</span> {viewDetailOnly.whatsapp}</p>
                 <p><span className="font-bold text-moss-900">Kampus / Jurusan:</span> {viewDetailOnly.university} — {viewDetailOnly.study}</p>
                 <p><span className="font-bold text-moss-900">Paket Foto:</span> {viewDetailOnly.package_name} ({rupiah(viewDetailOnly.package_price)})</p>
+                
+                {viewDetailOnly.extra_time_charge > 0 && (
+                  <p><span className="font-bold text-moss-900">Extra Time:</span> {rupiah(viewDetailOnly.extra_time_charge)} ({viewDetailOnly.extra_time_note || '-'})</p>
+                )}
+                {viewDetailOnly.video_charge > 0 && (
+                  <p><span className="font-bold text-moss-900">Penambahan Video:</span> {rupiah(viewDetailOnly.video_charge)} ({viewDetailOnly.video_note || '-'})</p>
+                )}
+
                 <p><span className="font-bold text-moss-900">Jadwal Sesi:</span> {fmtDate(viewDetailOnly.shoot_date)} ({(viewDetailOnly.start_time || "").substring(0, 5)} - {(viewDetailOnly.end_time || "").substring(0, 5)} WIB)</p>
                 <p><span className="font-bold text-moss-900">Lokasi:</span> {viewDetailOnly.location}</p>
                 <p><span className="font-bold text-moss-900">Status Booking:</span> <span className="uppercase font-bold text-moss-800">{viewDetailOnly.status}</span></p>
@@ -715,25 +738,50 @@ export default function Clients() {
                 </Select>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-moss-900">Extra Charge / Biaya Lain (Rp)</label>
+              {/* INPUT EXTRA TIME TERPISAH */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-neutral-50 rounded-2xl border border-moss-900/10">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-moss-900">Extra Time Charge (Rp)</label>
                   <Input 
                     type="number" 
-                    value={editExtraCharge} 
-                    onChange={(e) => setEditExtraCharge(e.target.value)} 
-                    placeholder="Misal: 200000" 
-                    className="bg-white rounded-xl border-moss-900/20 h-10 text-xs" 
+                    value={editExtraTimeCharge} 
+                    onChange={(e) => setEditExtraTimeCharge(e.target.value)} 
+                    placeholder="0" 
+                    className="bg-white rounded-xl border-moss-900/20 h-9 text-xs" 
                   />
                 </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-moss-900">Keterangan Extra</label>
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-moss-900">Keterangan Extra Time</label>
                   <Input 
                     type="text" 
-                    value={editExtraNote} 
-                    onChange={(e) => setEditExtraNote(e.target.value)} 
-                    placeholder="Misal: Extra Time" 
-                    className="bg-white rounded-xl border-moss-900/20 h-10 text-xs" 
+                    value={editExtraTimeNote} 
+                    onChange={(e) => setEditExtraTimeNote(e.target.value)} 
+                    placeholder="Misal: Tambah 30 menit" 
+                    className="bg-white rounded-xl border-moss-900/20 h-9 text-xs" 
+                  />
+                </div>
+              </div>
+
+              {/* INPUT PENAMBAHAN VIDEO TERPISAH */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-neutral-50 rounded-2xl border border-moss-900/10">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-moss-900">Video Charge (Rp)</label>
+                  <Input 
+                    type="number" 
+                    value={editVideoCharge} 
+                    onChange={(e) => setEditVideoCharge(e.target.value)} 
+                    placeholder="0" 
+                    className="bg-white rounded-xl border-moss-900/20 h-9 text-xs" 
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-moss-900">Keterangan Video</label>
+                  <Input 
+                    type="text" 
+                    value={editVideoNote} 
+                    onChange={(e) => setEditVideoNote(e.target.value)} 
+                    placeholder="Misal: Cinematic video" 
+                    className="bg-white rounded-xl border-moss-900/20 h-9 text-xs" 
                   />
                 </div>
               </div>
@@ -801,8 +849,9 @@ export default function Clients() {
                     const val = e.target.value;
                     setEditPaid(val);
                     const pkgPrice = Number(selected.package_price || 0);
-                    const extra = Number(editExtraCharge || selected.extra_charge || 0);
-                    if (Number(val) >= (pkgPrice + extra)) {
+                    const extraT = Number(editExtraTimeCharge || selected.extra_time_charge || 0);
+                    const videoC = Number(editVideoCharge || selected.video_charge || 0);
+                    if (Number(val) >= (pkgPrice + extraT + videoC)) {
                       setEditPaymentType("full");
                     }
                   }} 
