@@ -952,9 +952,28 @@ async def analytics(
         m = (b.get("shoot_date") or "")[:7]
         if not m:
             continue
-        mm = monthly.setdefault(m, {"month": m, "dp": 0.0, "full": 0.0, "bookings": 0})
+        mm = monthly.setdefault(m, {
+            "month": m, 
+            "dp": 0.0, 
+            "full": 0.0, 
+            "bookings": 0,
+            "clients": []
+        })
         mm["bookings"] += 1
-        mm["dp" if b["payment_type"] == "dp" else "full"] += b["amount_paid"]
+        is_dp = b["payment_type"] == "dp"
+        mm["dp" if is_dp else "full"] += b["amount_paid"]
+        
+        total_price_client = float(b.get("package_price", 0)) + float(b.get("extra_time_charge", 0)) + float(b.get("video_charge", 0))
+        mm["clients"].append({
+            "booking_id": b.get("booking_id"),
+            "client_name": b.get("full_name"),
+            "date": b.get("shoot_date"),
+            "package_name": b.get("package_name"),
+            "payment_type": b.get("payment_type"),
+            "amount_paid": b.get("amount_paid"),
+            "total_price": total_price_client,
+            "status": b.get("status")
+        })
 
     status_counts = {}
     for b in bookings:
