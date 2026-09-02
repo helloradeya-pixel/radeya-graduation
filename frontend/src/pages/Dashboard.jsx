@@ -23,8 +23,9 @@ export default function Dashboard() {
   });
   const [isOpen, setIsOpen] = useState(false);
 
-  // State untuk popup rincian klien fotografer & detail booking spesifik
+  // State untuk popup rincian klien fotografer, tren bulanan, & detail booking spesifik
   const [selectedPhotographer, setSelectedPhotographer] = useState(null);
+  const [selectedMonth, setSelectedMonth] = useState(null);
   const [selectedBookingDetail, setSelectedBookingDetail] = useState(null);
   const [, setLoadingBooking] = useState(false);
 
@@ -278,9 +279,11 @@ export default function Dashboard() {
 
             {/* 2. TREND PENDAPATAN PER BULAN */}
             <div className="bg-white p-4 sm:p-6 rounded-2xl border border-moss-900/10 shadow-sm">
-              <h3 className="font-bold text-moss-900 text-sm sm:text-base mb-3 flex items-center gap-2">
+              <h3 className="font-bold text-moss-900 text-sm sm:text-base mb-1 flex items-center gap-2">
                 <CalendarIcon className="h-4 w-4 text-moss-700" /> Tren Pendapatan Per Bulan
               </h3>
+              <p className="text-[11px] text-muted-foreground mb-3">Klik nama bulan untuk melihat rincian sesi & klien.</p>
+
               {data.monthly && data.monthly.length > 0 ? (
                 <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
                   <table className="w-full text-xs sm:text-sm min-w-[500px]">
@@ -297,8 +300,14 @@ export default function Dashboard() {
                       {data.monthly.map((m) => {
                         const totalBulan = m.dp + m.full;
                         return (
-                          <tr key={m.month} className="border-b border-neutral-50 last:border-0">
-                            <td className="py-3 font-semibold text-moss-900">{m.month}</td>
+                          <tr 
+                            key={m.month} 
+                            onClick={() => setSelectedMonth(m)}
+                            className="border-b border-neutral-50 last:border-0 hover:bg-moss-50/50 cursor-pointer transition-colors"
+                          >
+                            <td className="py-3 font-semibold text-moss-900 underline decoration-moss-300 underline-offset-2">
+                              {m.month}
+                            </td>
                             <td className="py-3">{m.bookings} Sesi</td>
                             <td className="py-3">{rupiah(m.dp)}</td>
                             <td className="py-3">{rupiah(m.full)}</td>
@@ -414,6 +423,65 @@ export default function Dashboard() {
               <Button 
                 size="sm" 
                 onClick={() => setSelectedPhotographer(null)}
+                className="bg-moss-900 text-white hover:bg-moss-800 text-xs h-9 px-4 rounded-xl"
+              >
+                Tutup
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* POPUP: DAFTAR KLIEN & JADWAL BERDASARKAN BULAN */}
+      {selectedMonth && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-lg rounded-2xl p-6 shadow-xl space-y-4 max-h-[85vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b pb-3">
+              <div>
+                <h3 className="font-bold text-moss-900 text-base">Rincian Sesi: Bulan {selectedMonth.month}</h3>
+                <p className="text-xs text-muted-foreground">Total {selectedMonth.bookings} sesi pada bulan ini</p>
+              </div>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setSelectedMonth(null)}
+                className="h-8 w-8 p-0 rounded-full"
+              >
+                ✕
+              </Button>
+            </div>
+
+            <div className="space-y-3">
+              {selectedMonth.clients && selectedMonth.clients.length > 0 ? (
+                selectedMonth.clients.map((client, idx) => (
+                  <div 
+                    key={idx} 
+                    onClick={() => handleClientClick(client.booking_id)}
+                    className="p-3 rounded-xl border border-neutral-100 bg-neutral-50 hover:bg-moss-50/60 cursor-pointer flex justify-between items-center text-xs sm:text-sm transition-colors"
+                  >
+                    <div>
+                      <p className="font-bold text-moss-900 underline decoration-moss-300">{client.client_name || client.full_name}</p>
+                      <p className="text-muted-foreground text-[11px]">{client.package_name} • {client.date || client.shoot_date}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-semibold text-moss-800">{rupiah(client.total_price || client.amount_paid || 0)}</p>
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${client.status === 'confirmed' || client.payment_type === 'full' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+                        {client.payment_type ? client.payment_type.toUpperCase() : 'DETAIL'}
+                      </span>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-xs text-muted-foreground text-center py-6">
+                  Belum ada rincian klien yang tersedia untuk bulan ini. (Pastikan backend mengirim array <code className="bg-neutral-100 px-1 py-0.5 rounded text-neutral-800">clients</code> di dalam data <code className="bg-neutral-100 px-1 py-0.5 rounded text-neutral-800">monthly</code>).
+                </p>
+              )}
+            </div>
+
+            <div className="flex justify-end pt-2 border-t">
+              <Button 
+                size="sm" 
+                onClick={() => setSelectedMonth(null)}
                 className="bg-moss-900 text-white hover:bg-moss-800 text-xs h-9 px-4 rounded-xl"
               >
                 Tutup
