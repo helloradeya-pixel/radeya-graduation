@@ -408,7 +408,7 @@ export default function BookingPage() {
 
               <div>
                 <span className="font-semibold text-[#2C2A29]">3. Perubahan Jadwal (Reschedule)</span>
-                <p className="mt-0.5">Sesi foto tidak dapat di-reschedule pada Hari H. Apabila klien berhalangan hadir tanpa informasi, maka pemesanan dianggap cancel (batal), Bisa reschedule kapan saja selama slot tanggal penggantinya masih kosong. Kabari admin secepatnya ya!.</p>
+                <p className="mt-0.5">Sesi foto tidak dapat di-reschedule pada Hari H. Apabila klien berhalangan hadir tanpa informasi, maka pemesanan dianggap cancel (batal), Bisa reschedule Sebelum hari H selama slot tanggal penggantinya masih kosong. Kabari admin secepatnya ya!.</p>
               </div>
 
               <div>
