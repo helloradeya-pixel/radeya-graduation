@@ -741,7 +741,7 @@ export default function Clients() {
               {/* INPUT EXTRA TIME TERPISAH */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-neutral-50 rounded-2xl border border-moss-900/10">
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-moss-900">Extra Time Charge (Rp)</label>
+                  <label className="text-xs font-bold text-moss-900">Penambahan biaya (Rp)</label>
                   <Input 
                     type="number" 
                     value={editExtraTimeCharge} 
@@ -751,7 +751,7 @@ export default function Clients() {
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-moss-900">Keterangan Extra Time</label>
+                  <label className="text-xs font-bold text-moss-900">Keterangan</label>
                   <Input 
                     type="text" 
                     value={editExtraTimeNote} 
