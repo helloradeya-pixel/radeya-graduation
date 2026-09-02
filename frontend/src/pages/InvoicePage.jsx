@@ -116,12 +116,13 @@ export default function InvoicePage() {
           <span className="font-medium">{rupiah(packagePrice)}</span>
         </div>
 
-        {extraTimeCharge > 0 && (
+                {extraTimeCharge > 0 && (
           <div className="flex justify-between text-amber-700">
-            <span>Extra Time {invoice.extra_time_note ? `(${invoice.extra_time_note})` : ''}:</span>
+            <span>{invoice.extra_time_note ? invoice.extra_time_note : 'Biaya Tambahan'}:</span>
             <span className="font-medium">+{rupiah(extraTimeCharge)}</span>
           </div>
         )}
+
 
         {videoCharge > 0 && (
           <div className="flex justify-between text-amber-700">
