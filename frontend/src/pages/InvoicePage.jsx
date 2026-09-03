@@ -22,9 +22,26 @@ export default function InvoicePage() {
       const pkgPrice = parseFloat(data.package_price || 0);
       const extraTime = parseFloat(data.extra_time_charge || 0);
       const videoCharge = parseFloat(data.video_charge || 0);
-      const calcBalance = Math.max((pkgPrice + extraTime + videoCharge) - parseFloat(data.amount_paid || 0), 0);
+      const totalKeseluruhan = pkgPrice + extraTime + videoCharge;
+      const calcBalance = Math.max(totalKeseluruhan - parseFloat(data.amount_paid || 0), 0);
       
       setAmountPaid(calcBalance > 0 ? calcBalance : "");
+
+      // Kirim data nilai uang ke Google Analytics agar tidak terbaca Rp0,00
+      if (typeof window !== "undefined" && window.gtag) {
+        window.gtag("event", "view_invoice", {
+          currency: "IDR",
+          value: totalKeseluruhan,
+          items: [
+            {
+              item_id: data.invoice_number,
+              item_name: data.package_name || "Paket Foto",
+              price: totalKeseluruhan,
+              quantity: 1,
+            },
+          ],
+        });
+      }
     } catch {
       toast.error("Invoice tidak ditemukan");
     } finally {
@@ -116,13 +133,12 @@ export default function InvoicePage() {
           <span className="font-medium">{rupiah(packagePrice)}</span>
         </div>
 
-                {extraTimeCharge > 0 && (
+        {extraTimeCharge > 0 && (
           <div className="flex justify-between text-amber-700">
             <span>{invoice.extra_time_note ? invoice.extra_time_note : 'Biaya Tambahan'}:</span>
             <span className="font-medium">+{rupiah(extraTimeCharge)}</span>
           </div>
         )}
-
 
         {videoCharge > 0 && (
           <div className="flex justify-between text-amber-700">
