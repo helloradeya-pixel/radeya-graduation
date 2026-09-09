@@ -87,11 +87,15 @@ export default function BookingPage() {
       fd.append("file", file);
       const { data: up } = await api.post("/upload/proof", fd, { headers: { "Content-Type": "multipart/form-data" } });
 
+      // Generate event_id unik agar sinkron dengan CAPI backend (Deduplikasi hijau)
+      const eventId = `purchase_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+
       const body = new FormData();
       Object.entries(f).forEach(([k, v]) => body.append(k, v));
       body.append("shoot_date", format(date, "yyyy-MM-dd"));
       body.append("amount_paid", String(amount));
       body.append("proof_file_id", up.file_id);
+      body.append("event_id", eventId);
       
       // Kirim cookie fbc dan fbp ke backend agar CAPI mendeteksi klik iklan yang sama
       body.append("fbc", getCookie('_fbc') || localStorage.getItem('fbc') || "");
@@ -110,7 +114,7 @@ export default function BookingPage() {
         full_name: f.full_name,
         whatsapp: f.whatsapp,
         email: f.email,
-      });
+      }, { eventID: eventId });
       // ==========================================
 
       // ==========================================
