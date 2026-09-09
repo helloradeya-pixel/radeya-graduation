@@ -115,7 +115,7 @@ async def send_email(to: str, subject: str, html: str, reply_to: Optional[str] =
     
     return resp.json().get("id")
 
-async def send_capi_purchase(booking: dict, fbc: str = "", fbp: str = ""):
+async def send_capi_purchase(booking: dict, fbc: str = "", fbp: str = "", event_id: str = ""):
     pixel_id = os.environ.get("META_PIXEL_ID")
     access_token = os.environ.get("META_ACCESS_TOKEN")
     if not pixel_id or not access_token:
@@ -139,23 +139,26 @@ async def send_capi_purchase(booking: dict, fbc: str = "", fbp: str = ""):
     if fbp:
         user_data["fbp"] = fbp
 
+    event_data = {
+        "event_name": "Purchase",
+        "event_time": int(datetime.now(timezone.utc).timestamp()),
+        "action_source": "website",
+        "event_source_url": f"https://booking.radeyaphoto.my.id/invoice/{booking['booking_id']}",
+        "user_data": user_data,
+        "custom_data": {
+            "currency": "IDR",
+            "value": float(booking.get("amount_paid", 0)),
+            "order_id": booking.get("invoice_number"),
+            "package_id": booking.get("package_id"),
+            "university": booking.get("university")
+        }
+    }
+
+    if event_id:
+        event_data["event_id"] = event_id
+
     payload = {
-        "data": [
-            {
-                "event_name": "Purchase",
-                "event_time": int(datetime.now(timezone.utc).timestamp()),
-                "action_source": "website",
-                "event_source_url": f"https://booking.radeyaphoto.my.id/invoice/{booking['booking_id']}",
-                "user_data": user_data,
-                "custom_data": {
-                    "currency": "IDR",
-                    "value": float(booking.get("amount_paid", 0)),
-                    "order_id": booking.get("invoice_number"),
-                    "package_id": booking.get("package_id"),
-                    "university": booking.get("university")
-                }
-            }
-        ],
+        "data": [event_data],
         "access_token": access_token
     }
 
@@ -523,6 +526,7 @@ async def create_booking(
     payment_type: Literal["dp", "full"] = Form(...), amount_paid: float = Form(...),
     proof_file_id: str = Form(...), notes: Optional[str] = Form(""),
     fbc: str = Form(""), fbp: str = Form(""),
+    event_id: str = Form(""),
 ):
     pkg = await db.packages.find_one({"package_id": package_id}, {"_id": 0})
     if not pkg:
@@ -551,7 +555,7 @@ async def create_booking(
     await db.bookings.insert_one(dict(doc))
     
     try:
-        await send_capi_purchase(doc, fbc=fbc, fbp=fbp)
+        await send_capi_purchase(doc, fbc=fbc, fbp=fbp, event_id=event_id)
     except Exception as e:
         logger.error(f"Gagal kirim CAPI: {e}")
 
