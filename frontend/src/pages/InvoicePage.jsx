@@ -27,21 +27,7 @@ export default function InvoicePage() {
       
       setAmountPaid(calcBalance > 0 ? calcBalance : "");
 
-      // Kirim data nilai uang ke Google Analytics agar tidak terbaca Rp0,00
-      if (typeof window !== "undefined" && window.gtag) {
-        window.gtag("event", "view_invoice", {
-          currency: "IDR",
-          value: totalKeseluruhan,
-          items: [
-            {
-              item_id: data.invoice_number,
-              item_name: data.package_name || "Paket Foto",
-              price: totalKeseluruhan,
-              quantity: 1,
-            },
-          ],
-        });
-      }
+      // Bagian view_invoice otomatis dihapus dari sini agar tidak double tracking pendapatan di GA4.
     } catch {
       toast.error("Invoice tidak ditemukan");
     } finally {
@@ -67,10 +53,29 @@ export default function InvoicePage() {
       const uploadRes = await api.post("/upload/proof", formData);
       const proofFileId = uploadRes.data.file_id;
 
+      const paidVal = parseFloat(amountPaid);
+
       await api.post(`/bookings/${id}/confirm-payment`, {
-        amount_paid: parseFloat(amountPaid),
+        amount_paid: paidVal,
         proof_file_id: proofFileId,
       });
+
+      // Kirim event purchase ke Google Analytics khusus saat pelunasan berhasil dikirim
+      if (typeof window !== "undefined" && window.gtag) {
+        window.gtag("event", "purchase", {
+          transaction_id: `pelunasan_${invoice.invoice_number}_${Date.now()}`,
+          value: paidVal,
+          currency: "IDR",
+          items: [
+            {
+              item_id: invoice.invoice_number,
+              item_name: `Pelunasan - ${invoice.package_name || "Paket Foto"}`,
+              price: paidVal,
+              quantity: 1,
+            },
+          ],
+        });
+      }
 
       toast.success("Konfirmasi pelunasan berhasil dikirim!");
       loadInvoice();
