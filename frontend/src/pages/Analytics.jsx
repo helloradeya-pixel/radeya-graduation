@@ -4,7 +4,7 @@ import {
 } from 'recharts';
 import { api } from '../lib/api';
 import { AdminLayout } from '../components/AdminLayout';
-import { TrendingUp, CalendarCheck, Users, ArrowUpRight, CheckCircle2, Trash2, Landmark, Clock } from 'lucide-react';
+import { TrendingUp, CalendarCheck, Users, ArrowUpRight, CheckCircle2, Trash2, Landmark, Clock, Camera } from 'lucide-react';
 import { format, subDays, isSameDay, parseISO } from 'date-fns';
 import { id } from 'date-fns/locale';
 
@@ -627,6 +627,13 @@ export default function Analytics() {
               <div className="flex justify-between p-2 rounded-xl bg-neutral-50">
                 <span className="text-neutral-500">Kampus / Prodi:</span>
                 <span className="font-medium">{activeClient.university || '-'} / {activeClient.study || '-'}</span>
+              </div>
+              <div className="flex justify-between p-2 rounded-xl bg-neutral-50">
+                <span className="text-neutral-500">Fotografer Bertugas:</span>
+                <span className="font-bold text-moss-900 flex items-center gap-1">
+                  <Camera className="h-3.5 w-3.5 text-emerald-700" />
+                  {activeClient.photographer_name || activeClient.photographer || 'Belum Ditugaskan'}
+                </span>
               </div>
               <div className="flex justify-between p-2 rounded-xl bg-neutral-50">
                 <span className="text-neutral-500">Jadwal Foto:</span>
