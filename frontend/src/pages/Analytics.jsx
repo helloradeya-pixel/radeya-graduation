@@ -4,8 +4,8 @@ import {
 } from 'recharts';
 import { api } from '../lib/api';
 import { AdminLayout } from '../components/AdminLayout';
-import { TrendingUp, CalendarCheck, Users, ArrowUpRight, CheckCircle2, Trash2, Landmark } from 'lucide-react';
-import { format } from 'date-fns';
+import { TrendingUp, CalendarCheck, Users, ArrowUpRight, CheckCircle2, Trash2, Landmark, Clock } from 'lucide-react';
+import { format, subDays, isSameDay, parseISO } from 'date-fns';
 import { id } from 'date-fns/locale';
 
 // Komponen UI shadcn
@@ -91,6 +91,35 @@ export default function Analytics() {
       </AdminLayout>
     );
   }
+
+  // --- FILTER CLOSING FORM HARI INI & KEMARIN BERDASARKAN created_at ---
+  const allBookings = data?.recent_bookings || [];
+  
+  const todayDate = new Date();
+  const yesterdayDate = subDays(todayDate, 1);
+
+  const todayClosings = allBookings.filter(item => {
+    if (!item.created_at) return false;
+    try {
+      const itemDate = parseISO(item.created_at);
+      return isSameDay(itemDate, todayDate);
+    } catch {
+      return false;
+    }
+  });
+
+  const yesterdayClosings = allBookings.filter(item => {
+    if (!item.created_at) return false;
+    try {
+      const itemDate = parseISO(item.created_at);
+      return isSameDay(itemDate, yesterdayDate);
+    } catch {
+      return false;
+    }
+  });
+
+  const todayRevenue = todayClosings.reduce((acc, curr) => acc + (curr.amount_paid || 0), 0);
+  const yesterdayRevenue = yesterdayClosings.reduce((acc, curr) => acc + (curr.amount_paid || 0), 0);
 
   // Perhitungan Keuangan Riil Rekening Global
   const totalTurnover = data?.total_turnover || 0;
@@ -179,6 +208,69 @@ export default function Analytics() {
           >
             - Catat Prive / Tarik Pribadi
           </Button>
+        </div>
+
+        {/* SECTION KHUSUS: MONITORING CLOSING FORM HARI INI & KEMARIN */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          
+          {/* Card Closing Hari Ini */}
+          <div className="bg-gradient-to-br from-emerald-50 to-teal-50/40 p-5 rounded-2xl border border-emerald-500/30 shadow-sm">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2 text-emerald-800">
+                <CalendarCheck className="h-5 w-5 text-emerald-700" />
+                <span className="text-xs font-bold uppercase tracking-wider text-emerald-900">Closing Form Hari Ini</span>
+              </div>
+              <span className="text-[10px] bg-emerald-200/60 text-emerald-800 font-semibold px-2.5 py-0.5 rounded-full">
+                {format(todayDate, 'd MMM yyyy', { locale: id })}
+              </span>
+            </div>
+            <div className="flex items-baseline justify-between mt-3">
+              <div>
+                <p className="text-2xl font-black text-emerald-900">{todayClosings.length} <span className="text-xs font-semibold text-neutral-600">Orang / Klien</span></p>
+                <p className="text-xs text-emerald-700 font-medium mt-0.5">Pendapatan Masuk: Rp {Math.round(todayRevenue).toLocaleString('id-ID')}</p>
+              </div>
+            </div>
+            {todayClosings.length > 0 && (
+              <div className="mt-3 pt-3 border-t border-emerald-500/15 flex flex-wrap gap-1.5">
+                {todayClosings.map((tc, idx) => (
+                  <span key={idx} className="inline-flex items-center gap-1 bg-white/90 text-emerald-800 text-[10px] px-2 py-1 rounded-lg border border-emerald-500/20 font-medium">
+                    <Clock className="h-3 w-3 text-emerald-600" />
+                    {format(parseISO(tc.created_at), 'HH:mm')} WIB - {tc.full_name} ({tc.package_name})
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Card Closing Hari Sebelumnya (Kemarin) */}
+          <div className="bg-white p-5 rounded-2xl border border-moss-900/10 shadow-sm">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2 text-neutral-700">
+                <Clock className="h-5 w-5 text-neutral-500" />
+                <span className="text-xs font-bold uppercase tracking-wider text-neutral-700">Closing Form Kemarin</span>
+              </div>
+              <span className="text-[10px] bg-neutral-100 text-neutral-600 font-semibold px-2.5 py-0.5 rounded-full">
+                {format(yesterdayDate, 'd MMM yyyy', { locale: id })}
+              </span>
+            </div>
+            <div className="flex items-baseline justify-between mt-3">
+              <div>
+                <p className="text-2xl font-black text-neutral-900">{yesterdayClosings.length} <span className="text-xs font-semibold text-neutral-500">Orang / Klien</span></p>
+                <p className="text-xs text-neutral-600 font-medium mt-0.5">Pendapatan Masuk: Rp {Math.round(yesterdayRevenue).toLocaleString('id-ID')}</p>
+              </div>
+            </div>
+            {yesterdayClosings.length > 0 && (
+              <div className="mt-3 pt-3 border-t border-neutral-100 flex flex-wrap gap-1.5">
+                {yesterdayClosings.map((yc, idx) => (
+                  <span key={idx} className="inline-flex items-center gap-1 bg-neutral-50 text-neutral-700 text-[10px] px-2 py-1 rounded-lg border border-neutral-200 font-medium">
+                    <Clock className="h-3 w-3 text-neutral-400" />
+                    {format(parseISO(yc.created_at), 'HH:mm')} WIB - {yc.full_name} ({yc.package_name})
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+
         </div>
 
         {/* KPI Summary Cards - Ditata rapi 2 kolom di HP */}
@@ -445,7 +537,7 @@ export default function Analytics() {
               </div>
               <Button 
                 onClick={handleSavePrive}
-                disabled={loadingPrive}
+                loading={loadingPrive}
                 className="w-full bg-rose-700 hover:bg-rose-800 text-white text-xs h-10 rounded-xl font-medium"
               >
                 {loadingPrive ? "Menyimpan..." : "Simpan Catatan Prive"}
