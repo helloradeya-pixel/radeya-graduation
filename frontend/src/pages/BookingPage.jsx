@@ -390,7 +390,7 @@ export default function BookingPage() {
                     type="file"
                     accept="image/*,application/pdf"
                     className="hidden"
-                    onChange={(e) => setFile(e.target.files?._[0] || e.target.files?.[0] || null)}
+                    onChange={(e) => setFile(e.target.files?.[0] || null)}
                   />
                 </label>
               )}
