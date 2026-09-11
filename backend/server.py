@@ -533,12 +533,15 @@ async def create_booking(
         raise HTTPException(400, "Paket tidak ditemukan")
     booking_id = f"bk_{uuid.uuid4().hex[:12]}"
     
+    # Generate invoice number terlebih dahulu agar CAPI menerima order_id yang valid sejak awal
+    invoice_num = await next_invoice_number()
+    
     actual_payment_type = "full" if float(amount_paid) >= pkg["price"] else payment_type
     balance_due_calc = max(pkg["price"] - float(amount_paid), 0)
     cleaned_notes = (notes or "").strip()
     
     doc = {
-        "booking_id": booking_id, "invoice_number": await next_invoice_number(),
+        "booking_id": booking_id, "invoice_number": invoice_num,
         "full_name": full_name, "email": str(email), "instagram": instagram, "whatsapp": whatsapp,
         "university": university, "study": study,
         "package_id": package_id, "package_name": pkg["name"], "package_price": pkg["price"],
@@ -552,8 +555,11 @@ async def create_booking(
         "photographer_fee": 0.0, "photographer_paid": False,
         "invoice_sent": False, "created_at": now_iso(),
     }
+    
+    # Simpan ke database terlebih dahulu
     await db.bookings.insert_one(dict(doc))
     
+    # Kirim CAPI setelah dokumen dan invoice_number lengkap tersedia
     try:
         await send_capi_purchase(doc, fbc=fbc, fbp=fbp, event_id=event_id)
     except Exception as e:
