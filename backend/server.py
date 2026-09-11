@@ -889,13 +889,8 @@ async def analytics(
 ):
     await get_current_user(request)
     
-    query = {}
-    if start_date and end_date:
-        query["shoot_date"] = {"$gte": start_date, "$lte": end_date}
-    elif month and month != "all":
-        query["shoot_date"] = {"$regex": f"^{month}"}
-        
-    bookings = await db.bookings.find(query, {"_id": 0}).to_list(5000)
+    # Ambil seluruh data booking secara global tanpa filter shoot_date
+    bookings = await db.bookings.find({}, {"_id": 0}).to_list(5000)
     
     dp_income = sum(b["amount_paid"] for b in bookings if b["payment_type"] == "dp")
     full_income = sum(b["amount_paid"] for b in bookings if b["payment_type"] == "full")
