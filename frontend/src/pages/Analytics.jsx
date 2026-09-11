@@ -25,7 +25,7 @@ export default function Analytics() {
   const [priveList, setPriveList] = useState([]);
   const [loadingPrive, setLoadingPrive] = useState(false);
 
-  // State untuk Modal Detail Klien
+  // State untuk Modal Detail Klien saat nama diklik
   const [selectedClientModal, setSelectedClientModal] = useState(false);
   const [activeClient, setActiveClient] = useState(null);
 
@@ -86,6 +86,7 @@ export default function Analytics() {
     }
   };
 
+  // Fungsi untuk membuka modal detail klien
   const handleOpenClientDetail = (client) => {
     setActiveClient(client);
     setSelectedClientModal(true);
@@ -599,7 +600,7 @@ export default function Analytics() {
         </div>
       )}
 
-      {/* POPUP MODAL DETAIL KLIEN */}
+      {/* POPUP MODAL DETAIL KLIEN SAAT NAMA DIKLIK */}
       {selectedClientModal && activeClient && (
         <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
           <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-xl space-y-4 max-h-[90vh] overflow-y-auto">
