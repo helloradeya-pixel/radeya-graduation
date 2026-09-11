@@ -261,7 +261,7 @@ export default function Analytics() {
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="text-base font-bold text-neutral-900">Tren Pendapatan Harian</h3>
-              <p className="text-xs text-neutral-500">Perbandingan pemasukan booking per hari (14 hari terakhir)</p>
+              <p className="text-xs text-neutral-500">Perbandingan pemasukan dan jumlah closing booking per hari (14 hari terakhir)</p>
             </div>
           </div>
           {dailyData.length > 0 ? (
@@ -272,7 +272,11 @@ export default function Analytics() {
                   <XAxis dataKey="dayLabel" fontSize={11} stroke="#888888" tickLine={false} />
                   <YAxis fontSize={11} stroke="#888888" tickLine={false} tickFormatter={(val) => `Rp${val / 1000}k`} />
                   <Tooltip 
-                    formatter={(value) => [rupiah(value), 'Pendapatan']}
+                    formatter={(value, name) => {
+                      if (name === 'pendapatanHarian') return [rupiah(value), 'Pendapatan'];
+                      if (name === 'jumlahBooking') return [`${value} Sesi`, 'Closing Booking'];
+                      return [value, name];
+                    }}
                     contentStyle={{ backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}
                   />
                   <Bar dataKey="pendapatanHarian" fill="#10b981" radius={[6, 6, 0, 0]} />
