@@ -14,6 +14,9 @@ import { toast } from 'sonner';
 
 const COLORS = ['#065f46', '#047857', '#10b981', '#34d399', '#6ee7b7'];
 
+// Fungsi helper rupiah untuk format mata uang
+const rupiah = (v) => `Rp ${Math.round(v || 0).toLocaleString('id-ID')}`;
+
 export default function Analytics() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -153,10 +156,9 @@ export default function Analytics() {
   (data?.monthly || []).forEach(m => {
     if (m.clients && Array.isArray(m.clients)) {
       m.clients.forEach(c => {
-        // Ambil tanggal booking (misal: c.date atau c.created_at)
         const rawDate = c.date || c.shoot_date || "";
         if (rawDate) {
-          const dayKey = rawDate.split('T')[0]; // Format YYYY-MM-DD
+          const dayKey = rawDate.split('T')[0]; 
           if (!dailyMap[dayKey]) {
             dailyMap[dayKey] = { date: dayKey, revenue: 0, count: 0 };
           }
@@ -167,10 +169,9 @@ export default function Analytics() {
     }
   });
 
-  // Urutkan data harian dan ambil 14 hari terakhir agar grafik rapi
   const dailyData = Object.values(dailyMap)
     .sort((a, b) => a.date.localeCompare(b.date))
-    .slice(-14) // Batasi 14 hari terakhir
+    .slice(-14)
     .map(d => {
       let formattedDay = d.date;
       try {
@@ -183,7 +184,6 @@ export default function Analytics() {
       };
     });
 
-  // Ambil data hari ini dan kemarin untuk perbandingan instan di atas grafik
   const todayStr = format(new Date(), "yyyy-MM-dd");
   const yesterdayDate = new Date();
   yesterdayDate.setDate(yesterdayDate.getDate() - 1);
@@ -210,7 +210,7 @@ export default function Analytics() {
     <AdminLayout title="Grafik & Analisis" subtitle="Laporan performa finansial, omzet, dan operasional Radeyaphoto">
       <div className="space-y-6 pb-12">
         
-        {/* Tombol Akses Prive / Penarikan Pribadi */}
+        {/* Tombol Akses Prive / Penارikan Pribadi */}
         <div className="flex justify-end">
           <Button
             onClick={() => setPriveModalOpen(true)}
@@ -267,7 +267,7 @@ export default function Analytics() {
           </div>
         </div>
 
-        {/* KARTU PERBANDINGAN HARI INI VS KEMARIN (UNTUK PANTAU NAIK/TURUN) */}
+        {/* KARTU PERBANDINGAN HARI INI VS KEMARIN */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="bg-gradient-to-br from-emerald-900 to-emerald-950 text-white p-5 rounded-2xl shadow-sm">
             <p className="text-xs uppercase tracking-wider text-emerald-200 font-semibold mb-1">Performa Hari Ini</p>
