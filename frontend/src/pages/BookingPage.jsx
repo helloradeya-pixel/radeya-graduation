@@ -59,6 +59,21 @@ export default function BookingPage() {
   const pkg = Array.isArray(packages) ? packages.find((p) => p.package_id === f.package_id) : undefined;
   const amount = pkg ? (f.payment_type === "dp" ? pkg.dp_amount || Math.round(pkg.price * 0.3) : pkg.price) : 0;
 
+  // Tangkap dan amankan fbclid dari URL iklan
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const fbclid = urlParams.get('fbclid');
+
+    if (fbclid) {
+      const fbcValue = `fb.1.${Date.now()}.${fbclid}`;
+      localStorage.setItem('fbc', fbcValue);
+      
+      const date = new Date();
+      date.setTime(date.getTime() + (30 * 24 * 60 * 60 * 1000));
+      document.cookie = `_fbc=${fbcValue}; expires=${date.toUTCString()}; path=/; SameSite=Lax`;
+    }
+  }, []);
+
   useEffect(() => {
     api.get("/packages", { params: { only_active: true } })
       .then(({ data }) => {
@@ -87,7 +102,6 @@ export default function BookingPage() {
       fd.append("file", file);
       const { data: up } = await api.post("/upload/proof", fd, { headers: { "Content-Type": "multipart/form-data" } });
 
-      // Generate event_id unik agar sinkron dengan CAPI backend (Deduplikasi hijau)
       const eventId = `purchase_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 
       const body = new FormData();
@@ -97,15 +111,11 @@ export default function BookingPage() {
       body.append("proof_file_id", up.file_id);
       body.append("event_id", eventId);
       
-      // Kirim cookie fbc dan fbp ke backend agar CAPI mendeteksi klik iklan yang sama
       body.append("fbc", getCookie('_fbc') || localStorage.getItem('fbc') || "");
       body.append("fbp", getCookie('_fbp') || localStorage.getItem('fbp') || "");
 
       const { data } = await api.post("/bookings", body);
 
-      // ==========================================
-      // TRACKING EVENT PURCHASE KETIKA BOOKING & DP SUKSES
-      // ==========================================
       trackPurchase('booking_wisuda', {
         package_id: f.package_id,
         amount_paid: amount,
@@ -115,11 +125,7 @@ export default function BookingPage() {
         whatsapp: f.whatsapp,
         email: f.email,
       }, { eventID: eventId });
-      // ==========================================
 
-      // ==========================================
-      // GOOGLE ANALYTICS (GA4) TRACKING
-      // ==========================================
       if (typeof window !== 'undefined' && window.gtag) {
         window.gtag('event', 'generate_lead', {
           currency: 'IDR',
@@ -140,7 +146,6 @@ export default function BookingPage() {
           }]
         });
       }
-      // ==========================================
 
       setResult(data);
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -385,7 +390,7 @@ export default function BookingPage() {
                     type="file"
                     accept="image/*,application/pdf"
                     className="hidden"
-                    onChange={(e) => setFile(e.target.files?.[0] || null)}
+                    onChange={(e) => setFile(e.target.files?._[0] || e.target.files?.[0] || null)}
                   />
                 </label>
               )}
