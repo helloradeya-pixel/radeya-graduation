@@ -120,12 +120,13 @@ export default function Analytics() {
     };
   });
 
-  // Ekstraksi Data Harian dari rincian klien di data monthly (untuk Grafik Per Hari)
+  // Ekstraksi Data Harian berdasarkan waktu pembuatan form (created_at)
   const dailyMap = {};
   (data?.monthly || []).forEach(m => {
     if (m.clients && Array.isArray(m.clients)) {
       m.clients.forEach(c => {
-        const rawDate = c.date || c.shoot_date || "";
+        // Prioritaskan created_at agar sesuai persis dengan waktu/tanggal client isi form
+        const rawDate = c.created_at || c.date || c.shoot_date || "";
         if (rawDate) {
           const dayKey = rawDate.split('T')[0]; 
           if (!dailyMap[dayKey]) {
