@@ -945,6 +945,7 @@ async def analytics(
                 "booking_id": b.get("booking_id"),
                 "client_name": b.get("full_name"),
                 "date": b.get("shoot_date"),
+                "created_at": b.get("created_at"),
                 "package_name": b.get("package_name"),
                 "fee": fee_val,
                 "is_paid": is_paid_pho
@@ -978,6 +979,7 @@ async def analytics(
             "booking_id": b.get("booking_id"),
             "client_name": b.get("full_name"),
             "date": b.get("shoot_date"),
+            "created_at": b.get("created_at"),
             "package_name": b.get("package_name"),
             "payment_type": b.get("payment_type"),
             "amount_paid": b.get("amount_paid"),
