@@ -889,16 +889,32 @@ async def analytics(
 ):
     await get_current_user(request)
     
+    # 1. Tarik seluruh data global untuk keperluan Grafik Harian (yang berdasarkan tanggal closing / created_at)
+    all_bookings = await db.bookings.find({}, {"_id": 0}).to_list(5000)
+    
+    # 2. Filter khusus Ringkasan Finansial menggunakan shoot_date agar jumlah jadwal sesi foto bulanan akurat
     query = {}
     if start_date and end_date:
         query["shoot_date"] = {"$gte": start_date, "$lte": end_date}
     elif month and month != "all":
         query["shoot_date"] = {"$regex": f"^{month}"}
         
-    bookings = await db.bookings.find(query, {"_id": 0}).to_list(5000)
+    if query.get("shoot_date"):
+        filtered_summary = []
+        for b in all_bookings:
+            s_date = b.get("shoot_date") or ""
+            if start_date and end_date:
+                if start_date <= s_date <= end_date:
+                    filtered_summary.append(b)
+            elif month:
+                if s_date.startswith(month):
+                    filtered_summary.append(b)
+        bookings_for_summary = filtered_summary
+    else:
+        bookings_for_summary = all_bookings
     
-    dp_income = sum(b["amount_paid"] for b in bookings if b["payment_type"] == "dp")
-    full_income = sum(b["amount_paid"] for b in bookings if b["payment_type"] == "full")
+    dp_income = sum(b["amount_paid"] for b in bookings_for_summary if b["payment_type"] == "dp")
+    full_income = sum(b["amount_paid"] for b in bookings_for_summary if b["payment_type"] == "full")
     raw_total_income = dp_income + full_income
 
     prive_docs = await db.prive_records.find({}, {"_id": 0}).to_list(5000)
@@ -906,7 +922,7 @@ async def analytics(
     
     total_income = max(raw_total_income - total_prive, 0)
     
-    active_bookings = [b for b in bookings if b.get("status") != "cancelled"]
+    active_bookings = [b for b in bookings_for_summary if b.get("status") != "cancelled"]
     
     outstanding = sum(max((float(b.get("package_price", 0)) + float(b.get("extra_time_charge", 0)) + float(b.get("video_charge", 0))) - float(b.get("amount_paid", 0)), 0) for b in active_bookings)
     total_turnover = raw_total_income + outstanding
@@ -945,6 +961,7 @@ async def analytics(
                 "booking_id": b.get("booking_id"),
                 "client_name": b.get("full_name"),
                 "date": b.get("shoot_date"),
+                "created_at": b.get("created_at"),
                 "package_name": b.get("package_name"),
                 "fee": fee_val,
                 "is_paid": is_paid_pho
@@ -957,9 +974,11 @@ async def analytics(
         p["count"] += 1
         p["revenue"] += pkg_revenue
 
+    # 3. Untuk grafik dan tren harian, baca berdasarkan tanggal form masuk (created_at) agar closing harian terdeteksi
     monthly = {}
-    for b in bookings:
-        m = (b.get("shoot_date") or "")[:7]
+    for b in all_bookings:
+        raw_c_date = b.get("created_at") or b.get("shoot_date") or ""
+        m = raw_c_date[:7] # Format YYYY-MM
         if not m:
             continue
         mm = monthly.setdefault(m, {
@@ -978,6 +997,7 @@ async def analytics(
             "booking_id": b.get("booking_id"),
             "client_name": b.get("full_name"),
             "date": b.get("shoot_date"),
+            "created_at": b.get("created_at"),
             "package_name": b.get("package_name"),
             "payment_type": b.get("payment_type"),
             "amount_paid": b.get("amount_paid"),
@@ -986,16 +1006,17 @@ async def analytics(
         })
 
     status_counts = {}
-    for b in bookings:
+    for b in bookings_for_summary:
         status_counts[b["status"]] = status_counts.get(b["status"], 0) + 1
 
-    upcoming = sorted([b for b in active_bookings if b.get("shoot_date", "") >= datetime.now(timezone.utc).strftime("%Y-%m-%d")], key=lambda x: (x["shoot_date"], x["start_time"]))[:5]
+    active_all_bookings = [b for b in all_bookings if b.get("status") != "cancelled"]
+    upcoming = sorted([b for b in active_all_bookings if b.get("shoot_date", "") >= datetime.now(timezone.utc).strftime("%Y-%m-%d")], key=lambda x: (x["shoot_date"], x["start_time"]))[:5]
     for u in upcoming:
         u["balance_due"] = max((float(u.get("package_price", 0)) + float(u.get("extra_time_charge", 0)) + float(u.get("video_charge", 0))) - float(u.get("amount_paid", 0)), 0)
         u["gcal_link"] = gcal_link(u)
 
     return {
-        "total_bookings": len(bookings), 
+        "total_bookings": len(bookings_for_summary), 
         "dp_income": dp_income, 
         "full_income": full_income,
         "total_income": total_income, 
