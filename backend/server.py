@@ -533,7 +533,6 @@ async def create_booking(
         raise HTTPException(400, "Paket tidak ditemukan")
     booking_id = f"bk_{uuid.uuid4().hex[:12]}"
     
-    # Generate invoice number terlebih dahulu agar CAPI menerima order_id yang valid sejak awal
     invoice_num = await next_invoice_number()
     
     actual_payment_type = "full" if float(amount_paid) >= pkg["price"] else payment_type
@@ -556,10 +555,8 @@ async def create_booking(
         "invoice_sent": False, "created_at": now_iso(),
     }
     
-    # Simpan ke database terlebih dahulu
     await db.bookings.insert_one(dict(doc))
     
-    # Kirim CAPI setelah dokumen dan invoice_number lengkap tersedia
     try:
         await send_capi_purchase(doc, fbc=fbc, fbp=fbp, event_id=event_id)
     except Exception as e:
@@ -1011,6 +1008,7 @@ async def analytics(
         "monthly": sorted(monthly.values(), key=lambda x: x["month"]),
         "status_counts": status_counts, 
         "upcoming": upcoming,
+        "recent_bookings": bookings,
     }
 
 @api_router.get("/config")
