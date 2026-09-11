@@ -889,11 +889,32 @@ async def analytics(
 ):
     await get_current_user(request)
     
-    # Ambil seluruh data booking secara global tanpa filter shoot_date
-    bookings = await db.bookings.find({}, {"_id": 0}).to_list(5000)
+    # 1. Tarik seluruh data untuk grafik & tren harian
+    all_bookings = await db.bookings.find({}, {"_id": 0}).to_list(5000)
     
-    dp_income = sum(b["amount_paid"] for b in bookings if b["payment_type"] == "dp")
-    full_income = sum(b["amount_paid"] for b in bookings if b["payment_type"] == "full")
+    # 2. Filter khusus Ringkasan Finansial berdasarkan tanggal form masuk (created_at)
+    summary_query = {}
+    if start_date and end_date:
+        summary_query["created_at"] = {"$gte": start_date, "$lte": end_date + "T23:59:59"}
+    elif month and month != "all":
+        summary_query["created_at"] = {"$regex": f"^{month}"}
+        
+    if summary_query.get("created_at"):
+        filtered_summary_bookings = []
+        for b in all_bookings:
+            c_at = (b.get("created_at") or "")[:10]
+            if start_date and end_date:
+                if start_date <= c_at <= end_date:
+                    filtered_summary_bookings.append(b)
+            elif month:
+                if c_at.startswith(month):
+                    filtered_summary_bookings.append(b)
+        bookings_for_summary = filtered_summary_bookings
+    else:
+        bookings_for_summary = all_bookings
+
+    dp_income = sum(b["amount_paid"] for b in bookings_for_summary if b["payment_type"] == "dp")
+    full_income = sum(b["amount_paid"] for b in bookings_for_summary if b["payment_type"] == "full")
     raw_total_income = dp_income + full_income
 
     prive_docs = await db.prive_records.find({}, {"_id": 0}).to_list(5000)
@@ -901,7 +922,7 @@ async def analytics(
     
     total_income = max(raw_total_income - total_prive, 0)
     
-    active_bookings = [b for b in bookings if b.get("status") != "cancelled"]
+    active_bookings = [b for b in bookings_for_summary if b.get("status") != "cancelled"]
     
     outstanding = sum(max((float(b.get("package_price", 0)) + float(b.get("extra_time_charge", 0)) + float(b.get("video_charge", 0))) - float(b.get("amount_paid", 0)), 0) for b in active_bookings)
     total_turnover = raw_total_income + outstanding
@@ -954,8 +975,9 @@ async def analytics(
         p["revenue"] += pkg_revenue
 
     monthly = {}
-    for b in bookings:
-        m = (b.get("shoot_date") or "")[:7]
+    for b in all_bookings:
+        raw_c_date = b.get("created_at") or b.get("shoot_date") or ""
+        m = raw_c_date[:7]
         if not m:
             continue
         mm = monthly.setdefault(m, {
@@ -983,16 +1005,17 @@ async def analytics(
         })
 
     status_counts = {}
-    for b in bookings:
+    for b in bookings_for_summary:
         status_counts[b["status"]] = status_counts.get(b["status"], 0) + 1
 
-    upcoming = sorted([b for b in active_bookings if b.get("shoot_date", "") >= datetime.now(timezone.utc).strftime("%Y-%m-%d")], key=lambda x: (x["shoot_date"], x["start_time"]))[:5]
+    active_all_bookings = [b for b in all_bookings if b.get("status") != "cancelled"]
+    upcoming = sorted([b for b in active_all_bookings if b.get("shoot_date", "") >= datetime.now(timezone.utc).strftime("%Y-%m-%d")], key=lambda x: (x["shoot_date"], x["start_time"]))[:5]
     for u in upcoming:
         u["balance_due"] = max((float(u.get("package_price", 0)) + float(u.get("extra_time_charge", 0)) + float(u.get("video_charge", 0))) - float(u.get("amount_paid", 0)), 0)
         u["gcal_link"] = gcal_link(u)
 
     return {
-        "total_bookings": len(bookings), 
+        "total_bookings": len(bookings_for_summary), 
         "dp_income": dp_income, 
         "full_income": full_income,
         "total_income": total_income, 
