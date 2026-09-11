@@ -4,7 +4,7 @@ import {
 } from 'recharts';
 import { api } from '../lib/api';
 import { AdminLayout } from '../components/AdminLayout';
-import { TrendingUp, CalendarCheck, Users, ArrowUpRight, CheckCircle2, Trash2, Landmark } from 'lucide-react';
+import { TrendingUp, Users, CheckCircle2, Trash2, Landmark } from 'lucide-react';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 
@@ -98,42 +98,11 @@ export default function Analytics() {
   // Perhitungan Keuangan Riil Rekening Global
   const totalTurnover = data?.total_turnover || 0;
   const totalIncome = data?.total_income || 0;
-  const totalBookings = data?.total_bookings || 0;
   const totalFeeSudahBayar = (data?.photographer_fee_total || 0) - (data?.photographer_fee_unpaid || 0);
   const realAccountBalance = totalIncome - totalFeeSudahBayar;
 
   // Perhitungan Dana Aman / Laba Bersih untuk Prive
   const safePriveLimit = realAccountBalance - (data?.photographer_fee_unpaid || 0);
-
-  // Pengelompokan Keuangan Riil Rekening Per Tahun
-  const yearlyMap = {};
-  (data?.monthly || []).forEach(item => {
-    const year = item.month ? item.month.split('-')[0] : '2026';
-    if (!yearlyMap[year]) {
-      yearlyMap[year] = { 
-        year, 
-        jumlahBooking: 0, 
-        totalDp: 0, 
-        totalPelunasan: 0 
-      };
-    }
-    yearlyMap[year].jumlahBooking += (item.bookings || 0);
-    yearlyMap[year].totalDp += (item.dp || 0);
-    yearlyMap[year].totalPelunasan += (item.full || 0);
-  });
-
-  const yearlyData = Object.values(yearlyMap).map(y => {
-    const isSingleYear = Object.keys(yearlyMap).length === 1;
-    const omzetTahunIni = y.totalDp + y.totalPelunasan;
-    const porsiTahun = isSingleYear ? 1 : (omzetTahunIni / (totalTurnover || 1));
-
-    return {
-      ...y,
-      pendapatanKotor: omzetTahunIni,
-      saldoRekeningRiil: isSingleYear ? realAccountBalance : realAccountBalance * porsiTahun,
-      piutangBelumLunas: isSingleYear ? (data?.outstanding || 0) : (data?.outstanding || 0) * porsiTahun
-    };
-  }).sort((a, b) => a.year.localeCompare(b.year));
 
   const monthlyFormatted = (data?.monthly || []).map(item => {
     let displayMonth = item.month;
@@ -202,15 +171,11 @@ export default function Analytics() {
     pho => pho.name && pho.name !== "Belum Ditugaskan" && pho.name.trim() !== ""
   );
 
-  const activeBookingsCount = packageData.reduce((acc, curr) => acc + curr.count, 0);
-  const averageOrderValue = activeBookingsCount > 0 ? totalTurnover / activeBookingsCount : 0;
-  const cashCollectionRate = totalTurnover > 0 ? ((totalIncome / totalTurnover) * 100).toFixed(1) : 0;
-
   return (
     <AdminLayout title="Grafik & Analisis" subtitle="Laporan performa finansial, omzet, dan operasional Radeyaphoto">
       <div className="space-y-6 pb-12">
         
-        {/* Tombol Akses Prive / Penارikan Pribadi */}
+        {/* Tombol Akses Prive / Penarikan Pribadi */}
         <div className="flex justify-end">
           <Button
             onClick={() => setPriveModalOpen(true)}
@@ -229,7 +194,7 @@ export default function Analytics() {
               <span className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">Omzet Kotor</span>
             </div>
             <p className="text-sm sm:text-lg font-bold text-neutral-900">
-              Rp {Math.round(totalTurnover).toLocaleString('id-ID')}
+              {rupiah(totalTurnover)}
             </p>
           </div>
 
@@ -239,7 +204,7 @@ export default function Analytics() {
               <span className="text-[11px] font-semibold text-emerald-800 uppercase tracking-wider">Saldo Rekening</span>
             </div>
             <p className="text-sm sm:text-lg font-bold text-emerald-700">
-              Rp {Math.round(realAccountBalance).toLocaleString('id-ID')}
+              {rupiah(realAccountBalance)}
             </p>
             <p className="text-[9px] text-emerald-600/80 mt-0.5">Uang masuk - Prive - Bayar FG</p>
           </div>
@@ -250,7 +215,7 @@ export default function Analytics() {
               <span className="text-[11px] font-semibold text-indigo-800 uppercase tracking-wider">Aman Ditarik</span>
             </div>
             <p className={`text-sm sm:text-lg font-bold ${safePriveLimit < 0 ? 'text-rose-600' : 'text-indigo-700'}`}>
-              Rp {Math.round(safePriveLimit).toLocaleString('id-ID')}
+              {rupiah(safePriveLimit)}
             </p>
             <p className="text-[9px] text-indigo-600/80 mt-0.5">Saldo min. utang fee FG</p>
           </div>
@@ -261,9 +226,9 @@ export default function Analytics() {
               <span className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">Total Fee FG</span>
             </div>
             <p className="text-sm sm:text-lg font-bold text-rose-700">
-              Rp {Math.round(data?.photographer_fee_total || 0).toLocaleString('id-ID')}
+              {rupiah(data?.photographer_fee_total || 0)}
             </p>
-            <p className="text-[9px] text-neutral-400 mt-0.5">Belum lunas: Rp {Math.round(data?.photographer_fee_unpaid || 0).toLocaleString('id-ID')}</p>
+            <p className="text-[9px] text-neutral-400 mt-0.5">Belum lunas: {rupiah(data?.photographer_fee_unpaid || 0)}</p>
           </div>
         </div>
 
@@ -306,7 +271,7 @@ export default function Analytics() {
                   <XAxis dataKey="dayLabel" fontSize={11} stroke="#888888" tickLine={false} />
                   <YAxis fontSize={11} stroke="#888888" tickLine={false} tickFormatter={(val) => `Rp${val / 1000}k`} />
                   <Tooltip 
-                    formatter={(value) => [`Rp ${value.toLocaleString('id-ID')}`, 'Pendapatan']}
+                    formatter={(value) => [rupiah(value), 'Pendapatan']}
                     contentStyle={{ backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}
                   />
                   <Bar dataKey="pendapatanHarian" fill="#10b981" radius={[6, 6, 0, 0]} />
@@ -333,7 +298,7 @@ export default function Analytics() {
                 <XAxis dataKey="monthName" fontSize={12} stroke="#888888" tickLine={false} />
                 <YAxis fontSize={12} stroke="#888888" tickLine={false} tickFormatter={(val) => `Rp${val / 1000}k`} />
                 <Tooltip 
-                  formatter={(value) => [`Rp ${value.toLocaleString('id-ID')}`, 'Pendapatan']}
+                  formatter={(value) => [rupiah(value), 'Pendapatan']}
                   contentStyle={{ backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}
                 />
                 <Bar dataKey="totalPendapatan" fill="#065f46" radius={[6, 6, 0, 0]} />
@@ -359,7 +324,7 @@ export default function Analytics() {
                     </div>
                   </div>
                   <p className="text-sm font-bold text-moss-800">
-                    Rp {pkg.revenue.toLocaleString('id-ID')}
+                    {rupiah(pkg.revenue)}
                   </p>
                 </div>
               ))}
@@ -384,7 +349,7 @@ export default function Analytics() {
                   </div>
                   <div className="text-right shrink-0">
                     <p className="text-sm font-bold text-neutral-900">
-                      Rp {pho.fee.toLocaleString('id-ID')}
+                      {rupiah(pho.fee)}
                     </p>
                   </div>
                 </div>
@@ -447,7 +412,7 @@ export default function Analytics() {
                 {priveList.map((prv) => (
                   <div key={prv.prive_id} className="flex justify-between items-center p-2.5 rounded-xl bg-neutral-50 border border-neutral-100 text-xs">
                     <div>
-                      <p className="font-bold text-rose-700">Rp {Number(prv.amount).toLocaleString('id-ID')}</p>
+                      <p className="font-bold text-rose-700">{rupiah(prv.amount)}</p>
                       <p className="text-neutral-500 text-[10px]">{prv.notes} • {format(new Date(prv.created_at), "d MMM yyyy", { locale: id })}</p>
                     </div>
                     <Button 
