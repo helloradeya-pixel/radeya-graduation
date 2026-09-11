@@ -25,6 +25,10 @@ export default function Analytics() {
   const [priveList, setPriveList] = useState([]);
   const [loadingPrive, setLoadingPrive] = useState(false);
 
+  // State untuk Modal Detail Klien saat nama diklik
+  const [selectedClientModal, setSelectedClientModal] = useState(false);
+  const [activeClient, setActiveClient] = useState(null);
+
   const fetchAnalytics = async () => {
     try {
       const res = await api.get('/analytics/summary');
@@ -82,6 +86,11 @@ export default function Analytics() {
     }
   };
 
+  const handleOpenClientDetail = (client) => {
+    setActiveClient(client);
+    setSelectedClientModal(true);
+  };
+
   if (loading) {
     return (
       <AdminLayout title="Analisis & Grafik" subtitle="Memuat data laporan bisnis...">
@@ -118,8 +127,18 @@ export default function Analytics() {
     }
   });
 
-  const todayRevenue = todayClosings.reduce((acc, curr) => acc + (curr.amount_paid || 0), 0);
-  const yesterdayRevenue = yesterdayClosings.reduce((acc, curr) => acc + (curr.amount_paid || 0), 0);
+  // Perhitungan Pendapatan Berdasarkan Total Harga Paket + Ekstra (Bukan hanya uang muka/DP)
+  const calculateTotalRevenue = (closings) => {
+    return closings.reduce((acc, curr) => {
+      const pkgPrice = curr.package_price || 0;
+      const extraTime = curr.extra_time_charge || 0;
+      const video = curr.video_charge || 0;
+      return acc + (pkgPrice + extraTime + video);
+    }, 0);
+  };
+
+  const todayRevenue = calculateTotalRevenue(todayClosings);
+  const yesterdayRevenue = calculateTotalRevenue(yesterdayClosings);
 
   // Perhitungan Keuangan Riil Rekening Global
   const totalTurnover = data?.total_turnover || 0;
@@ -131,7 +150,7 @@ export default function Analytics() {
   // Perhitungan Dana Aman / Laba Bersih untuk Prive
   const safePriveLimit = realAccountBalance - (data?.photographer_fee_unpaid || 0);
 
-  // Pengelompokan Keuangan Riil Rekening Per Tahun (Sinkron Total Global & Otomatis Full untuk Single Year)
+  // Pengelompokan Keuangan Riil Rekening Per Tahun
   const yearlyMap = {};
   (data?.monthly || []).forEach(item => {
     const year = item.month ? item.month.split('-')[0] : '2026';
@@ -183,16 +202,12 @@ export default function Analytics() {
     count: p.count
   }));
 
-  // Menyaring agar "Belum Ditugaskan" atau string kosong tidak tampil di daftar performa fotografer
   const photographerData = (data?.per_photographer || []).filter(
     pho => pho.name && pho.name !== "Belum Ditugaskan" && pho.name.trim() !== ""
   );
 
-  // Average Order Value (AOV) / Rata-rata nilai per booking aktif
   const activeBookingsCount = packageData.reduce((acc, curr) => acc + curr.count, 0);
   const averageOrderValue = activeBookingsCount > 0 ? totalTurnover / activeBookingsCount : 0;
-
-  // Rasio Kas Cair (Kas Masuk / Omzet Kotor * 100)
   const cashCollectionRate = totalTurnover > 0 ? ((totalIncome / totalTurnover) * 100).toFixed(1) : 0;
 
   return (
@@ -227,16 +242,20 @@ export default function Analytics() {
             <div className="flex items-baseline justify-between mt-3">
               <div>
                 <p className="text-2xl font-black text-emerald-900">{todayClosings.length} <span className="text-xs font-semibold text-neutral-600">Orang / Klien</span></p>
-                <p className="text-xs text-emerald-700 font-medium mt-0.5">Pendapatan Masuk: Rp {Math.round(todayRevenue).toLocaleString('id-ID')}</p>
+                <p className="text-xs text-emerald-700 font-medium mt-0.5">Total Nilai Kontrak: Rp {Math.round(todayRevenue).toLocaleString('id-ID')}</p>
               </div>
             </div>
             {todayClosings.length > 0 && (
               <div className="mt-3 pt-3 border-t border-emerald-500/15 flex flex-wrap gap-1.5">
                 {todayClosings.map((tc, idx) => (
-                  <span key={idx} className="inline-flex items-center gap-1 bg-white/90 text-emerald-800 text-[10px] px-2 py-1 rounded-lg border border-emerald-500/20 font-medium">
-                    <Clock className="h-3 w-3 text-emerald-600" />
-                    {format(parseISO(tc.created_at), 'HH:mm')} WIB - {tc.full_name} ({tc.package_name})
-                  </span>
+                  <button 
+                    key={idx} 
+                    onClick={() => handleOpenClientDetail(tc)}
+                    className="inline-flex items-center gap-1 bg-white/90 hover:bg-emerald-100 text-emerald-800 text-[10px] px-2.5 py-1 rounded-lg border border-emerald-500/20 font-medium transition-colors text-left cursor-pointer"
+                  >
+                    <Clock className="h-3 w-3 text-emerald-600 shrink-0" />
+                    <span>{format(parseISO(tc.created_at), 'HH:mm')} WIB - <strong>{tc.full_name}</strong> ({tc.package_name})</span>
+                  </button>
                 ))}
               </div>
             )}
@@ -256,16 +275,20 @@ export default function Analytics() {
             <div className="flex items-baseline justify-between mt-3">
               <div>
                 <p className="text-2xl font-black text-neutral-900">{yesterdayClosings.length} <span className="text-xs font-semibold text-neutral-500">Orang / Klien</span></p>
-                <p className="text-xs text-neutral-600 font-medium mt-0.5">Pendapatan Masuk: Rp {Math.round(yesterdayRevenue).toLocaleString('id-ID')}</p>
+                <p className="text-xs text-neutral-600 font-medium mt-0.5">Total Nilai Kontrak: Rp {Math.round(yesterdayRevenue).toLocaleString('id-ID')}</p>
               </div>
             </div>
             {yesterdayClosings.length > 0 && (
               <div className="mt-3 pt-3 border-t border-neutral-100 flex flex-wrap gap-1.5">
                 {yesterdayClosings.map((yc, idx) => (
-                  <span key={idx} className="inline-flex items-center gap-1 bg-neutral-50 text-neutral-700 text-[10px] px-2 py-1 rounded-lg border border-neutral-200 font-medium">
-                    <Clock className="h-3 w-3 text-neutral-400" />
-                    {format(parseISO(yc.created_at), 'HH:mm')} WIB - {yc.full_name} ({yc.package_name})
-                  </span>
+                  <button 
+                    key={idx} 
+                    onClick={() => handleOpenClientDetail(yc)}
+                    className="inline-flex items-center gap-1 bg-neutral-50 hover:bg-neutral-100 text-neutral-700 text-[10px] px-2.5 py-1 rounded-lg border border-neutral-200 font-medium transition-colors text-left cursor-pointer"
+                  >
+                    <Clock className="h-3 w-3 text-neutral-400 shrink-0" />
+                    <span>{format(parseISO(yc.created_at), 'HH:mm')} WIB - <strong>{yc.full_name}</strong> ({yc.package_name})</span>
+                  </button>
                 ))}
               </div>
             )}
@@ -273,7 +296,7 @@ export default function Analytics() {
 
         </div>
 
-        {/* KPI Summary Cards - Ditata rapi 2 kolom di HP */}
+        {/* KPI Summary Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           <div className="bg-white p-4 rounded-2xl border border-moss-900/10 shadow-sm">
             <div className="flex items-center gap-2 text-moss-800 mb-1">
@@ -339,7 +362,7 @@ export default function Analytics() {
           </div>
         </div>
 
-        {/* Baris Indikator Profesional & Kesehatan Keuangan */}
+        {/* Baris Indikator Profesional */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="bg-white p-4 rounded-2xl border border-moss-900/10 shadow-sm flex items-center justify-between">
             <div>
@@ -428,14 +451,11 @@ export default function Analytics() {
           </div>
         </div>
 
-        {/* Grid Bagian Bawah: Paket Terlaris & Performa Fotografer */}
+        {/* Grid Bawah: Paket & Fotografer */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          
-          {/* Kontribusi Paket */}
           <div className="bg-white p-5 sm:p-6 rounded-2xl border border-moss-900/10 shadow-sm">
             <h3 className="text-base font-bold text-neutral-900 mb-1">Pendapatan Berdasarkan Paket</h3>
             <p className="text-xs text-neutral-500 mb-4">Paket layanan yang paling diminati klien</p>
-            
             <div className="space-y-4">
               {packageData.map((pkg, idx) => (
                 <div key={pkg.name} className="flex items-center justify-between p-3 rounded-xl bg-neutral-50 border border-neutral-100">
@@ -446,22 +466,15 @@ export default function Analytics() {
                       <p className="text-xs text-neutral-500">{pkg.count} Sesi foto</p>
                     </div>
                   </div>
-                  <p className="text-sm font-bold text-moss-800">
-                    Rp {pkg.revenue.toLocaleString('id-ID')}
-                  </p>
+                  <p className="text-sm font-bold text-moss-800">Rp {pkg.revenue.toLocaleString('id-ID')}</p>
                 </div>
               ))}
-              {packageData.length === 0 && (
-                <p className="text-sm text-neutral-400 text-center py-6">Belum ada data paket.</p>
-              )}
             </div>
           </div>
 
-          {/* Performa Fotografer */}
           <div className="bg-white p-5 sm:p-6 rounded-2xl border border-moss-900/10 shadow-sm">
             <h3 className="text-base font-bold text-neutral-900 mb-1">Performa Fotografer</h3>
             <p className="text-xs text-neutral-500 mb-4">Jumlah sesi dan total fee tim fotografer</p>
-
             <div className="space-y-4">
               {photographerData.map((pho) => (
                 <div key={pho.name} className="flex items-start justify-between gap-2 p-3 rounded-xl bg-neutral-50 border border-neutral-100">
@@ -475,76 +488,37 @@ export default function Analytics() {
                     </div>
                   </div>
                   <div className="text-right shrink-0">
-                    <p className="text-sm font-bold text-neutral-900">
-                      Rp {pho.fee.toLocaleString('id-ID')}
-                    </p>
-                    {pho.fee_unpaid > 0 && (
-                      <div className="mt-1">
-                        <span className="inline-block text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-medium leading-tight">
-                          Belum dibayar: Rp {pho.fee_unpaid.toLocaleString('id-ID')}
-                        </span>
-                      </div>
-                    )}
+                    <p className="text-sm font-bold text-neutral-900">Rp {pho.fee.toLocaleString('id-ID')}</p>
                   </div>
                 </div>
               ))}
-              {photographerData.length === 0 && (
-                <p className="text-sm text-neutral-400 text-center py-6">Belum ada data penugasan fotografer.</p>
-              )}
             </div>
           </div>
-
         </div>
 
       </div>
 
-      {/* POPUP MODAL: CATAT & KELOLA PRIVE (TARIK PRIBADI) KHUSUS DI HALAMAN ANALITIK */}
+      {/* MODAL PRIVE */}
       {priveModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
           <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-xl space-y-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b pb-3">
               <h3 className="font-bold text-moss-900 text-base">Catat & Riwayat Prive (Tarik Pribadi)</h3>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => setPriveModalOpen(false)}
-                className="h-8 w-8 p-0 rounded-full"
-              >
-                ✕
-              </Button>
+              <Button variant="ghost" size="sm" onClick={() => setPriveModalOpen(false)} className="h-8 w-8 p-0 rounded-full">✕</Button>
             </div>
-
             <div className="space-y-3 text-xs">
               <div>
                 <label className="font-bold text-moss-900 block mb-1">Nominal Penarikan (Rp)</label>
-                <input 
-                  type="number" 
-                  value={priveAmount} 
-                  onChange={(e) => setPriveAmount(e.target.value)}
-                  placeholder="Contoh: 150000"
-                  className="w-full p-2.5 rounded-xl border border-neutral-200 bg-white"
-                />
+                <input type="number" value={priveAmount} onChange={(e) => setPriveAmount(e.target.value)} placeholder="Contoh: 150000" className="w-full p-2.5 rounded-xl border border-neutral-200 bg-white" />
               </div>
               <div>
                 <label className="font-bold text-moss-900 block mb-1">Keterangan / Keperluan</label>
-                <input 
-                  type="text" 
-                  value={priveNotes} 
-                  onChange={(e) => setPriveNotes(e.target.value)}
-                  placeholder="Contoh: Keperluan rumah / bensin"
-                  className="w-full p-2.5 rounded-xl border border-neutral-200 bg-white"
-                />
+                <input type="text" value={priveNotes} onChange={(e) => setPriveNotes(e.target.value)} placeholder="Contoh: Keperluan rumah / bensin" className="w-full p-2.5 rounded-xl border border-neutral-200 bg-white" />
               </div>
-              <Button 
-                onClick={handleSavePrive}
-                loading={loadingPrive}
-                className="w-full bg-rose-700 hover:bg-rose-800 text-white text-xs h-10 rounded-xl font-medium"
-              >
+              <Button onClick={handleSavePrive} disabled={loadingPrive} className="w-full bg-rose-700 hover:bg-rose-800 text-white text-xs h-10 rounded-xl font-medium">
                 {loadingPrive ? "Menyimpan..." : "Simpan Catatan Prive"}
               </Button>
             </div>
-
-            {/* Daftar Riwayat Prive */}
             <div className="pt-3 border-t space-y-2">
               <p className="font-bold text-moss-900 text-xs">Riwayat Prive Terbaru:</p>
               <div className="space-y-2 max-h-40 overflow-y-auto">
@@ -554,25 +528,71 @@ export default function Analytics() {
                       <p className="font-bold text-rose-700">Rp {Number(prv.amount).toLocaleString('id-ID')}</p>
                       <p className="text-neutral-500 text-[10px]">{prv.notes} • {format(new Date(prv.created_at), "d MMM yyyy", { locale: id })}</p>
                     </div>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={() => handleDeletePrive(prv.prive_id)}
-                      className="h-7 w-7 p-0 text-rose-600 hover:bg-rose-50 rounded-lg"
-                    >
+                    <Button variant="ghost" size="sm" onClick={() => handleDeletePrive(prv.prive_id)} className="h-7 w-7 p-0 text-rose-600 hover:bg-rose-50 rounded-lg">
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>
                   </div>
                 ))}
-                {priveList.length === 0 && (
-                  <p className="text-center text-neutral-400 text-[11px] py-4">Belum ada catatan prive.</p>
-                )}
+              </div>
+            </div>
+            <div className="pt-2">
+              <Button onClick={() => setPriveModalOpen(false)} className="w-full bg-moss-900 hover:bg-moss-800 text-white text-xs h-9 rounded-xl">Tutup</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* POPUP MODAL DETAIL KLIEN */}
+      {selectedClientModal && activeClient && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b pb-3">
+              <div>
+                <h3 className="font-bold text-moss-900 text-base">{activeClient.full_name}</h3>
+                <p className="text-[11px] text-neutral-500">Invoice: {activeClient.invoice_number || '-'}</p>
+              </div>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setSelectedClientModal(false)}
+                className="h-8 w-8 p-0 rounded-full"
+              >
+                ✕
+              </Button>
+            </div>
+
+            <div className="space-y-2.5 text-xs text-neutral-700">
+              <div className="flex justify-between p-2 rounded-xl bg-neutral-50">
+                <span className="text-neutral-500">Paket Layanan:</span>
+                <span className="font-bold text-moss-900">{activeClient.package_name}</span>
+              </div>
+              <div className="flex justify-between p-2 rounded-xl bg-neutral-50">
+                <span className="text-neutral-500">Kampus / Prodi:</span>
+                <span className="font-medium">{activeClient.university || '-'} / {activeClient.study || '-'}</span>
+              </div>
+              <div className="flex justify-between p-2 rounded-xl bg-neutral-50">
+                <span className="text-neutral-500">Jadwal Foto:</span>
+                <span className="font-medium">{activeClient.shoot_date} ({activeClient.start_time} - {activeClient.end_time})</span>
+              </div>
+              <div className="flex justify-between p-2 rounded-xl bg-neutral-50">
+                <span className="text-neutral-500">Lokasi:</span>
+                <span className="font-medium">{activeClient.location || '-'}</span>
+              </div>
+              <div className="flex justify-between p-2 rounded-xl bg-neutral-50">
+                <span className="text-neutral-500">WhatsApp:</span>
+                <a href={`https://wa.me/${activeClient.whatsapp}`} target="_blank" rel="noreferrer" className="font-bold text-emerald-700 underline">
+                  {activeClient.whatsapp}
+                </a>
+              </div>
+              <div className="flex justify-between p-2 rounded-xl bg-emerald-50/50 border border-emerald-500/20">
+                <span className="text-emerald-800 font-semibold">Pembayaran ({activeClient.payment_type?.toUpperCase()}):</span>
+                <span className="font-bold text-emerald-900">Rp {Number(activeClient.amount_paid || 0).toLocaleString('id-ID')}</span>
               </div>
             </div>
 
             <div className="pt-2">
               <Button 
-                onClick={() => setPriveModalOpen(false)}
+                onClick={() => setSelectedClientModal(false)}
                 className="w-full bg-moss-900 hover:bg-moss-800 text-white text-xs h-9 rounded-xl"
               >
                 Tutup
