@@ -42,6 +42,9 @@ export default function Dashboard() {
   });
   const [savingEdit, setSavingEdit] = useState(false);
 
+  // State baru untuk preview gambar bukti transfer via modal terpisah
+  const [previewImage, setPreviewImage] = useState(null);
+
   // Fungsi load data berdasarkan rentang tanggal ke backend
   const loadAnalytics = useCallback(async () => {
     setLoading(true);
@@ -559,16 +562,16 @@ export default function Dashboard() {
                   </Button>
                 </div>
 
-                {/* Tombol Bukti Transfer (Diperbaiki agar tidak terdeteksi router React) */}
+                {/* Tombol Bukti Transfer (Diperbarui untuk memicu state modal preview gambar) */}
                 {selectedBookingDetail.proof_file_id && (
                   <Button 
                     onClick={() => {
                       const proofVal = selectedBookingDetail.proof_file_id;
                       if (typeof proofVal === "string" && (proofVal.startsWith("http://") || proofVal.startsWith("https://"))) {
-                        window.open(proofVal, "_blank");
+                        setPreviewImage(proofVal);
                       } else {
                         const backendBase = api.defaults.baseURL ? api.defaults.baseURL.replace(/\/api$/, "") : window.location.origin;
-                        window.open(`${backendBase}/api/files/${proofVal}`, "_blank");
+                        setPreviewImage(`${backendBase}/api/files/${proofVal}`);
                       }
                     }}
                     variant="outline"
@@ -642,7 +645,7 @@ export default function Dashboard() {
                     }}
                     className="w-full p-2.5 rounded-xl border border-neutral-200 bg-white text-xs"
                   >
-                    <option value="none">-- Belum Ditugaskan --</option>
+                    <option value="none">-- Belum Ditugaskan -- --</option>
                     {photographersList.map((pho) => (
                       <option key={pho.photographer_id} value={pho.photographer_id}>
                         {pho.name} (Fee: {rupiah(pho.fee_per_session)})
@@ -694,6 +697,50 @@ export default function Dashboard() {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* POPUP MODAL PREVIEW GAMBAR BUKTI TRANSFER */}
+      {previewImage && (
+        <div className="fixed inset-0 z-[60] bg-black/80 flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-md rounded-2xl p-4 shadow-2xl space-y-3 relative flex flex-col items-center">
+            <div className="w-full flex items-center justify-between border-b pb-2">
+              <h3 className="font-bold text-moss-900 text-sm">Bukti Transfer</h3>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setPreviewImage(null)}
+                className="h-7 w-7 p-0 rounded-full"
+              >
+                ✕
+              </Button>
+            </div>
+            <div className="w-full max-h-[70vh] overflow-auto flex justify-center items-center bg-neutral-100 rounded-xl p-2">
+              <img 
+                src={previewImage} 
+                alt="Bukti Transfer" 
+                className="max-h-[60vh] object-contain rounded-lg"
+                onError={() => {
+                  toast.error("Gagal memuat gambar bukti transfer");
+                }}
+              />
+            </div>
+            <div className="w-full flex gap-2 pt-2">
+              <Button 
+                variant="outline"
+                onClick={() => window.open(previewImage, "_blank")}
+                className="w-1/2 text-xs h-9 rounded-xl"
+              >
+                Buka di Tab Baru
+              </Button>
+              <Button 
+                onClick={() => setPreviewImage(null)}
+                className="w-1/2 bg-moss-900 hover:bg-moss-800 text-white text-xs h-9 rounded-xl"
+              >
+                Tutup
+              </Button>
+            </div>
           </div>
         </div>
       )}
