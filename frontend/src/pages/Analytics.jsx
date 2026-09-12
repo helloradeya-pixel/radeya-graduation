@@ -4,7 +4,7 @@ import {
 } from 'recharts';
 import { api } from '../lib/api';
 import { AdminLayout } from '../components/AdminLayout';
-import { TrendingUp, CalendarCheck, Users, ArrowUpRight, CheckCircle2, Trash2, Landmark, Clock, Camera } from 'lucide-react';
+import { TrendingUp, CalendarCheck, Users, ArrowUpRight, CheckCircle2, Trash2, Landmark, Clock, Camera, ExternalLink } from 'lucide-react';
 import { format, subDays, isSameDay, parseISO } from 'date-fns';
 import { id } from 'date-fns/locale';
 
@@ -28,6 +28,9 @@ export default function Analytics() {
   // State untuk Modal Detail Klien saat nama diklik
   const [selectedClientModal, setSelectedClientModal] = useState(false);
   const [activeClient, setActiveClient] = useState(null);
+
+  // State untuk preview modal gambar bukti transfer
+  const [previewImage, setPreviewImage] = useState(null);
 
   const fetchAnalytics = async () => {
     try {
@@ -151,7 +154,7 @@ export default function Analytics() {
   // Perhitungan Dana Aman / Laba Bersih untuk Prive
   const safePriveLimit = realAccountBalance - (data?.photographer_fee_unpaid || 0);
 
-  // Pengelompokan Keuangan Riil Rekening Per Tahun (Sinkron Total Global & Otomatis Full untuk Single Year)
+  // Pengelompokan Keuangan Riil Rekening Per Tahun
   const yearlyMap = {};
   (data?.monthly || []).forEach(item => {
     const year = item.month ? item.month.split('-')[0] : '2026';
@@ -203,16 +206,12 @@ export default function Analytics() {
     count: p.count
   }));
 
-  // Menyaring agar "Belum Ditugaskan" atau string kosong tidak tampil di daftar performa fotografer
   const photographerData = (data?.per_photographer || []).filter(
     pho => pho.name && pho.name !== "Belum Ditugaskan" && pho.name.trim() !== ""
   );
 
-  // Average Order Value (AOV) / Rata-rata nilai per booking aktif
   const activeBookingsCount = packageData.reduce((acc, curr) => acc + curr.count, 0);
   const averageOrderValue = activeBookingsCount > 0 ? totalTurnover / activeBookingsCount : 0;
-
-  // Rasio Kas Cair (Kas Masuk / Omzet Kotor * 100)
   const cashCollectionRate = totalTurnover > 0 ? ((totalIncome / totalTurnover) * 100).toFixed(1) : 0;
 
   return (
@@ -301,7 +300,7 @@ export default function Analytics() {
 
         </div>
 
-        {/* KPI Summary Cards - Ditata rapi 2 kolom di HP */}
+        {/* KPI Summary Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           <div className="bg-white p-4 rounded-2xl border border-moss-900/10 shadow-sm">
             <div className="flex items-center gap-2 text-moss-800 mb-1">
@@ -367,7 +366,7 @@ export default function Analytics() {
           </div>
         </div>
 
-        {/* Baris Indikator Profesional & Kesehatan Keuangan */}
+        {/* Indikator Profesional */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="bg-white p-4 rounded-2xl border border-moss-900/10 shadow-sm flex items-center justify-between">
             <div>
@@ -456,10 +455,8 @@ export default function Analytics() {
           </div>
         </div>
 
-        {/* Grid Bagian Bawah: Paket Terlaris & Performa Fotografer */}
+        {/* Grid Bagian Bawah */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          
-          {/* Kontribusi Paket */}
           <div className="bg-white p-5 sm:p-6 rounded-2xl border border-moss-900/10 shadow-sm">
             <h3 className="text-base font-bold text-neutral-900 mb-1">Pendapatan Berdasarkan Paket</h3>
             <p className="text-xs text-neutral-500 mb-4">Paket layanan yang paling diminati klien</p>
@@ -485,7 +482,6 @@ export default function Analytics() {
             </div>
           </div>
 
-          {/* Performa Fotografer */}
           <div className="bg-white p-5 sm:p-6 rounded-2xl border border-moss-900/10 shadow-sm">
             <h3 className="text-base font-bold text-neutral-900 mb-1">Performa Fotografer</h3>
             <p className="text-xs text-neutral-500 mb-4">Jumlah sesi dan total fee tim fotografer</p>
@@ -521,12 +517,11 @@ export default function Analytics() {
               )}
             </div>
           </div>
-
         </div>
 
       </div>
 
-      {/* POPUP MODAL: CATAT & KELOLA PRIVE (TARIK PRIBADI) KHUSUS DI HALAMAN ANALITIK */}
+      {/* POPUP MODAL: CATAT & KELOLA PRIVE */}
       {priveModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
           <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-xl space-y-4 max-h-[90vh] overflow-y-auto">
@@ -572,7 +567,6 @@ export default function Analytics() {
               </Button>
             </div>
 
-            {/* Daftar Riwayat Prive */}
             <div className="pt-3 border-t space-y-2">
               <p className="font-bold text-moss-900 text-xs">Riwayat Prive Terbaru:</p>
               <div className="space-y-2 max-h-40 overflow-y-auto">
@@ -641,7 +635,7 @@ export default function Analytics() {
               <div className="flex justify-between p-2 rounded-xl bg-neutral-50">
                 <span className="text-neutral-500">Fotografer Bertugas:</span>
                 <span className="font-bold text-moss-900 flex items-center gap-1">
-                  <Camera className="h-3.5 w-3.5 text-emerald-700`" />
+                  <Camera className="h-3.5 w-3.5 text-emerald-700" />
                   {activeClient.photographer_name || activeClient.photographer || 'Belum Ditugaskan'}
                 </span>
               </div>
@@ -665,10 +659,73 @@ export default function Analytics() {
               </div>
             </div>
 
+            {/* Tombol Lihat Bukti Transfer */}
+            {activeClient.proof_file_id && (
+              <Button 
+                onClick={() => {
+                  const proofVal = activeClient.proof_file_id;
+                  if (typeof proofVal === "string" && (proofVal.startsWith("http://") || proofVal.startsWith("https://"))) {
+                    setPreviewImage(proofVal);
+                  } else {
+                    const backendBase = api.defaults.baseURL ? api.defaults.baseURL.replace(/\/api$/, "") : window.location.origin;
+                    setPreviewImage(`${backendBase}/api/files/${proofVal}`);
+                  }
+                }}
+                variant="outline"
+                className="w-full border-moss-900/20 text-moss-900 hover:bg-moss-50 text-xs h-10 rounded-xl flex items-center justify-center gap-2 font-medium"
+              >
+                <ExternalLink className="h-4 w-4" /> Lihat Bukti Transfer
+              </Button>
+            )}
+
             <div className="pt-2">
               <Button 
                 onClick={() => setSelectedClientModal(false)}
                 className="w-full bg-moss-900 hover:bg-moss-800 text-white text-xs h-9 rounded-xl"
+              >
+                Tutup
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* POPUP MODAL PREVIEW GAMBAR BUKTI TRANSFER */}
+      {previewImage && (
+        <div className="fixed inset-0 z-[60] bg-black/80 flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-md rounded-2xl p-4 shadow-2xl space-y-3 relative flex flex-col items-center">
+            <div className="w-full flex items-center justify-between border-b pb-2">
+              <h3 className="font-bold text-moss-900 text-sm">Bukti Transfer</h3>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setPreviewImage(null)}
+                className="h-7 w-7 p-0 rounded-full"
+              >
+                ✕
+              </Button>
+            </div>
+            <div className="w-full max-h-[70vh] overflow-auto flex justify-center items-center bg-neutral-100 rounded-xl p-2">
+              <img 
+                src={previewImage} 
+                alt="Bukti Transfer" 
+                className="max-h-[60vh] object-contain rounded-lg"
+                onError={() => {
+                  toast.error("Gagal memuat gambar bukti transfer");
+                }}
+              />
+            </div>
+            <div className="w-full flex gap-2 pt-2">
+              <Button 
+                variant="outline"
+                onClick={() => window.open(previewImage, "_blank")}
+                className="w-1/2 text-xs h-9 rounded-xl"
+              >
+                Buka di Tab Baru
+              </Button>
+              <Button 
+                onClick={() => setPreviewImage(null)}
+                className="w-1/2 bg-moss-900 hover:bg-moss-800 text-white text-xs h-9 rounded-xl"
               >
                 Tutup
               </Button>
