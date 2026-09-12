@@ -92,6 +92,16 @@ export default function Analytics() {
     setSelectedClientModal(true);
   };
 
+  // Helper function untuk membersihkan dan memformat nomor WhatsApp agar valid (mengganti 0 dengan 62)
+  const formatWhatsAppUrl = (phone) => {
+    if (!phone) return '#';
+    let clean = phone.replace(/\D/g, '');
+    if (clean.startsWith('0')) {
+      clean = '62' + clean.slice(1);
+    }
+    return `https://wa.me/${clean}`;
+  };
+
   if (loading) {
     return (
       <AdminLayout title="Analisis & Grafik" subtitle="Memuat data laporan bisnis...">
@@ -631,7 +641,7 @@ export default function Analytics() {
               <div className="flex justify-between p-2 rounded-xl bg-neutral-50">
                 <span className="text-neutral-500">Fotografer Bertugas:</span>
                 <span className="font-bold text-moss-900 flex items-center gap-1">
-                  <Camera className="h-3.5 w-3.5 text-emerald-700" />
+                  <Camera className="h-3.5 w-3.5 text-emerald-700`" />
                   {activeClient.photographer_name || activeClient.photographer || 'Belum Ditugaskan'}
                 </span>
               </div>
@@ -645,7 +655,7 @@ export default function Analytics() {
               </div>
               <div className="flex justify-between p-2 rounded-xl bg-neutral-50">
                 <span className="text-neutral-500">WhatsApp:</span>
-                <a href={`https://wa.me/${activeClient.whatsapp}`} target="_blank" rel="noreferrer" className="font-bold text-emerald-700 underline">
+                <a href={formatWhatsAppUrl(activeClient.whatsapp)} target="_blank" rel="noreferrer" className="font-bold text-emerald-700 underline">
                   {activeClient.whatsapp}
                 </a>
               </div>
