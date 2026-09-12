@@ -26,8 +26,6 @@ export default function InvoicePage() {
       const calcBalance = Math.max(totalKeseluruhan - parseFloat(data.amount_paid || 0), 0);
       
       setAmountPaid(calcBalance > 0 ? calcBalance : "");
-
-      // Bagian view_invoice otomatis dihapus dari sini agar tidak double tracking pendapatan di GA4.
     } catch {
       toast.error("Invoice tidak ditemukan");
     } finally {
@@ -60,7 +58,6 @@ export default function InvoicePage() {
         proof_file_id: proofFileId,
       });
 
-      // Kirim event purchase ke Google Analytics khusus saat pelunasan berhasil dikirim
       if (typeof window !== "undefined" && window.gtag) {
         window.gtag("event", "purchase", {
           transaction_id: `pelunasan_${invoice.invoice_number}_${Date.now()}`,
@@ -87,8 +84,8 @@ export default function InvoicePage() {
     }
   };
 
-  if (loading) return <div className="p-10 text-center">Memuat invoice...</div>;
-  if (!invoice) return <div className="p-10 text-center">Invoice tidak valid.</div>;
+  if (loading) return <div className="p-10 text-center text-xs">Memuat invoice...</div>;
+  if (!invoice) return <div className="p-10 text-center text-xs">Invoice tidak valid.</div>;
 
   const packagePrice = parseFloat(invoice.package_price || 0);
   const extraTimeCharge = parseFloat(invoice.extra_time_charge || 0);
@@ -104,32 +101,30 @@ export default function InvoicePage() {
   const waLink = `https://wa.me/${adminWhatsApp}?text=${waText}`;
 
   return (
-    <div className="max-w-xl mx-auto p-6 bg-white rounded-lg shadow-md my-10 border border-moss-900/10 font-sans text-[#2C2A29]">
-      <div className="flex justify-between items-center border-b pb-4 mb-4">
+    <div className="max-w-xl mx-auto p-4 sm:p-6 bg-white rounded-lg shadow-sm my-4 border border-moss-900/10 font-sans text-[#2C2A29] text-xs">
+      <div className="flex justify-between items-center border-b pb-2 mb-3">
         <div>
-          <h1 className="text-xl font-bold text-moss-900">Radeyaphoto Invoice</h1>
-          <p className="text-xs text-muted-foreground">{invoice.invoice_number}</p>
+          <h1 className="text-base font-bold text-moss-900">Radeyaphoto Invoice</h1>
+          <p className="text-[11px] text-muted-foreground">{invoice.invoice_number}</p>
         </div>
         <div className="text-right">
-          <span className={`text-xs px-2.5 py-1 rounded font-semibold uppercase ${balanceDue <= 0 ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}`}>
+          <span className={`text-[10px] px-2 py-0.5 rounded font-semibold uppercase ${balanceDue <= 0 ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}`}>
             {balanceDue <= 0 ? 'Lunas (Full)' : 'DP / Belum Lunas'}
           </span>
         </div>
       </div>
 
-      {/* Menggunakan text-xs agar ukuran font kembali kecil proporsional seperti tampilan pertama */}
-      <div className="space-y-2 text-xs mb-6">
+      <div className="space-y-1.5 mb-4">
         <p><span className="font-semibold">Nama Klien:</span> {invoice.full_name}</p>
         <p><span className="font-semibold">Paket:</span> {invoice.package_name} ({rupiah(packagePrice)})</p>
         <p><span className="font-semibold">Jadwal:</span> {fmtDate(invoice.shoot_date)} ({invoice.start_time} - {invoice.end_time})</p>
         <p><span className="font-semibold">Lokasi:</span> {invoice.location}</p>
-        <hr className="my-2" />
+        <hr className="my-1.5" />
         
-        {/* Informasi Rekening & Batas Pelunasan */}
-        <div className="bg-slate-50 p-3 rounded-md border border-slate-200 my-3 text-xs space-y-1.5">
+        <div className="bg-slate-50 p-2.5 rounded-md border border-slate-200 my-2 space-y-1">
           <p className="text-slate-600">bisa di transfer ke sini yah kak</p>
           <p className="font-bold text-slate-800">BCA 2952093623 a/n Yulviana Kusnia</p>
-          <p className="text-amber-700 font-medium pt-1 border-t border-slate-200">
+          <p className="text-amber-700 font-medium pt-1 border-t border-slate-200 text-[11px]">
             ⚠️ Batas waktu pelunasan paling lambat H-1 sebelum jadwal sesi foto.
           </p>
         </div>
@@ -153,7 +148,7 @@ export default function InvoicePage() {
           </div>
         )}
 
-        <div className="flex justify-between font-bold border-t pt-2">
+        <div className="flex justify-between font-bold border-t pt-1.5">
           <span>Total Keseluruhan:</span>
           <span>{rupiah(totalKeseluruhan)}</span>
         </div>
@@ -161,51 +156,47 @@ export default function InvoicePage() {
           <span>Sudah Dibayar:</span>
           <span>{rupiah(invoice.amount_paid)}</span>
         </div>
-        {/* Sisa tagihan diset text-xs agar tidak terlalu besar */}
-        <div className="flex justify-between text-amber-700 font-bold text-xs border-t pt-2">
+        <div className="flex justify-between text-amber-700 font-bold border-t pt-1.5">
           <span>Sisa Tagihan:</span>
           <span>{rupiah(balanceDue)}</span>
         </div>
       </div>
 
       {balanceDue > 0 ? (
-        <form onSubmit={handleSubmitPelunasan} className="space-y-4 border-t pt-4">
+        <form onSubmit={handleSubmitPelunasan} className="space-y-3 border-t pt-3">
           <h3 className="font-semibold text-xs">Konfirmasi Pelunasan / Pembayaran</h3>
           <div>
-            <label className="block text-xs font-medium mb-1">Nominal Pembayaran / Pelunasan (Rp)</label>
+            <label className="block text-[11px] font-medium mb-0.5">Nominal Pembayaran / Pelunasan (Rp)</label>
             <Input
               type="number"
               value={amountPaid}
               onChange={(e) => setAmountPaid(e.target.value)}
-              className="mt-1 bg-white text-xs"
+              className="mt-0.5 bg-white h-8 text-xs"
               placeholder="Masukkan nominal yang ditransfer"
               required
             />
-            <p className="text-[11px] text-muted-foreground mt-1">
-              Masukkan nominal uang yang Anda transfer untuk membayar sisa tagihan.
-            </p>
           </div>
           <div>
-            <label className="block text-xs font-medium mb-1">Upload Bukti Transfer (Foto/PDF)</label>
+            <label className="block text-[11px] font-medium mb-0.5">Upload Bukti Transfer (Foto/PDF)</label>
             <input
               type="file"
               onChange={(e) => setFile(e.target.files[0])}
-              className="mt-1 block w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-moss-50 file:text-moss-700 hover:file:bg-moss-100"
+              className="mt-0.5 block w-full text-[11px] text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded file:border-0 file:text-[11px] file:font-semibold file:bg-moss-50 file:text-moss-700 hover:file:bg-moss-100"
               required
             />
           </div>
-          <Button type="submit" disabled={submitting} className="w-full bg-[#065f46] hover:bg-[#044e38] text-white text-xs">
+          <Button type="submit" disabled={submitting} className="w-full h-9 bg-[#065f46] hover:bg-[#044e38] text-white text-xs">
             {submitting ? "Mengirim..." : "Kirim Konfirmasi Pelunasan"}
           </Button>
         </form>
       ) : (
-        <div className="space-y-3 border-t pt-4">
-          <div className="bg-emerald-50/70 border border-emerald-200/60 p-4 rounded-xl text-center text-emerald-900 font-medium text-xs">
+        <div className="space-y-2 border-t pt-3">
+          <div className="bg-emerald-50/70 border border-emerald-200/60 p-3 rounded-lg text-center text-emerald-900 font-medium text-xs">
             Pembayaran Anda sudah LUNAS! Terima kasih.
           </div>
           <a href={waLink} target="_blank" rel="noreferrer">
-            <Button className="w-full h-12 rounded-xl bg-[#065f46] hover:bg-[#044e38] text-white font-medium transition-all shadow-sm text-xs">
-              Konfirmasi ke WhatsApp Admin <ArrowRight className="ml-2 h-4 w-4" />
+            <Button className="w-full h-10 rounded-lg bg-[#065f46] hover:bg-[#044e38] text-white font-medium text-xs shadow-sm">
+              Konfirmasi ke WhatsApp Admin <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
             </Button>
           </a>
         </div>
