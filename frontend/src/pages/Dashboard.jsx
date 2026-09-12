@@ -559,19 +559,16 @@ export default function Dashboard() {
                   </Button>
                 </div>
 
-                {/* Tombol Bukti Transfer */}
+                {/* Tombol Bukti Transfer (Diperbaiki agar tidak terdeteksi router React) */}
                 {selectedBookingDetail.proof_file_id && (
                   <Button 
                     onClick={() => {
-                      const fileId = selectedBookingDetail.proof_file_id;
-                      if (fileId.startsWith("http")) {
-                        window.open(fileId, "_blank");
+                      const proofVal = selectedBookingDetail.proof_file_id;
+                      if (typeof proofVal === "string" && (proofVal.startsWith("http://") || proofVal.startsWith("https://"))) {
+                        window.open(proofVal, "_blank");
                       } else {
-                        const baseUrl = api.defaults.baseURL || window.location.origin;
-                        const fullUrl = fileId.startsWith("/") 
-                          ? `${baseUrl.replace(/\/api$/, "")}${fileId}` 
-                          : `${baseUrl.replace(/\/api$/, "")}/api/files/${fileId}`;
-                        window.open(fullUrl, "_blank");
+                        const backendBase = api.defaults.baseURL ? api.defaults.baseURL.replace(/\/api$/, "") : window.location.origin;
+                        window.open(`${backendBase}/api/files/${proofVal}`, "_blank");
                       }
                     }}
                     variant="outline"
@@ -670,7 +667,7 @@ export default function Dashboard() {
                     type="checkbox" 
                     id="edit_pho_paid"
                     checked={editForm.photographer_paid}
-                    onChange={(e) => setEditForm({ ...editForm, photografer_paid: e.target.checked })}
+                    onChange={(e) => setEditForm({ ...editForm, photographer_paid: e.target.checked })}
                     className="h-4 w-4 rounded border-neutral-300 text-moss-900 focus:ring-moss-800"
                   />
                   <label htmlFor="edit_pho_paid" className="text-xs font-semibold text-moss-900 cursor-pointer">
