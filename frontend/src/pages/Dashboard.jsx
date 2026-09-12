@@ -562,7 +562,14 @@ export default function Dashboard() {
                 {/* Tombol Bukti Transfer */}
                 {selectedBookingDetail.proof_file_id && (
                   <Button 
-                    onClick={() => window.open(`/api/files/${selectedBookingDetail.proof_file_id}`, "_blank")}
+                    onClick={() => {
+                      const fileId = selectedBookingDetail.proof_file_id;
+                      // Jika proof_file_id sudah berupa URL lengkap (mengandung http), langsung buka. Jika berupa ID/path, gabungkan dengan baseURL API atau domain saat ini.
+                      const fileUrl = fileId.startsWith("http") 
+                        ? fileId 
+                        : `${api.defaults.baseURL || ""}/files/${fileId}`;
+                      window.open(fileUrl, "_blank");
+                    }}
                     variant="outline"
                     className="w-full border-moss-900/20 text-moss-900 hover:bg-moss-50 text-xs h-10 rounded-xl flex items-center justify-center gap-2 font-medium"
                   >
@@ -663,7 +670,7 @@ export default function Dashboard() {
                     className="h-4 w-4 rounded border-neutral-300 text-moss-900 focus:ring-moss-800"
                   />
                   <label htmlFor="edit_pho_paid" className="text-xs font-semibold text-moss-900 cursor-pointer">
-                    Fee Fotografer Sudah Dibayar (Lunas)
+                    Fee Fotograjer Sudah Dibayar (Lunas)
                   </label>
                 </div>
 
