@@ -162,7 +162,7 @@ export default function InvoicePage() {
         </div>
 
         {/* ======================================================== */}
-        {/* BAGIAN BARU: TAMPILAN TOMBOL BUKTI TRANSFER */}
+        {/* PERBAIKAN URL PADA TOMBOL BUKTI TRANSFER */}
         {/* ======================================================== */}
         {invoice.proof_file_id && (
           <div className="mt-3 pt-3 border-t">
@@ -171,7 +171,11 @@ export default function InvoicePage() {
                 <span className="font-semibold block text-xs text-moss-900">Bukti Transfer</span>
                 <span className="text-[10px] text-muted-foreground">File pembayaran terlampir</span>
               </div>
-              <a href={`/api/files/${invoice.proof_file_id}`} target="_blank" rel="noreferrer">
+              <a 
+                href={`${api.defaults.baseURL || ""}/files/${invoice.proof_file_id}`} 
+                target="_blank" 
+                rel="noreferrer"
+              >
                 <Button variant="outline" className="h-8 text-xs gap-1 border-moss-900/20 text-moss-900 hover:bg-moss-50">
                   <ExternalLink className="h-3 w-3" /> Lihat Bukti
                 </Button>
