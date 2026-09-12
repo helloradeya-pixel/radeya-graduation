@@ -4,7 +4,7 @@ import { api, rupiah, fmtDate } from "../lib/api";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { toast } from "sonner";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, ExternalLink } from "lucide-react";
 
 export default function InvoicePage() {
   const { id } = useParams();
@@ -160,6 +160,27 @@ export default function InvoicePage() {
           <span>Sisa Tagihan:</span>
           <span>{rupiah(balanceDue)}</span>
         </div>
+
+        {/* ======================================================== */}
+        {/* BAGIAN BARU: TAMPILAN TOMBOL BUKTI TRANSFER */}
+        {/* ======================================================== */}
+        {invoice.proof_file_id && (
+          <div className="mt-3 pt-3 border-t">
+            <div className="flex items-center justify-between gap-2 bg-slate-50 p-2.5 rounded-md border border-slate-200">
+              <div>
+                <span className="font-semibold block text-xs text-moss-900">Bukti Transfer</span>
+                <span className="text-[10px] text-muted-foreground">File pembayaran terlampir</span>
+              </div>
+              <a href={`/api/files/${invoice.proof_file_id}`} target="_blank" rel="noreferrer">
+                <Button variant="outline" className="h-8 text-xs gap-1 border-moss-900/20 text-moss-900 hover:bg-moss-50">
+                  <ExternalLink className="h-3 w-3" /> Lihat Bukti
+                </Button>
+              </a>
+            </div>
+          </div>
+        )}
+        {/* ======================================================== */}
+
       </div>
 
       {balanceDue > 0 ? (
