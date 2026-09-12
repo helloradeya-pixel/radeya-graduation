@@ -530,7 +530,16 @@ export default function Dashboard() {
                 {/* Tombol Aksi Cepat */}
                 <div className="grid grid-cols-3 gap-2">
                   <Button 
-                    onClick={() => window.open(selectedBookingDetail.whatsapp_link || `https://wa.me/${selectedBookingDetail.whatsapp}`, "_blank")}
+                    onClick={() => {
+                      let phone = selectedBookingDetail.whatsapp || "";
+                      // Hapus semua karakter non-digit
+                      phone = phone.replace(/\D/g, "");
+                      // Jika diawali angka 0, ganti dengan 62
+                      if (phone.startsWith("0")) {
+                        phone = "62" + phone.slice(1);
+                      }
+                      window.open(selectedBookingDetail.whatsapp_link || `https://wa.me/${phone}`, "_blank");
+                    }}
                     className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-10 rounded-xl flex items-center justify-center gap-1.5 font-medium"
                   >
                     <MessageSquare className="h-4 w-4" /> WA
