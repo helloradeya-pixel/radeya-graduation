@@ -160,31 +160,6 @@ export default function InvoicePage() {
           <span>Sisa Tagihan:</span>
           <span>{rupiah(balanceDue)}</span>
         </div>
-
-        {/* ======================================================== */}
-        {/* PERBAIKAN URL PADA TOMBOL BUKTI TRANSFER */}
-        {/* ======================================================== */}
-        {invoice.proof_file_id && (
-          <div className="mt-3 pt-3 border-t">
-            <div className="flex items-center justify-between gap-2 bg-slate-50 p-2.5 rounded-md border border-slate-200">
-              <div>
-                <span className="font-semibold block text-xs text-moss-900">Bukti Transfer</span>
-                <span className="text-[10px] text-muted-foreground">File pembayaran terlampir</span>
-              </div>
-              <a 
-                href={`${api.defaults.baseURL || ""}/files/${invoice.proof_file_id}`} 
-                target="_blank" 
-                rel="noreferrer"
-              >
-                <Button variant="outline" className="h-8 text-xs gap-1 border-moss-900/20 text-moss-900 hover:bg-moss-50">
-                  <ExternalLink className="h-3 w-3" /> Lihat Bukti
-                </Button>
-              </a>
-            </div>
-          </div>
-        )}
-        {/* ======================================================== */}
-
       </div>
 
       {balanceDue > 0 ? (
@@ -215,10 +190,30 @@ export default function InvoicePage() {
           </Button>
         </form>
       ) : (
-        <div className="space-y-2 border-t pt-3">
+        <div className="space-y-3 border-t pt-3">
           <div className="bg-emerald-50/70 border border-emerald-200/60 p-3 rounded-lg text-center text-emerald-900 font-medium text-xs">
             Pembayaran Anda sudah LUNAS! Terima kasih.
           </div>
+
+          {/* TOMBOL LIHAT BUKTI PELUNASAN: Hanya muncul di sini setelah lunas / ter-upload */}
+          {invoice.proof_file_id && (
+            <div className="flex items-center justify-between gap-2 bg-slate-50 p-2.5 rounded-md border border-slate-200">
+              <div>
+                <span className="font-semibold block text-xs text-moss-900">Bukti Transfer Pelunasan</span>
+                <span className="text-[10px] text-muted-foreground">File pelunasan berhasil di-upload</span>
+              </div>
+              <a 
+                href={`${api.defaults.baseURL || ""}/files/${invoice.proof_file_id}`} 
+                target="_blank" 
+                rel="noreferrer"
+              >
+                <Button variant="outline" className="h-8 text-xs gap-1 border-moss-900/20 text-moss-900 hover:bg-moss-50">
+                  <ExternalLink className="h-3 w-3" /> Lihat Bukti
+                </Button>
+              </a>
+            </div>
+          )}
+
           <a href={waLink} target="_blank" rel="noreferrer">
             <Button className="w-full h-10 rounded-lg bg-[#065f46] hover:bg-[#044e38] text-white font-medium text-xs shadow-sm">
               Konfirmasi ke WhatsApp Admin <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
