@@ -564,11 +564,15 @@ export default function Dashboard() {
                   <Button 
                     onClick={() => {
                       const fileId = selectedBookingDetail.proof_file_id;
-                      // Jika proof_file_id sudah berupa URL lengkap (mengandung http), langsung buka. Jika berupa ID/path, gabungkan dengan baseURL API atau domain saat ini.
-                      const fileUrl = fileId.startsWith("http") 
-                        ? fileId 
-                        : `${api.defaults.baseURL || ""}/files/${fileId}`;
-                      window.open(fileUrl, "_blank");
+                      if (fileId.startsWith("http")) {
+                        window.open(fileId, "_blank");
+                      } else {
+                        const baseUrl = api.defaults.baseURL || window.location.origin;
+                        const fullUrl = fileId.startsWith("/") 
+                          ? `${baseUrl.replace(/\/api$/, "")}${fileId}` 
+                          : `${baseUrl.replace(/\/api$/, "")}/api/files/${fileId}`;
+                        window.open(fullUrl, "_blank");
+                      }
                     }}
                     variant="outline"
                     className="w-full border-moss-900/20 text-moss-900 hover:bg-moss-50 text-xs h-10 rounded-xl flex items-center justify-center gap-2 font-medium"
@@ -666,11 +670,11 @@ export default function Dashboard() {
                     type="checkbox" 
                     id="edit_pho_paid"
                     checked={editForm.photographer_paid}
-                    onChange={(e) => setEditForm({ ...editForm, photographer_paid: e.target.checked })}
+                    onChange={(e) => setEditForm({ ...editForm, photografer_paid: e.target.checked })}
                     className="h-4 w-4 rounded border-neutral-300 text-moss-900 focus:ring-moss-800"
                   />
                   <label htmlFor="edit_pho_paid" className="text-xs font-semibold text-moss-900 cursor-pointer">
-                    Fee Fotograjer Sudah Dibayar (Lunas)
+                    Fee Fotografer Sudah Dibayar (Lunas)
                   </label>
                 </div>
 
