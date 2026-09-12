@@ -160,7 +160,7 @@ export default function InvoicePage() {
           <span>Sudah Dibayar:</span>
           <span>{rupiah(invoice.amount_paid)}</span>
         </div>
-        <div className="flex justify-between text-amber-700 font-bold text-base border-t pt-2">
+        <div className="flex justify-between text-amber-700 font-bold text-sm border-t pt-2">
           <span>Sisa Tagihan:</span>
           <span>{rupiah(balanceDue)}</span>
         </div>
