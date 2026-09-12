@@ -117,7 +117,8 @@ export default function InvoicePage() {
         </div>
       </div>
 
-      <div className="space-y-2 text-sm mb-6">
+      {/* Menggunakan text-xs agar ukuran font kembali kecil proporsional seperti tampilan pertama */}
+      <div className="space-y-2 text-xs mb-6">
         <p><span className="font-semibold">Nama Klien:</span> {invoice.full_name}</p>
         <p><span className="font-semibold">Paket:</span> {invoice.package_name} ({rupiah(packagePrice)})</p>
         <p><span className="font-semibold">Jadwal:</span> {fmtDate(invoice.shoot_date)} ({invoice.start_time} - {invoice.end_time})</p>
@@ -160,7 +161,8 @@ export default function InvoicePage() {
           <span>Sudah Dibayar:</span>
           <span>{rupiah(invoice.amount_paid)}</span>
         </div>
-        <div className="flex justify-between text-amber-700 font-bold text-sm border-t pt-2">
+        {/* Sisa tagihan diset text-xs agar tidak terlalu besar */}
+        <div className="flex justify-between text-amber-700 font-bold text-xs border-t pt-2">
           <span>Sisa Tagihan:</span>
           <span>{rupiah(balanceDue)}</span>
         </div>
@@ -168,14 +170,14 @@ export default function InvoicePage() {
 
       {balanceDue > 0 ? (
         <form onSubmit={handleSubmitPelunasan} className="space-y-4 border-t pt-4">
-          <h3 className="font-semibold text-sm">Konfirmasi Pelunasan / Pembayaran</h3>
+          <h3 className="font-semibold text-xs">Konfirmasi Pelunasan / Pembayaran</h3>
           <div>
             <label className="block text-xs font-medium mb-1">Nominal Pembayaran / Pelunasan (Rp)</label>
             <Input
               type="number"
               value={amountPaid}
               onChange={(e) => setAmountPaid(e.target.value)}
-              className="mt-1 bg-white"
+              className="mt-1 bg-white text-xs"
               placeholder="Masukkan nominal yang ditransfer"
               required
             />
@@ -192,17 +194,17 @@ export default function InvoicePage() {
               required
             />
           </div>
-          <Button type="submit" disabled={submitting} className="w-full bg-[#065f46] hover:bg-[#044e38] text-white">
+          <Button type="submit" disabled={submitting} className="w-full bg-[#065f46] hover:bg-[#044e38] text-white text-xs">
             {submitting ? "Mengirim..." : "Kirim Konfirmasi Pelunasan"}
           </Button>
         </form>
       ) : (
         <div className="space-y-3 border-t pt-4">
-          <div className="bg-emerald-50/70 border border-emerald-200/60 p-4 rounded-xl text-center text-emerald-900 font-medium text-sm">
+          <div className="bg-emerald-50/70 border border-emerald-200/60 p-4 rounded-xl text-center text-emerald-900 font-medium text-xs">
             Pembayaran Anda sudah LUNAS! Terima kasih.
           </div>
           <a href={waLink} target="_blank" rel="noreferrer">
-            <Button className="w-full h-12 rounded-xl bg-[#065f46] hover:bg-[#044e38] text-white font-medium transition-all shadow-sm">
+            <Button className="w-full h-12 rounded-xl bg-[#065f46] hover:bg-[#044e38] text-white font-medium transition-all shadow-sm text-xs">
               Konfirmasi ke WhatsApp Admin <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </a>
