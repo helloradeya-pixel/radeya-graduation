@@ -716,13 +716,21 @@ export default function Clients() {
 
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-moss-900">Status Booking</label>
-                <Select onValueChange={setEditStatus} value={editStatus}>
+                <Select 
+                  onValueChange={(val) => {
+                    setEditStatus(val);
+                    if (val === "cancelled") {
+                      toast.info("Status dibatalkan. Sesuaikan jumlah pembayaran sebesar DP yang masuk (hangus).");
+                    }
+                  }} 
+                  value={editStatus}
+                >
                   <SelectTrigger className="bg-white rounded-xl border-moss-900/20 h-10 text-xs"><SelectValue /></SelectTrigger>
                   <SelectContent className="bg-white z-50">
                     <SelectItem value="pending" className="text-xs">Pending</SelectItem>
                     <SelectItem value="confirmed" className="text-xs">Confirmed</SelectItem>
                     <SelectItem value="completed" className="text-xs">Completed</SelectItem>
-                    <SelectItem value="cancelled" className="text-xs">Cancelled</SelectItem>
+                    <SelectItem value="cancelled" className="text-xs text-rose-600 font-semibold">Cancelled (Batal)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -848,6 +856,9 @@ export default function Clients() {
                   onChange={(e) => {
                     const val = e.target.value;
                     setEditPaid(val);
+
+                    if (editStatus === "cancelled") return;
+
                     const pkgPrice = Number(selected.package_price || 0);
                     const extraT = Number(editExtraTimeCharge || selected.extra_time_charge || 0);
                     const videoC = Number(editVideoCharge || selected.video_charge || 0);
@@ -857,6 +868,9 @@ export default function Clients() {
                   }} 
                   className="bg-white rounded-xl border-moss-900/20 h-10 text-xs" 
                 />
+                <p className="text-[10px] text-muted-foreground mt-0.5">
+                  *Untuk client yang cancel, isi nominal sesuai uang DP yang benar-benar masuk (misal: 200000) agar piutang bersih dan tidak menunggak.
+                </p>
               </div>
 
               <div className="flex items-center justify-end pt-2">
