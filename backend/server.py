@@ -283,7 +283,6 @@ class BookingUpdate(BaseModel):
     photographer_paid: Optional[bool] = None
     notes: Optional[str] = None
     
-    # Extra Charge dipecah menjadi Extra Time dan Video
     extra_time_charge: Optional[float] = None
     extra_time_note: Optional[str] = None
     video_charge: Optional[float] = None
@@ -894,8 +893,12 @@ async def analytics(
         
     bookings = await db.bookings.find(query, {"_id": 0}).to_list(5000)
     
-    dp_income = sum(b["amount_paid"] for b in bookings if b["payment_type"] == "dp")
-    full_income = sum(b["amount_paid"] for b in bookings if b["payment_type"] == "full")
+    # 1. Pisahkan booking aktif dengan booking yang dibatalkan (cancelled)
+    active_bookings = [b for b in bookings if b.get("status") != "cancelled"]
+    
+    # 2. Pendapatan kas masuk hanya dihitung dari booking yang aktif
+    dp_income = sum(b["amount_paid"] for b in active_bookings if b["payment_type"] == "dp")
+    full_income = sum(b["amount_paid"] for b in active_bookings if b["payment_type"] == "full")
     raw_total_income = dp_income + full_income
 
     prive_docs = await db.prive_records.find({}, {"_id": 0}).to_list(5000)
@@ -903,8 +906,7 @@ async def analytics(
     
     total_income = max(raw_total_income - total_prive, 0)
     
-    active_bookings = [b for b in bookings if b.get("status") != "cancelled"]
-    
+    # 3. Piutang murni dari active bookings saja
     outstanding = sum(max((float(b.get("package_price", 0)) + float(b.get("extra_time_charge", 0)) + float(b.get("video_charge", 0))) - float(b.get("amount_paid", 0)), 0) for b in active_bookings)
     total_turnover = raw_total_income + outstanding
     
