@@ -98,10 +98,12 @@ export default function BookingPage() {
 
     setSubmitting(true);
     try {
+      // 1. Upload Bukti Transfer
       const fd = new FormData();
       fd.append("file", file);
       const { data: up } = await api.post("/upload/proof", fd, { headers: { "Content-Type": "multipart/form-data" } });
 
+      // 2. Generator Event ID Unik untuk Deduplikasi Event Meta
       const eventId = `purchase_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 
       const body = new FormData();
@@ -111,11 +113,16 @@ export default function BookingPage() {
       body.append("proof_file_id", up.file_id);
       body.append("event_id", eventId);
       
-      body.append("fbc", getCookie('_fbc') || localStorage.getItem('fbc') || "");
-      body.append("fbp", getCookie('_fbp') || localStorage.getItem('fbp') || "");
+      const fbc = getCookie('_fbc') || localStorage.getItem('fbc') || "";
+      const fbp = getCookie('_fbp') || localStorage.getItem('fbp') || "";
+      
+      body.append("fbc", fbc);
+      body.append("fbp", fbp);
 
+      // 3. Simpan Ke Database Backend FastAPI
       const { data } = await api.post("/bookings", body);
 
+      // 4. Trigger Meta Pixel Browser (Purchase)
       trackPurchase('booking_wisuda', {
         package_id: f.package_id,
         amount_paid: amount,
@@ -126,14 +133,31 @@ export default function BookingPage() {
         email: f.email,
       }, { eventID: eventId });
 
-      if (typeof window !== 'undefined' && window.gtag) {
-        window.gtag('event', 'generate_lead', {
-          currency: 'IDR',
+      // 5. Trigger Meta CAPI Server (Menjamin Nilai DP 100% Terbaca Meta)
+      const namaParts = f.full_name.trim().split(' ');
+      fetch('/api/meta-capi', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          service: 'graduation',
+          type: 'booking', 
+          segment: 'graduation',
+          event_id: eventId,
           value: amount,
-          package_name: pkg?.name || f.package_id,
-          university: f.university,
-        });
-        
+          url: window.location.href,
+          user_data: {
+            ph: f.whatsapp,
+            em: f.email,
+            fn: namaParts[0],
+            ln: namaParts.slice(1).join(' '),
+            fbc: fbc,
+            fbp: fbp,
+          }
+        }),
+      }).catch(err => console.error("CAPI Purchase Error:", err));
+
+      // 6. Trigger Google Analytics (GA4)
+      if (typeof window !== 'undefined' && window.gtag) {
         window.gtag('event', 'purchase', {
           transaction_id: data.invoice_number || `booking_${Date.now()}`,
           value: amount,
