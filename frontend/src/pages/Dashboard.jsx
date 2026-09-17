@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { AdminLayout } from "../components/AdminLayout";
 import { api, rupiah } from "../lib/api";
 import { toast } from "sonner";
-import { TrendingUp, Wallet, Users, Calendar as CalendarIcon, DollarSign, MessageSquare, Mail, Settings, ExternalLink, Save, ArrowLeft } from "lucide-react";
+import { TrendingUp, Wallet, Users, Calendar as CalendarIcon, DollarSign, MessageSquare, Mail, Settings, ExternalLink, Save, ArrowLeft, Copy } from "lucide-react";
 import { format, startOfMonth, endOfMonth, addMonths, subMonths } from "date-fns";
 import { id } from "date-fns/locale";
 
@@ -334,35 +334,64 @@ export default function Dashboard() {
               <p className="text-[11px] text-muted-foreground mb-3">Klik nama fotografer untuk melihat daftar klien & jadwal sesi.</p>
               
               <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
-                <table className="w-full text-xs sm:text-sm min-w-[450px]">
+                <table className="w-full text-xs sm:text-sm min-w-[500px]">
                   <thead>
                     <tr className="text-left text-muted-foreground border-b border-neutral-100">
                       <th className="pb-2.5 font-semibold">Nama</th>
-                      <th className="pb-2.5 font-semibold">Sesi</th>
+                      <th className="pb-2.5 font-semibold">No. Rekening</th>
+                      <th className="pb-2.5 font-semibold text-center">Sesi</th>
                       <th className="pb-2.5 font-semibold">Total Fee</th>
                       <th className="pb-2.5 font-semibold text-right">Belum Dibayar</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredPhotographers.map((p) => (
-                      <tr 
-                        key={p.name} 
-                        onClick={() => setSelectedPhotographer(p)}
-                        className="border-b border-neutral-50 last:border-0 hover:bg-moss-50/50 cursor-pointer transition-colors"
-                      >
-                        <td className="py-3 font-semibold text-moss-900 underline decoration-moss-300 underline-offset-2">
-                          {p.name}
-                        </td>
-                        <td className="py-3">{p.sessions} Sesi</td>
-                        <td className="py-3 font-medium">{rupiah(p.fee)}</td>
-                        <td className={`py-3 text-right font-bold ${p.fee_unpaid > 0 ? 'text-rose-600' : 'text-green-600'}`}>
-                          {rupiah(p.fee_unpaid)}
-                        </td>
-                      </tr>
-                    ))}
+                    {filteredPhotographers.map((p) => {
+                      // Mencari data nomor rekening fotografer dari daftar photographersList
+                      const currentPho = photographersList.find(
+                        (item) => item.name?.toLowerCase() === p.name?.toLowerCase()
+                      );
+                      const accNumber = currentPho?.account_number || p.account_number || "";
+
+                      return (
+                        <tr 
+                          key={p.name} 
+                          className="border-b border-neutral-50 last:border-0 hover:bg-moss-50/50 transition-colors"
+                        >
+                          <td 
+                            onClick={() => setSelectedPhotographer(p)}
+                            className="py-3 font-semibold text-moss-900 underline decoration-moss-300 underline-offset-2 cursor-pointer"
+                          >
+                            {p.name}
+                          </td>
+                          <td className="py-3">
+                            {accNumber ? (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigator.clipboard.writeText(accNumber);
+                                  toast.success(`No. Rekening ${p.name} tersalin!`);
+                                }}
+                                className="inline-flex items-center gap-1.5 px-2 py-1 bg-neutral-100 hover:bg-moss-100 text-neutral-700 hover:text-moss-900 rounded-lg text-xs font-mono transition-colors"
+                                title="Klik untuk salin"
+                              >
+                                <span>{accNumber}</span>
+                                <Copy className="h-3 w-3 text-neutral-400" />
+                              </button>
+                            ) : (
+                              <span className="text-neutral-400 text-xs">-</span>
+                            )}
+                          </td>
+                          <td onClick={() => setSelectedPhotographer(p)} className="py-3 text-center cursor-pointer">{p.sessions} Sesi</td>
+                          <td onClick={() => setSelectedPhotographer(p)} className="py-3 font-medium cursor-pointer">{rupiah(p.fee)}</td>
+                          <td onClick={() => setSelectedPhotographer(p)} className={`py-3 text-right font-bold cursor-pointer ${p.fee_unpaid > 0 ? 'text-rose-600' : 'text-green-600'}`}>
+                            {rupiah(p.fee_unpaid)}
+                          </td>
+                        </tr>
+                      );
+                    })}
                     {filteredPhotographers.length === 0 && (
                       <tr>
-                        <td colSpan="4" className="text-center text-xs text-muted-foreground py-6">
+                        <td colSpan="5" className="text-center text-xs text-muted-foreground py-6">
                           Belum ada data penugasan fotografer yang aktif.
                         </td>
                       </tr>
@@ -476,7 +505,7 @@ export default function Dashboard() {
                 ))
               ) : (
                 <p className="text-xs text-muted-foreground text-center py-6">
-                  Belum ada rincian klien yang tersedia untuk bulan ini. (Pastikan backend mengirim array <code className="bg-neutral-100 px-1 py-0.5 rounded text-neutral-800">clients</code> di dalam data <code className="bg-neutral-100 px-1 py-0.5 rounded text-neutral-800">monthly</code>).
+                  Belum ada rincian klien yang tersedia untuk bulan ini.
                 </p>
               )}
             </div>
@@ -535,9 +564,7 @@ export default function Dashboard() {
                   <Button 
                     onClick={() => {
                       let phone = selectedBookingDetail.whatsapp || "";
-                      // Hapus semua karakter non-digit
                       phone = phone.replace(/\D/g, "");
-                      // Jika diawali angka 0, ganti dengan 62
                       if (phone.startsWith("0")) {
                         phone = "62" + phone.slice(1);
                       }
@@ -562,7 +589,7 @@ export default function Dashboard() {
                   </Button>
                 </div>
 
-                {/* Tombol Bukti Transfer (Diperbarui untuk memicu state modal preview gambar) */}
+                {/* Tombol Bukti Transfer */}
                 {selectedBookingDetail.proof_file_id && (
                   <Button 
                     onClick={() => {
@@ -592,7 +619,7 @@ export default function Dashboard() {
                 </div>
               </>
             ) : (
-              /* FORM EDIT LANGSUNG DI POPUP DENGAN STATUS FEE FOTOGRAFER */
+              /* FORM EDIT LANGSUNG DI POPUP */
               <div className="space-y-3 text-xs sm:text-sm">
                 <div>
                   <label className="font-bold text-moss-900 block mb-1">Status Booking</label>
@@ -645,7 +672,7 @@ export default function Dashboard() {
                     }}
                     className="w-full p-2.5 rounded-xl border border-neutral-200 bg-white text-xs"
                   >
-                    <option value="none">-- Belum Ditugaskan -- --</option>
+                    <option value="none">-- Belum Ditugaskan --</option>
                     {photographersList.map((pho) => (
                       <option key={pho.photographer_id} value={pho.photographer_id}>
                         {pho.name} (Fee: {rupiah(pho.fee_per_session)})
