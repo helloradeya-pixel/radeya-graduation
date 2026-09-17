@@ -268,6 +268,7 @@ class Package(PackageIn):
 class PhotographerIn(BaseModel):
     name: str
     phone: Optional[str] = ""
+    account_number: Optional[str] = ""  # Field baru ditambahkan
     fee_per_session: float = 0
     active: bool = True
 
@@ -1047,7 +1048,14 @@ async def startup():
             await db.packages.insert_one({"package_id": f"pkg_{uuid.uuid4().hex[:10]}", **p})
     if await db.photographers.count_documents({}) == 0:
         for n, f in [("Rizky", 150000), ("Dinda", 150000)]:
-            await db.photographers.insert_one({"photographer_id": f"pho_{uuid.uuid4().hex[:10]}", "name": n, "phone": "", "fee_per_session": f, "active": True})
+            await db.photographers.insert_one({
+                "photographer_id": f"pho_{uuid.uuid4().hex[:10]}",
+                "name": n,
+                "phone": "",
+                "account_number": "",
+                "fee_per_session": f,
+                "active": True
+            })
     
     admin_exists = await db.users.find_one({"email": ADMIN_EMAIL})
     
