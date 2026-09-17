@@ -115,6 +115,9 @@ async def send_email(to: str, subject: str, html: str, reply_to: Optional[str] =
     
     return resp.json().get("id")
 
+# ========================================================
+# META CONVERSIONS API (CAPI) - GRAPH API v20.0
+# ========================================================
 async def send_capi_purchase(booking: dict, fbc: str = "", fbp: str = "", event_id: str = ""):
     pixel_id = os.environ.get("META_PIXEL_ID")
     access_token = os.environ.get("META_ACCESS_TOKEN")
@@ -122,10 +125,16 @@ async def send_capi_purchase(booking: dict, fbc: str = "", fbp: str = "", event_
         logger.warning("Meta Pixel ID atau Access Token CAPI belum disetel di .env")
         return
 
-    url = f"https://graph.facebook.com/v19.0/{pixel_id}/events"
+    # Updated ke Graph API v20.0
+    url = f"https://graph.facebook.com/v20.0/{pixel_id}/events"
     
+    # Normalisasi nomor WhatsApp ke standar internasional 62...
+    raw_wa = "".join(filter(str.isdigit, booking.get("whatsapp", "")))
+    if raw_wa.startswith("0"):
+        raw_wa = "62" + raw_wa[1:]
+
     email_hash = hashlib.sha256(booking.get("email", "").strip().lower().encode('utf-8')).hexdigest() if booking.get("email") else None
-    phone_hash = hashlib.sha256("".join(filter(str.isdigit, booking.get("whatsapp", ""))).encode('utf-8')).hexdigest() if booking.get("whatsapp") else None
+    phone_hash = hashlib.sha256(raw_wa.encode('utf-8')).hexdigest() if raw_wa else None
     external_id_hash = hashlib.sha256(booking.get("invoice_number", "").strip().encode('utf-8')).hexdigest() if booking.get("invoice_number") else None
 
     user_data = {
