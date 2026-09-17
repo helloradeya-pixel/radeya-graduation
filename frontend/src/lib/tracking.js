@@ -4,23 +4,6 @@ export const generateEventId = () => {
   return `graduation_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 };
 
-// Ambil fbc & fbp dari cookie atau localStorage
-const getCookie = (name) => {
-  if (!isBrowser()) return undefined;
-  const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
-  return match ? match[2] : undefined;
-};
-
-const getFbc = () => {
-  if (!isBrowser()) return undefined;
-  return getCookie('_fbc') || localStorage.getItem('fbc') || undefined;
-};
-
-const getFbp = () => {
-  if (!isBrowser()) return undefined;
-  return getCookie('_fbp') || localStorage.getItem('fbp') || undefined;
-};
-
 const metaTrack = (event, event_id, params = {}) => {
   if (!isBrowser()) return;
 
