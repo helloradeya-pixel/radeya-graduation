@@ -428,7 +428,7 @@ export default function BookingPage() {
               <span>Syarat dan Ketentuan Pemesanan (T&C)</span>
             </div>
             
-            <div className="space-y-3 text-xs sm:text-sm text-[#666666] leading-relaxed">
+            <div className="space-y-4 text-xs sm:text-sm text-[#666666] leading-relaxed">
               <div>
                 <span className="font-semibold text-[#2C2A29]">1. Pembatalan</span>
                 <p className="mt-0.5">DP (Down Payment) yang sudah dibayarkan tidak dapat dikembalikan (non-refundable) apabila terjadi pembatalan dari pihak klien.</p>
@@ -441,16 +441,31 @@ export default function BookingPage() {
 
               <div>
                 <span className="font-semibold text-[#2C2A29]">3. Perubahan Jadwal (Reschedule)</span>
-                <p className="mt-0.5">Sesi foto tidak dapat di-reschedule pada Hari H. Apabila klien berhalangan hadir tanpa informasi, maka pemesanan dianggap cancel (batal), Bisa reschedule Sebelum hari H selama slot tanggal penggantinya masih kosong. Kabari admin secepatnya ya!.</p>
+                <p className="mt-0.5">Sesi foto tidak dapat di-reschedule pada Hari H. Apabila klien berhalangan hadir tanpa informasi, maka pemesanan dianggap cancel (batal). Reschedule hanya dapat dilakukan sebelum Hari H apabila slot tanggal dan jam pengganti masih tersedia. Kabari admin secepatnya ya!</p>
               </div>
 
               <div>
-                <span className="font-semibold text-[#2C2A29]">4. Penyimpanan Berkas (File Storage)</span>
+                <span className="font-semibold text-[#2C2A29]">4. Waktu & Ketepatan Sesi</span>
+                <p className="mt-0.5">Pastikan tanggal dan jam sesi foto yang telah dipesan sudah sesuai. Klien diharapkan hadir tepat waktu dengan batas toleransi keterlambatan maksimal 5 menit agar durasi sesi tetap optimal.</p>
+              </div>
+
+              <div>
+                <span className="font-semibold text-[#2C2A29]">5. Penyerahan File & Editing</span>
+                <ul className="mt-1 space-y-1 list-disc list-inside">
+                  <li>Seluruh file foto mentah (raw/original) dapat diakses maksimal <strong>H+1</strong> setelah sesi pemotretan.</li>
+                  <li>Batas waktu pemilihan foto untuk di-edit adalah <strong>H+7</strong> setelah file original diberikan.</li>
+                  <li>Hasil foto pilihan (edited) dapat diakses maksimal <strong>H+3</strong> setelah klien menyerahkan daftar foto pilihan.</li>
+                  <li>Editing foto terbatas pada penyesuaian warna (color toning) dan pencahayaan (exposure adjustment).</li>
+                </ul>
+              </div>
+
+              <div>
+                <span className="font-semibold text-[#2C2A29]">6. Penyimpanan Berkas (File Storage)</span>
                 <p className="mt-0.5">Hasil foto akan disimpan melalui tautan Google Drive dengan masa aktif maksimal 1 bulan sejak file dikirimkan. Setelah melewati batas waktu tersebut, file akan terhapus otomatis. Klien dianjurkan untuk segera melakukan backup mandiri.</p>
               </div>
 
               <div>
-                <span className="font-semibold text-[#2C2A29]">5. Ketentuan Umum</span>
+                <span className="font-semibold text-[#2C2A29]">7. Ketentuan Umum</span>
                 <p className="mt-0.5">Dengan melakukan pembayaran DP, klien dianggap telah membaca dan menyetujui seluruh syarat dan ketentuan di atas.</p>
               </div>
             </div>
