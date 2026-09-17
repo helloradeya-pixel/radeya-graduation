@@ -454,7 +454,7 @@ export default function BookingPage() {
                 <ul className="mt-1 space-y-1 list-disc list-inside">
                   <li>Seluruh file foto mentah (raw/original) dapat diakses maksimal <strong>H+1</strong> setelah sesi pemotretan.</li>
                   <li>Batas waktu pemilihan foto untuk di-edit adalah <strong>H+7</strong> setelah file original diberikan.</li>
-                  <li>Hasil foto pilihan (edited) dapat diakses maksimal <strong>H+3</strong> setelah klien menyerahkan daftar foto pilihan.</li>
+                  <li>Hasil foto pilihan (edited) dapat diakses dalam <strong>H+3 hingga maksimal H+7</strong> setelah klien menyerahkan daftar foto pilihan (proses pengerjaan menyesuaikan antrean pada periode padat wisuda).</li>
                   <li>Editing foto terbatas pada penyesuaian warna (color toning) dan pencahayaan (exposure adjustment).</li>
                 </ul>
               </div>
