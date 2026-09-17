@@ -10,7 +10,7 @@ import { Switch } from "../components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
 
 const emptyPkg = { name: "", price: "", dp_amount: "", duration_minutes: 60, description: "", active: true };
-const emptyPho = { name: "", phone: "", fee_per_session: "", active: true };
+const emptyPho = { name: "", phone: "", account_number: "", fee_per_session: "", active: true };
 
 export default function Settings() {
   const [packages, setPackages] = useState([]);
@@ -87,6 +87,8 @@ export default function Settings() {
     try {
       await api.post("/photographers", { 
         ...nf, 
+        phone: nf.phone || "",
+        account_number: nf.account_number || "",
         fee_per_session: Number(nf.fee_per_session || 0) 
       });
       setNf(emptyPho); 
@@ -103,6 +105,7 @@ export default function Settings() {
       await api.put(`/photographers/${p.photographer_id}`, { 
         name: p.name, 
         phone: p.phone || "", 
+        account_number: p.account_number || "",
         fee_per_session: Number(p.fee_per_session || 0), 
         active: p.active 
       });
@@ -175,9 +178,10 @@ export default function Settings() {
         <TabsContent value="photographers" className="mt-6 space-y-4">
           <div className="rounded-lg border border-dashed border-moss-800/30 bg-moss-50/40 p-5" data-testid="new-photographer-form">
             <p className="label-xs mb-4">Tambah Fotografer</p>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
               <Input data-testid="new-photographer-name" placeholder="Nama fotografer" value={nf.name} onChange={(e) => setNf({ ...nf, name: e.target.value })} className="h-10 bg-white" />
               <Input data-testid="new-photographer-phone" placeholder="No. WhatsApp" value={nf.phone} onChange={(e) => setNf({ ...nf, phone: e.target.value })} className="h-10 bg-white" />
+              <Input data-testid="new-photographer-account" placeholder="No. Rekening" value={nf.account_number} onChange={(e) => setNf({ ...nf, account_number: e.target.value })} className="h-10 bg-white" />
               <Input data-testid="new-photographer-fee" type="number" placeholder="Fee per sesi" value={nf.fee_per_session} onChange={(e) => setNf({ ...nf, fee_per_session: e.target.value })} className="h-10 bg-white" />
               <Button onClick={addPho} data-testid="add-photographer-button" className="h-10 rounded-full bg-moss-800 hover:bg-moss-900 hover:text-white text-white"><Plus className="h-4 w-4 mr-1" /> Tambah</Button>
             </div>
@@ -185,9 +189,10 @@ export default function Settings() {
 
           {safePhotographers.map((p) => (
             <div key={p.photographer_id} data-testid={`photographer-row-${p.photographer_id}`} className="rounded-lg border border-moss-900/10 bg-white p-5">
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 items-end">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5 items-end">
                 <div><Label className="label-xs">Nama</Label><Input value={p.name || ""} onChange={(e) => updPhoField(p.photographer_id, "name", e.target.value)} className="h-10 mt-1.5" /></div>
                 <div><Label className="label-xs">WhatsApp</Label><Input value={p.phone || ""} onChange={(e) => updPhoField(p.photographer_id, "phone", e.target.value)} className="h-10 mt-1.5" /></div>
+                <div><Label className="label-xs">No. Rekening</Label><Input value={p.account_number || ""} onChange={(e) => updPhoField(p.photographer_id, "account_number", e.target.value)} className="h-10 mt-1.5" placeholder="BCA 12345678" /></div>
                 <div><Label className="label-xs">Fee / sesi</Label><Input type="number" value={p.fee_per_session || ""} onChange={(e) => updPhoField(p.photographer_id, "fee_per_session", e.target.value)} className="h-10 mt-1.5" /></div>
                 <div className="flex items-center gap-2">
                   <Switch checked={!!p.active} onCheckedChange={(v) => updPhoField(p.photographer_id, "active", v)} data-testid={`photographer-active-${p.photographer_id}`} />
