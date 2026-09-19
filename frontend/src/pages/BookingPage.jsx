@@ -122,19 +122,29 @@ export default function BookingPage() {
       // 3. Simpan Ke Database Backend FastAPI
       const { data } = await api.post("/bookings", body);
 
+      // Pisahkan nama depan dan nama belakang untuk parameter standar Meta EMQ
+      const namaParts = f.full_name.trim().split(' ');
+      const fn = namaParts[0] || "";
+      const ln = namaParts.slice(1).join(' ') || "";
+
       // 4. Trigger Meta Pixel Browser (Purchase)
-      trackPurchase('booking_wisuda', {
-        package_id: f.package_id,
-        amount_paid: amount,
-        university: f.university,
-      }, {
-        full_name: f.full_name,
-        whatsapp: f.whatsapp,
-        email: f.email,
-      }, { eventID: eventId });
+      trackPurchase(
+        'booking_wisuda',
+        {
+          package_id: f.package_id,
+          amount_paid: amount,
+          university: f.university,
+        },
+        {
+          ph: f.whatsapp,
+          em: f.email,
+          fn: fn,
+          ln: ln,
+        },
+        { eventID: eventId }
+      );
 
       // 5. Trigger Meta CAPI Server (Menjamin Nilai DP 100% Terbaca Meta)
-      const namaParts = f.full_name.trim().split(' ');
       fetch('/api/meta-capi', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -148,8 +158,8 @@ export default function BookingPage() {
           user_data: {
             ph: f.whatsapp,
             em: f.email,
-            fn: namaParts[0],
-            ln: namaParts.slice(1).join(' '),
+            fn: fn,
+            ln: ln,
             fbc: fbc,
             fbp: fbp,
           }
