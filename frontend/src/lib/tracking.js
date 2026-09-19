@@ -39,19 +39,20 @@ export const trackWA = (label = 'unknown', extra = {}, customEventId = null) => 
   return event_id;
 };
 
-export const trackLead = (label = 'form_submit', extra = {}, _customerData = {}) => {
+export const trackLead = (label = 'form_submit', extra = {}, customerData = {}) => {
   const event_id = generateEventId();
 
   metaTrack('Lead', event_id, {
     content_name: `Lead_graduation_${label}`,
     ...extra,
+    ...customerData, // <-- Menggabungkan identitas ke Pixel Browser
   });
 
-  gaTrack('generate_lead', { event_label: label, ...extra });
+  gaTrack('generate_lead', { event_label: label, ...extra, ...customerData });
   return event_id;
 };
 
-export const trackPurchase = (label = 'booking_dp', extra = {}, _customerData = {}, options = {}) => {
+export const trackPurchase = (label = 'booking_dp', extra = {}, customerData = {}, options = {}) => {
   // Gunakan eventID yang dipass dari BookingPage agar 100% klop dengan CAPI
   const event_id = options?.eventID || generateEventId();
 
@@ -59,8 +60,9 @@ export const trackPurchase = (label = 'booking_dp', extra = {}, _customerData = 
     content_name: `Purchase_graduation_${label}`,
     content_type: 'product',
     ...extra,
+    ...customerData, // <-- Menggabungkan identitas ke Pixel Browser
   });
 
-  gaTrack('purchase', { event_label: label, ...extra });
+  gaTrack('purchase', { event_label: label, ...extra, ...customerData });
   return event_id;
 };
