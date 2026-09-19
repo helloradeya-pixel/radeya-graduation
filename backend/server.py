@@ -125,7 +125,7 @@ async def send_capi_purchase(booking: dict, fbc: str = "", fbp: str = "", event_
         logger.warning("Meta Pixel ID atau Access Token CAPI belum disetel di .env")
         return
 
-    # Updated ke Graph API v20.0
+    # Graph API v20.0
     url = f"https://graph.facebook.com/v20.0/{pixel_id}/events"
     
     # Normalisasi nomor WhatsApp ke standar internasional 62...
@@ -133,9 +133,16 @@ async def send_capi_purchase(booking: dict, fbc: str = "", fbp: str = "", event_
     if raw_wa.startswith("0"):
         raw_wa = "62" + raw_wa[1:]
 
+    # Hashing data identitas pelanggan sesuai standar Meta CAPI
     email_hash = hashlib.sha256(booking.get("email", "").strip().lower().encode('utf-8')).hexdigest() if booking.get("email") else None
     phone_hash = hashlib.sha256(raw_wa.encode('utf-8')).hexdigest() if raw_wa else None
     external_id_hash = hashlib.sha256(booking.get("invoice_number", "").strip().encode('utf-8')).hexdigest() if booking.get("invoice_number") else None
+
+    # Pemisahan dan Hashing Nama Depan & Nama Belakang
+    full_name = booking.get("full_name", "").strip().lower()
+    name_parts = full_name.split()
+    fn_hash = hashlib.sha256(name_parts[0].encode('utf-8')).hexdigest() if len(name_parts) > 0 else None
+    ln_hash = hashlib.sha256(" ".join(name_parts[1:]).encode('utf-8')).hexdigest() if len(name_parts) > 1 else None
 
     user_data = {
         "em": [email_hash] if email_hash else [],
@@ -143,6 +150,10 @@ async def send_capi_purchase(booking: dict, fbc: str = "", fbp: str = "", event_
         "external_id": [external_id_hash] if external_id_hash else []
     }
 
+    if fn_hash:
+        user_data["fn"] = [fn_hash]
+    if ln_hash:
+        user_data["ln"] = [ln_hash]
     if fbc:
         user_data["fbc"] = fbc
     if fbp:
@@ -277,7 +288,7 @@ class Package(PackageIn):
 class PhotographerIn(BaseModel):
     name: str
     phone: Optional[str] = ""
-    account_number: Optional[str] = ""  # Field baru ditambahkan
+    account_number: Optional[str] = ""
     fee_per_session: float = 0
     active: bool = True
 
@@ -293,7 +304,6 @@ class BookingUpdate(BaseModel):
     photographer_paid: Optional[bool] = None
     notes: Optional[str] = None
     
-    # Extra Charge dipecah menjadi Extra Time dan Video
     extra_time_charge: Optional[float] = None
     extra_time_note: Optional[str] = None
     video_charge: Optional[float] = None
