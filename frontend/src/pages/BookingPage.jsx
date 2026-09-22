@@ -17,8 +17,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "../components/ui/popove
 import { RadioGroup, RadioGroupItem } from "../components/ui/radio-group";
 import { api, rupiah } from "../lib/api";
 
-// Menggunakan trackPurchase agar Meta membaca ini sebagai event Purchase (Pembelian/DP) untuk ROAS
-import { trackPurchase } from "../lib/tracking";
+import { trackPurchase, formatPhone } from "../lib/tracking";
 
 const HERO = "https://images.unsplash.com/photo-1561409958-c0e6ad782a81?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDQ2MzR8MHwxfHNlYXJjaHwxfHxvdXRkb29yJTIwZ3JhZHVhdGlvbiUyMHBob3RvfGVufDB8fHx8MTc4NjMzODI2Nnww&ixlib=rb-4.1.0&q=85";
 
@@ -68,9 +67,9 @@ export default function BookingPage() {
       const fbcValue = `fb.1.${Date.now()}.${fbclid}`;
       localStorage.setItem('fbc', fbcValue);
       
-      const date = new Date();
-      date.setTime(date.getTime() + (30 * 24 * 60 * 60 * 1000));
-      document.cookie = `_fbc=${fbcValue}; expires=${date.toUTCString()}; path=/; SameSite=Lax`;
+      const cookieDate = new Date();
+      cookieDate.setTime(cookieDate.getTime() + (30 * 24 * 60 * 60 * 1000));
+      document.cookie = `_fbc=${fbcValue}; expires=${cookieDate.toUTCString()}; path=/; SameSite=Lax`;
     }
   }, []);
 
@@ -103,11 +102,21 @@ export default function BookingPage() {
       fd.append("file", file);
       const { data: up } = await api.post("/upload/proof", fd, { headers: { "Content-Type": "multipart/form-data" } });
 
-      // 2. Generator Event ID Unik untuk Deduplikasi Event Meta
-      const eventId = `purchase_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+      // 2. Normalisasi nomor WhatsApp ke standar E.164 Meta (628xxx)
+      const cleanPhone = formatPhone(f.whatsapp);
+
+      // 3. Generator Event ID Deterministik untuk Deduplikasi Event Meta
+      const formattedDate = format(date, "yyyyMMdd");
+      const eventId = `purchase_${cleanPhone}_${formattedDate}`;
 
       const body = new FormData();
-      Object.entries(f).forEach(([k, v]) => body.append(k, v));
+      Object.entries(f).forEach(([k, v]) => {
+        if (k === 'whatsapp') {
+          body.append(k, cleanPhone);
+        } else {
+          body.append(k, v);
+        }
+      });
       body.append("shoot_date", format(date, "yyyy-MM-dd"));
       body.append("amount_paid", String(amount));
       body.append("proof_file_id", up.file_id);
@@ -119,15 +128,17 @@ export default function BookingPage() {
       body.append("fbc", fbc);
       body.append("fbp", fbp);
 
-      // 3. Simpan Ke Database Backend FastAPI
+      // 4. Simpan Ke Database Backend FastAPI (FastAPI akan otomatis memicu CAPI server-side 1x)
       const { data } = await api.post("/bookings", body);
+
+      const finalEventId = data.invoice_number || eventId;
 
       // Pisahkan nama depan dan nama belakang untuk parameter standar Meta EMQ
       const namaParts = f.full_name.trim().split(' ');
       const fn = namaParts[0] || "";
       const ln = namaParts.slice(1).join(' ') || "";
 
-      // 4. Trigger Meta Pixel Browser (Purchase)
+      // 5. Trigger Meta Pixel Browser (Purchase) dengan eventID konsisten
       trackPurchase(
         'booking_wisuda',
         {
@@ -136,40 +147,18 @@ export default function BookingPage() {
           university: f.university,
         },
         {
-          ph: f.whatsapp,
+          ph: cleanPhone,
           em: f.email,
           fn: fn,
           ln: ln,
         },
-        { eventID: eventId }
+        { eventID: finalEventId }
       );
-
-      // 5. Trigger Meta CAPI Server (Menjamin Nilai DP 100% Terbaca Meta)
-      fetch('/api/meta-capi', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          service: 'graduation',
-          type: 'booking', 
-          segment: 'graduation',
-          event_id: eventId,
-          value: amount,
-          url: window.location.href,
-          user_data: {
-            ph: f.whatsapp,
-            em: f.email,
-            fn: fn,
-            ln: ln,
-            fbc: fbc,
-            fbp: fbp,
-          }
-        }),
-      }).catch(err => console.error("CAPI Purchase Error:", err));
 
       // 6. Trigger Google Analytics (GA4)
       if (typeof window !== 'undefined' && window.gtag) {
         window.gtag('event', 'purchase', {
-          transaction_id: data.invoice_number || `booking_${Date.now()}`,
+          transaction_id: finalEventId,
           value: amount,
           currency: 'IDR',
           items: [{
