@@ -125,21 +125,27 @@ async def send_capi_purchase(booking: dict, fbc: str = "", fbp: str = "", event_
         logger.warning("Meta Pixel ID atau Access Token CAPI belum disetel di .env")
         return
 
-    # Graph API v20.0
     url = f"https://graph.facebook.com/v20.0/{pixel_id}/events"
     
-    # Normalisasi nomor WhatsApp ke standar internasional 62...
-    raw_wa = "".join(filter(str.isdigit, booking.get("whatsapp", "")))
+    # Normalisasi nomor WhatsApp ke standar E.164 Meta (628xxx)
+    raw_wa = "".join(filter(str.isdigit, str(booking.get("whatsapp", ""))))
     if raw_wa.startswith("0"):
         raw_wa = "62" + raw_wa[1:]
+    elif raw_wa.startswith("8"):
+        raw_wa = "62" + raw_wa
 
-    # Hashing data identitas pelanggan sesuai standar Meta CAPI
-    email_hash = hashlib.sha256(booking.get("email", "").strip().lower().encode('utf-8')).hexdigest() if booking.get("email") else None
-    phone_hash = hashlib.sha256(raw_wa.encode('utf-8')).hexdigest() if raw_wa else None
-    external_id_hash = hashlib.sha256(booking.get("invoice_number", "").strip().encode('utf-8')).hexdigest() if booking.get("invoice_number") else None
+    # Clean & SHA-256 Hash Data Identitas Sesuai Standar Meta CAPI
+    raw_email = (booking.get("email") or "").strip().lower()
+    email_hash = hashlib.sha256(raw_email.encode('utf-8')).hexdigest() if raw_email else None
+    
+    clean_wa = raw_wa.strip()
+    phone_hash = hashlib.sha256(clean_wa.encode('utf-8')).hexdigest() if clean_wa else None
+    
+    inv_num = (booking.get("invoice_number") or "").strip()
+    external_id_hash = hashlib.sha256(inv_num.encode('utf-8')).hexdigest() if inv_num else None
 
     # Pemisahan dan Hashing Nama Depan & Nama Belakang
-    full_name = booking.get("full_name", "").strip().lower()
+    full_name = (booking.get("full_name") or "").strip().lower()
     name_parts = full_name.split()
     fn_hash = hashlib.sha256(name_parts[0].encode('utf-8')).hexdigest() if len(name_parts) > 0 else None
     ln_hash = hashlib.sha256(" ".join(name_parts[1:]).encode('utf-8')).hexdigest() if len(name_parts) > 1 else None
@@ -159,6 +165,9 @@ async def send_capi_purchase(booking: dict, fbc: str = "", fbp: str = "", event_
     if fbp:
         user_data["fbp"] = fbp
 
+    # Lock Kunci Deduplikasi
+    final_event_id = event_id if event_id else booking.get("invoice_number")
+
     event_data = {
         "event_name": "Purchase",
         "event_time": int(datetime.now(timezone.utc).timestamp()),
@@ -174,8 +183,8 @@ async def send_capi_purchase(booking: dict, fbc: str = "", fbp: str = "", event_
         }
     }
 
-    if event_id:
-        event_data["event_id"] = event_id
+    if final_event_id:
+        event_data["event_id"] = final_event_id
 
     payload = {
         "data": [event_data],
@@ -188,7 +197,7 @@ async def send_capi_purchase(booking: dict, fbc: str = "", fbp: str = "", event_
             if resp.status_code >= 400:
                 logger.error(f"CAPI Error: {resp.text}")
             else:
-                logger.info(f"CAPI Purchase berhasil dikirim untuk invoice {booking.get('invoice_number')}!")
+                logger.info(f"CAPI Purchase berhasil dikirim untuk invoice {booking.get('invoice_number')} (event_id: {final_event_id})!")
         except Exception as e:
             logger.error(f"Gagal koneksi ke CAPI Meta: {e}")
 
