@@ -355,9 +355,9 @@ export default function BookingPage() {
                 <div className="flex justify-between items-center bg-white p-3 rounded-xl border border-[#EBE7DF]">
                   <div>
                     <span className="font-semibold text-[#2C2A29]">BCA</span>
-                    <p className="font-mono text-sm text-[#2C2A29] mt-0.5">2952093623</p>
+                    <p className="font-mono text-sm text-[#2C2A29] mt-0.5">7111734414</p>
                   </div>
-                  <span className="text-[11px] text-[#888] text-right">a.n. Yulviana Kusnia</span>
+                  <span className="text-[11px] text-[#888] text-right">a.n. Ade Sutiawan</span>
                 </div>
               </div>
             </div>
