@@ -646,7 +646,7 @@ async def create_booking(
            f"Sisa Pembayaran: Rp {balance_due_calc:,.0f}\n"
            f"No. Invoice: {doc['invoice_number']}\n\n"
            f"⚠️ *Batas waktu pelunasan paling lambat H-1*\n"
-           f"Bisa ditransfer ke: *BCA 2952093623 a/n Yulviana Kusnia*\n\n"
+           f"Bisa ditransfer ke: *BCA Digital (blu): 005506102026 a/n Ade Sutiawan*\n\n"
            f"📄 *Link Invoice:* {invoice_web_url}\n\n"
            f"Bukti transfer sudah saya upload. Mohon konfirmasi booking saya. Terima kasih!")
     doc["whatsapp_link"] = f"https://wa.me/{ADMIN_WHATSAPP}?text={quote(msg)}"
