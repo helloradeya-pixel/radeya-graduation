@@ -206,7 +206,7 @@ export default function Clients() {
       `- Sisa Tagihan: *${balanceDueText}*\n\n` +
       `⚠️ *Batas waktu pelunasan paling lambat H-1* sebelum jadwal sesi foto.\n\n` +
       `Bisa ditransfer ke sini ya Kak:\n` +
-      `💳 *BCA 005506102026 a/n ADE SUTIAWAN*\n\n` +
+      `💳 *BCA Digital (blu): 005506102026 a/n ADE SUTIAWAN*\n\n` +
       `Silakan cek detail lengkap dan upload bukti pelunasan melalui tautan berikut:\n${invoiceUrl}\n\n` +
       `Mohon konfirmasinya ya Kak. Terima kasih!`;
 
