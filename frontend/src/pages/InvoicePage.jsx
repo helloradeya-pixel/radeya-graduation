@@ -123,7 +123,7 @@ export default function InvoicePage() {
         
         <div className="bg-slate-50 p-2.5 rounded-md border border-slate-200 my-2 space-y-1">
           <p className="text-slate-600">bisa di transfer ke sini yah kak</p>
-          <p className="font-bold text-slate-800">BCA Digital (blu): 005506102026 a/n Ade Sutiawan</p>
+          <p className="font-bold text-slate-800">BCA Digital (blu): 005506102026  a/n  Ade Sutiawan</p>
           <p className="text-amber-700 font-medium pt-1 border-t border-slate-200 text-[11px]">
             ⚠️ Batas waktu pelunasan paling lambat H-1 sebelum jadwal sesi foto.
           </p>
