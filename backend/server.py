@@ -854,7 +854,7 @@ def invoice_html(b: dict) -> str:
   
   <div style="background:#f8fafc;padding:12px;border-radius:6px;border:1px solid #e2e8f0;margin:12px 0;font-size:12px;">
     <p style="margin:0 0 4px 0;color:#475569;">bisa di transfer ke sini yah kak</p>
-    <p style="margin:0;font-weight:bold;color:#1e293b;">BCA 2952093623 a/n Yulviana Kusnia</p>
+    <p style="margin:0;font-weight:bold;color:#1e293b;">BCA Digital (blu): 005506102026 a/n Ade Sutiawan</p>
     <p style="margin:8px 0 0 0;color:#c2410c;font-weight:500;border-top:1px solid #e2e8f0;padding-top:6px;">
       ⚠️ Batas waktu pelunasan paling lambat H-1 sebelum jadwal sesi foto.
     </p>
