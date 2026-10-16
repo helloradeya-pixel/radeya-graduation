@@ -1,23 +1,59 @@
 import axios from "axios";
 
-// Mencegah nilai "undefined" jika env variable belum diset di Vercel
-const rawBaseUrl = process.env.REACT_APP_BACKEND_URL;
-const backendUrl = (!rawBaseUrl || rawBaseUrl === "undefined") ? "" : rawBaseUrl;
+// 1. Definisikan URL produksi default sebagai fallback jika env variable di Vercel tidak terbaca
+const DEFAULT_BACKEND_URL = "https://radeya-graduation-backend.vercel.app";
 
-export const API = `${backendUrl}/api`;
+// 2. Ambil Base URL dari environment variable (CRA / Vite / Vercel)
+const rawBaseUrl =
+  process.env.REACT_APP_BACKEND_URL ||
+  (typeof import.meta !== "undefined" && import.meta.env && import.meta.env.VITE_BACKEND_URL);
 
-export const api = axios.create({ baseURL: API, withCredentials: true });
+// Gunakan fallback jika rawBaseUrl kosong, "undefined", atau bernilai ""
+const cleanedBaseUrl =
+  !rawBaseUrl || rawBaseUrl === "undefined" || rawBaseUrl.trim() === ""
+    ? DEFAULT_BACKEND_URL
+    : rawBaseUrl;
 
-// TAMBAHKAN INTERCEPTOR INI AGAR TOKEN SELALU DIKIRIM DI HEADER
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("session_token");
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
+// Hilangkan trailing slash di akhir URL jika ada
+const sanitizedBaseUrl = cleanedBaseUrl.replace(/\/+$/, "");
+
+export const API = `${sanitizedBaseUrl}/api`;
+
+// 3. Inisialisasi Instansiasi Axios
+export const api = axios.create({
+  baseURL: API,
+  withCredentials: true,
+  headers: {
+    "Accept": "application/json",
+  },
 });
 
+// 4. Interceptor Request: Otomatis lampirkan Token Bearer
+api.interceptors.request.use(
+  (config) => {
+    // Cek beberapa key umum untuk memastikan token tidak terlewat
+    const token =
+      localStorage.getItem("session_token") ||
+      localStorage.getItem("token") ||
+      localStorage.getItem("auth_token");
 
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+
+    // Jika mengirim FormData (misal: upload bukti bayar), biarkan browser mengatur Content-Type multipart
+    if (config.data instanceof FormData) {
+      delete config.headers["Content-Type"];
+    }
+
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// 5. Helper Utilities
 export const rupiah = (v) =>
   "Rp " + Number(v || 0).toLocaleString("id-ID", { maximumFractionDigits: 0 });
 
@@ -32,8 +68,17 @@ export const shortRupiah = (v) => {
 export const fmtDate = (d) => {
   if (!d) return "-";
   try {
-    return new Date(d + "T00:00:00").toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
+    // Tangani jika format d sudah mengandung ISO string / waktu
+    const dateObj = typeof d === "string" && !d.includes("T") ? new Date(`${d}T00:00:00`) : new Date(d);
+    
+    if (isNaN(dateObj.getTime())) return String(d);
+
+    return dateObj.toLocaleDateString("id-ID", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
   } catch {
-    return d;
+    return String(d);
   }
 };
