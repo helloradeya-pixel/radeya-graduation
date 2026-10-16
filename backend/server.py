@@ -1,5 +1,7 @@
 import os
+import io
 import uuid
+import base64
 import logging
 import hashlib
 from pathlib import Path
@@ -7,8 +9,8 @@ from datetime import datetime, timezone, timedelta
 from typing import List, Optional, Literal
 
 import httpx
-import requests
 import bcrypt
+from PIL import Image
 from dotenv import load_dotenv
 from fastapi import FastAPI, APIRouter, HTTPException, UploadFile, File, Form, Header, Query, Request, Response
 from fastapi.responses import Response as FastResponse
@@ -53,43 +55,68 @@ NOTION_DATABASE_ID = os.environ.get("NOTION_DATABASE_ID")
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-STORAGE_BASE = (os.environ.get("INTEGRATION_PROXY_URL") or "").strip() or "https://integrations.emergentagent.com"
-STORAGE_URL = STORAGE_BASE.rstrip("/") + "/objstore/api/v1/storage"
-EMERGENT_KEY = os.environ.get("EMERGENT_LLM_KEY")
 APP_NAME = "gradphoto"
-storage_key = None
-
 MIME_TYPES = {"jpg": "image/jpeg", "jpeg": "image/jpeg", "png": "image/png", "webp": "image/webp", "pdf": "application/pdf"}
-
-def init_storage(force: bool = False):
-    global storage_key
-    if storage_key and not force:
-        return storage_key
-    resp = requests.post(f"{STORAGE_URL}/init", json={"emergent_key": EMERGENT_KEY}, timeout=30)
-    resp.raise_for_status()
-    storage_key = resp.json()["storage_key"]
-    return storage_key
-
-def put_object(path: str, data: bytes, content_type: str) -> dict:
-    key = init_storage()
-    resp = requests.put(f"{STORAGE_URL}/objects/{path}", headers={"X-Storage-Key": key, "Content-Type": content_type}, data=data, timeout=120)
-    if resp.status_code == 404:
-        key = init_storage(force=True)
-        resp = requests.put(f"{STORAGE_URL}/objects/{path}", headers={"X-Storage-Key": key, "Content-Type": content_type}, data=data, timeout=120)
-    resp.raise_for_status()
-    return resp.json()
-
-def get_object(path: str):
-    key = init_storage()
-    resp = requests.get(f"{STORAGE_URL}/objects/{path}", headers={"X-Storage-Key": key}, timeout=60)
-    if resp.status_code == 404:
-        key = init_storage(force=True)
-        resp = requests.get(f"{STORAGE_URL}/objects/{path}", headers={"X-Storage-Key": key}, timeout=60)
-    resp.raise_for_status()
-    return resp.content, resp.headers.get("Content-Type", "application/octet-stream")
 
 RESEND_API_KEY = os.environ.get("RESEND_API_KEY")
 EMAIL_FROM_NAME = os.environ.get("EMAIL_FROM_NAME", "Radeyaphoto Studio")
+
+# Didefinisikan di atas agar bisa dipakai semua fungsi
+def now_iso():
+    return datetime.now(timezone.utc).isoformat()
+
+# ========================================================
+# HELPER STORAGE SYSTEM (BASE64 + AUTO COMPRESS + AUTO CLEANUP)
+# ========================================================
+
+def compress_image(image_bytes: bytes) -> tuple[bytes, str]:
+    """
+    Mengompres foto bukti transfer agar ukurannya hemat di MongoDB (~100-200KB)
+    """
+    try:
+        img = Image.open(io.BytesIO(image_bytes))
+        
+        if img.mode in ("RGBA", "P"):
+            img = img.convert("RGB")
+        
+        max_dimension = 1200
+        if max(img.width, img.height) > max_dimension:
+            img.thumbnail((max_dimension, max_dimension), Image.Resampling.LANCZOS)
+        
+        output = io.BytesIO()
+        img.save(output, format="JPEG", quality=70, optimize=True)
+        return output.getvalue(), "image/jpeg"
+    except Exception as e:
+        logger.warning(f"Gagal kompres gambar, menyimpan data asli: {e}")
+        return image_bytes, "image/jpeg"
+
+
+async def cleanup_old_proofs(days: int = 30):
+    """
+    Menghapus data gambar bukti bayar (file_data) yang usianya lebih dari 'days' hari
+    agar storage MongoDB Atlas tetap hemat dan tidak penuh.
+    """
+    try:
+        cutoff_date = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+        
+        result = await db.files.update_many(
+            {
+                "created_at": {"$lt": cutoff_date},
+                "file_data": {"$exists": True, "$ne": None}
+            },
+            {
+                "$set": {
+                    "file_data": None,
+                    "is_cleaned": True,
+                    "cleaned_at": now_iso()
+                }
+            }
+        )
+        if result.modified_count > 0:
+            logger.info(f"[AUTO-CLEANUP] Berhasil membersihkan {result.modified_count} bukti bayar lama (> {days} hari).")
+    except Exception as e:
+        logger.error(f"[AUTO-CLEANUP ERROR]: {e}")
+
 
 async def send_email(to: str, subject: str, html: str, reply_to: Optional[str] = None):
     url = "https://api.resend.com/emails"
@@ -127,14 +154,12 @@ async def send_capi_purchase(booking: dict, fbc: str = "", fbp: str = "", event_
 
     url = f"https://graph.facebook.com/v20.0/{pixel_id}/events"
     
-    # Normalisasi nomor WhatsApp ke standar E.164 Meta (628xxx)
     raw_wa = "".join(filter(str.isdigit, str(booking.get("whatsapp", ""))))
     if raw_wa.startswith("0"):
         raw_wa = "62" + raw_wa[1:]
     elif raw_wa.startswith("8"):
         raw_wa = "62" + raw_wa
 
-    # Clean & SHA-256 Hash Data Identitas Sesuai Standar Meta CAPI
     raw_email = (booking.get("email") or "").strip().lower()
     email_hash = hashlib.sha256(raw_email.encode('utf-8')).hexdigest() if raw_email else None
     
@@ -144,7 +169,6 @@ async def send_capi_purchase(booking: dict, fbc: str = "", fbp: str = "", event_
     inv_num = (booking.get("invoice_number") or "").strip()
     external_id_hash = hashlib.sha256(inv_num.encode('utf-8')).hexdigest() if inv_num else None
 
-    # Pemisahan dan Hashing Nama Depan & Nama Belakang
     full_name = (booking.get("full_name") or "").strip().lower()
     name_parts = full_name.split()
     fn_hash = hashlib.sha256(name_parts[0].encode('utf-8')).hexdigest() if len(name_parts) > 0 else None
@@ -165,7 +189,6 @@ async def send_capi_purchase(booking: dict, fbc: str = "", fbp: str = "", event_
     if fbp:
         user_data["fbp"] = fbp
 
-    # Lock Kunci Deduplikasi
     final_event_id = event_id if event_id else booking.get("invoice_number")
 
     event_data = {
@@ -331,9 +354,6 @@ class PriveIn(BaseModel):
     amount: float
     notes: Optional[str] = "Keperluan pribadi"
 
-def now_iso():
-    return datetime.now(timezone.utc).isoformat()
-
 async def get_current_user(request: Request) -> User:
     token = request.cookies.get("session_token")
     if not token:
@@ -452,32 +472,88 @@ async def delete_photographer(photographer_id: str, request: Request):
     await db.photographers.delete_one({"photographer_id": photographer_id})
     return {"ok": True}
 
+# ========================================================
+# ENDPOINT UPLOAD & DOWNLOAD FILE (DIRECT MONGODB ATLAS)
+# ========================================================
+
 @api_router.post("/upload/proof")
 async def upload_proof(file: UploadFile = File(...)):
-    ext = (file.filename or "img.jpg").split(".")[-1].lower()
-    if ext not in MIME_TYPES:
-        raise HTTPException(400, "Format file harus JPG, PNG, WEBP atau PDF")
-    data = await file.read()
-    if len(data) > 6 * 1024 * 1024:
-        raise HTTPException(400, "Ukuran file maksimal 6MB")
-    path = f"{APP_NAME}/proofs/{uuid.uuid4().hex}.{ext}"
-    content_type = file.content_type or MIME_TYPES[ext]
-    result = put_object(path, data, content_type)
-    file_id = f"file_{uuid.uuid4().hex[:12]}"
-    await db.files.insert_one({
-        "id": file_id, "storage_path": result["path"], "original_filename": file.filename,
-        "content_type": content_type, "size": result.get("size", len(data)),
-        "is_deleted": False, "created_at": now_iso(),
-    })
-    return {"file_id": file_id, "storage_path": result["path"], "content_type": content_type}
+    try:
+        # Jalankan cleanup otomatis file tua > 30 hari
+        await cleanup_old_proofs(days=30)
+
+        filename = file.filename or "proof.jpg"
+        ext = filename.split(".")[-1].lower() if "." in filename else "jpg"
+        
+        if ext not in MIME_TYPES:
+            raise HTTPException(
+                status_code=400, 
+                detail="Format file tidak didukung. Harap upload format JPG, PNG, WEBP, atau PDF."
+            )
+        
+        raw_data = await file.read()
+        
+        if len(raw_data) > 6 * 1024 * 1024:
+            raise HTTPException(
+                status_code=400, 
+                detail="Ukuran file terlalu besar. Maksimal 6 MB."
+            )
+        
+        # Kompres gambar
+        if ext in ["jpg", "jpeg", "png", "webp"]:
+            data, content_type = compress_image(raw_data)
+        else:
+            data, content_type = raw_data, file.content_type or "application/pdf"
+        
+        file_id = f"file_{uuid.uuid4().hex[:12]}"
+        encoded_data = base64.b64encode(data).decode("utf-8")
+        
+        # Simpan file ke MongoDB Atlas
+        await db.files.insert_one({
+            "id": file_id,
+            "original_filename": filename,
+            "content_type": content_type,
+            "size": len(data),
+            "file_data": encoded_data,
+            "is_deleted": False,
+            "created_at": now_iso(),
+        })
+        
+        logger.info(f"Upload berhasil: {file_id} | Ukuran: {len(data)//1024} KB")
+        
+        return {
+            "file_id": file_id,
+            "storage_path": f"db://files/{file_id}",
+            "content_type": content_type
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error pada /upload/proof: {type(e).__name__} - {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Gagal memproses upload file: {str(e)}"
+        )
+
 
 @api_router.get("/files/{file_id}")
 async def download_file(file_id: str):
     rec = await db.files.find_one({"id": file_id, "is_deleted": False}, {"_id": 0})
     if not rec:
-        raise HTTPException(404, "File tidak ditemukan")
-    data, ct = get_object(rec["storage_path"])
-    return FastResponse(content=data, media_type=rec.get("content_type", ct))
+        raise HTTPException(status_code=404, detail="File tidak ditemukan")
+    
+    if rec.get("file_data"):
+        file_bytes = base64.b64decode(rec["file_data"])
+        return FastResponse(content=file_bytes, media_type=rec.get("content_type", "image/jpeg"))
+    
+    if rec.get("is_cleaned"):
+        raise HTTPException(
+            status_code=410, 
+            detail="Bukti bayar ini sudah dibersihkan secara otomatis karena usianya sudah lebih dari 30 hari."
+        )
+        
+    raise HTTPException(status_code=404, detail="Data isi file kosong atau tidak valid")
 
 @api_router.post("/prive")
 async def add_prive(body: PriveIn, request: Request):
@@ -1058,12 +1134,6 @@ DEFAULT_PACKAGES = [
 
 @app.on_event("startup")
 async def startup():
-    try:
-        init_storage()
-        logger.info("Storage initialized")
-    except Exception as e:
-        logger.error(f"Storage init failed: {e}")
-        
     try:
         await db.bookings.create_index("shoot_date")
         await db.bookings.create_index("photographer_id")
