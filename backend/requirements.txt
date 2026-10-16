@@ -9,3 +9,4 @@ bcrypt
 httpx
 requests
 python-dotenv
+Pillow
