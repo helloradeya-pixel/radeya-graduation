@@ -18,6 +18,7 @@ from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel, Field
 from passlib.context import CryptContext
+from pymongo import ReturnDocument
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -619,8 +620,18 @@ def gcal_link(b: dict) -> str:
     return f"https://calendar.google.com/calendar/render?action=TEMPLATE&text={text}&dates={d}T{s}/{d}T{e}&details={details}&location={loc}&ctz=Asia/Jakarta"
 
 async def next_invoice_number() -> str:
-    count = await db.bookings.count_documents({})
-    return f"INV-{datetime.now(timezone.utc).strftime('%Y%m')}-{count + 1:04d}"
+    ym = datetime.now(timezone.utc).strftime('%Y%m')
+    counter_id = f"invoice_{ym}"
+    
+    counter = await db.counters.find_one_and_update(
+        {"_id": counter_id},
+        {"$inc": {"seq": 1}},
+        upsert=True,
+        return_document=ReturnDocument.AFTER
+    )
+    
+    seq_number = counter["seq"]
+    return f"INV-{ym}-{seq_number:04d}"
 
 @api_router.post("/bookings")
 async def create_booking(
@@ -1137,7 +1148,8 @@ async def startup():
     try:
         await db.bookings.create_index("shoot_date")
         await db.bookings.create_index("photographer_id")
-        logger.info("Database indexes for shoot_date and photographer_id created successfully")
+        await db.bookings.create_index("invoice_number", unique=True)
+        logger.info("Database indexes for shoot_date, photographer_id, and invoice_number created successfully")
     except Exception as e:
         logger.error(f"Failed to create indexes: {e}")
 
