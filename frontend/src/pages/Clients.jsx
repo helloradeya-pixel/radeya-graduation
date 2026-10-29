@@ -51,9 +51,10 @@ export default function Clients() {
   const [editPhoPaid, setEditPhoPaid] = useState(false);
   const [editPhoFee, setEditPhoFee] = useState("");
   
-  // State terpisah untuk Extra Time dan Penambahan Video
-  const [editExtraTimeCharge, setEditExtraTimeCharge] = useState("");
-  const [editExtraTimeNote, setEditExtraTimeNote] = useState("");
+  // State Dinamis Array untuk Multi-Penambahan Biaya [{ note: '', amount: '' }]
+  const [additionalFees, setAdditionalFees] = useState([]);
+
+  // State Penambahan Video
   const [editVideoCharge, setEditVideoCharge] = useState("");
   const [editVideoNote, setEditVideoNote] = useState("");
 
@@ -126,9 +127,18 @@ export default function Clients() {
     setEditPhoPaid(b.photographer_paid || false);
     setEditPhoFee(b.photographer_fee !== undefined && b.photographer_fee !== null ? String(b.photographer_fee) : "");
     
-    // Inisialisasi field Extra Time & Video terpisah
-    setEditExtraTimeCharge(b.extra_time_charge ? String(b.extra_time_charge) : "");
-    setEditExtraTimeNote(b.extra_time_note || "");
+    // Inisialisasi data array penambahan biaya
+    if (b.additional_fees && Array.isArray(b.additional_fees) && b.additional_fees.length > 0) {
+      setAdditionalFees(b.additional_fees);
+    } else if (b.extra_time_charge > 0) {
+      // Fallback data tunggal dari database
+      setAdditionalFees([
+        { note: b.extra_time_note || "Penambahan Biaya", amount: String(b.extra_time_charge) }
+      ]);
+    } else {
+      setAdditionalFees([]);
+    }
+
     setEditVideoCharge(b.video_charge ? String(b.video_charge) : "");
     setEditVideoNote(b.video_note || "");
 
@@ -139,9 +149,28 @@ export default function Clients() {
     setShowReschedule(false);
   };
 
+  // Helper Array Penambahan Biaya
+  const addFeeItem = () => {
+    setAdditionalFees([...additionalFees, { note: "", amount: "" }]);
+  };
+
+  const removeFeeItem = (index) => {
+    setAdditionalFees(additionalFees.filter((_, i) => i !== index));
+  };
+
+  const updateFeeItem = (index, field, value) => {
+    const updated = [...additionalFees];
+    updated[index][field] = value;
+    setAdditionalFees(updated);
+  };
+
   const saveDetail = async () => {
     try {
       const photographerIdToSend = (!editPho || editPho === "none" || editPho === "") ? null : editPho;
+
+      // Hitung akumulasi nominal penambahan & gabungan catatan
+      const totalExtraCharge = additionalFees.reduce((acc, item) => acc + (parseFloat(item.amount) || 0), 0);
+      const combinedNotes = additionalFees.map(item => item.note).filter(Boolean).join(", ");
 
       await api.put(`/bookings/${selected.booking_id}`, {
         status: editStatus,
@@ -151,9 +180,10 @@ export default function Clients() {
         photographer_paid: editPhoPaid,
         photographer_fee: photographerIdToSend ? (parseFloat(editPhoFee) || 0) : 0,
         
-        // Kirim field terpisah ke backend
-        extra_time_charge: parseFloat(editExtraTimeCharge) || 0,
-        extra_time_note: editExtraTimeNote,
+        extra_time_charge: totalExtraCharge,
+        extra_time_note: combinedNotes,
+        additional_fees: additionalFees,
+
         video_charge: parseFloat(editVideoCharge) || 0,
         video_note: editVideoNote,
 
@@ -575,9 +605,25 @@ export default function Clients() {
                 <p><span className="font-bold text-moss-900">Kampus / Jurusan:</span> {viewDetailOnly.university} — {viewDetailOnly.study}</p>
                 <p><span className="font-bold text-moss-900">Paket Foto:</span> {viewDetailOnly.package_name} ({rupiah(viewDetailOnly.package_price)})</p>
                 
-                {viewDetailOnly.extra_time_charge > 0 && (
-                  <p><span className="font-bold text-moss-900">Extra Time:</span> {rupiah(viewDetailOnly.extra_time_charge)} ({viewDetailOnly.extra_time_note || '-'})</p>
+                {/* RENDERING DINAMIS DAFTAR BIAYA TAMBAHAN */}
+                {viewDetailOnly.additional_fees && viewDetailOnly.additional_fees.length > 0 ? (
+                  viewDetailOnly.additional_fees.map((fee, idx) => (
+                    <p key={idx}>
+                      <span className="font-bold text-moss-900">
+                        {fee.note ? fee.note : "Penambahan Biaya"}:
+                      </span>{" "}
+                      {rupiah(fee.amount)}
+                    </p>
+                  ))
+                ) : viewDetailOnly.extra_time_charge > 0 && (
+                  <p>
+                    <span className="font-bold text-moss-900">
+                      {viewDetailOnly.extra_time_note ? viewDetailOnly.extra_time_note : "Penambahan Biaya"}:
+                    </span>{" "}
+                    {rupiah(viewDetailOnly.extra_time_charge)}
+                  </p>
                 )}
+
                 {viewDetailOnly.video_charge > 0 && (
                   <p><span className="font-bold text-moss-900">Penambahan Video:</span> {rupiah(viewDetailOnly.video_charge)} ({viewDetailOnly.video_note || '-'})</p>
                 )}
@@ -746,28 +792,55 @@ export default function Clients() {
                 </Select>
               </div>
 
-              {/* INPUT EXTRA TIME TERPISAH */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-neutral-50 rounded-2xl border border-moss-900/10">
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-moss-900">Penambahan biaya (Rp)</label>
-                  <Input 
-                    type="number" 
-                    value={editExtraTimeCharge} 
-                    onChange={(e) => setEditExtraTimeCharge(e.target.value)} 
-                    placeholder="0" 
-                    className="bg-white rounded-xl border-moss-900/20 h-9 text-xs" 
-                  />
+              {/* INPUT PENAMBAHAN BIAYA MULTI-ITEM (ARRAY DINAMIS) */}
+              <div className="p-3 bg-neutral-50 rounded-2xl border border-moss-900/10 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-moss-900">
+                    Penambahan Biaya ({additionalFees.length})
+                  </label>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={addFeeItem}
+                    className="h-7 text-[11px] bg-white border-moss-900/20 text-moss-900 font-semibold rounded-lg hover:bg-moss-50"
+                  >
+                    + Tambah Biaya
+                  </Button>
                 </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-moss-900">Keterangan</label>
-                  <Input 
-                    type="text" 
-                    value={editExtraTimeNote} 
-                    onChange={(e) => setEditExtraTimeNote(e.target.value)} 
-                    placeholder="Misal: Tambah 30 menit" 
-                    className="bg-white rounded-xl border-moss-900/20 h-9 text-xs" 
-                  />
-                </div>
+
+                {additionalFees.length === 0 && (
+                  <p className="text-[11px] text-muted-foreground italic">Tidak ada biaya tambahan.</p>
+                )}
+
+                {additionalFees.map((fee, idx) => (
+                  <div key={idx} className="flex items-center gap-2 pt-1">
+                    <Input 
+                      type="text" 
+                      value={fee.note} 
+                      onChange={(e) => updateFeeItem(idx, "note", e.target.value)} 
+                      placeholder="Keterangan (misal: Transport)" 
+                      className="bg-white rounded-xl border-moss-900/20 h-9 text-xs flex-1" 
+                    />
+                    <Input 
+                      type="number" 
+                      value={fee.amount} 
+                      onChange={(e) => updateFeeItem(idx, "amount", e.target.value)} 
+                      placeholder="Rp 0" 
+                      className="bg-white rounded-xl border-moss-900/20 h-9 text-xs w-28 sm:w-36" 
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeFeeItem(idx)}
+                      className="h-9 w-9 p-0 text-rose-600 hover:bg-rose-50 rounded-xl shrink-0"
+                      title="Hapus Penambahan Ini"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
               </div>
 
               {/* INPUT PENAMBAHAN VIDEO TERPISAH */}
@@ -860,9 +933,9 @@ export default function Clients() {
                     if (editStatus === "cancelled") return;
 
                     const pkgPrice = Number(selected.package_price || 0);
-                    const extraT = Number(editExtraTimeCharge || selected.extra_time_charge || 0);
+                    const totalAddFees = additionalFees.reduce((acc, item) => acc + (parseFloat(item.amount) || 0), 0);
                     const videoC = Number(editVideoCharge || selected.video_charge || 0);
-                    if (Number(val) >= (pkgPrice + extraT + videoC)) {
+                    if (Number(val) >= (pkgPrice + totalAddFees + videoC)) {
                       setEditPaymentType("full");
                     }
                   }} 
