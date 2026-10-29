@@ -54,10 +54,6 @@ export default function Clients() {
   // State Dinamis Array untuk Multi-Penambahan Biaya [{ note: '', amount: '' }]
   const [additionalFees, setAdditionalFees] = useState([]);
 
-  // State Penambahan Video
-  const [editVideoCharge, setEditVideoCharge] = useState("");
-  const [editVideoNote, setEditVideoNote] = useState("");
-
   const [editShootDate, setEditShootDate] = useState("");
   const [editStartTime, setEditStartTime] = useState("");
   const [editEndTime, setEditEndTime] = useState("");
@@ -127,20 +123,19 @@ export default function Clients() {
     setEditPhoPaid(b.photographer_paid || false);
     setEditPhoFee(b.photographer_fee !== undefined && b.photographer_fee !== null ? String(b.photographer_fee) : "");
     
-    // Inisialisasi data array penambahan biaya
+    // Inisialisasi data array penambahan biaya (termasuk migrasi legacy extra_time / video)
     if (b.additional_fees && Array.isArray(b.additional_fees) && b.additional_fees.length > 0) {
       setAdditionalFees(b.additional_fees);
-    } else if (b.extra_time_charge > 0) {
-      // Fallback data tunggal dari database
-      setAdditionalFees([
-        { note: b.extra_time_note || "Penambahan Biaya", amount: String(b.extra_time_charge) }
-      ]);
     } else {
-      setAdditionalFees([]);
+      const initialList = [];
+      if (b.extra_time_charge > 0) {
+        initialList.push({ note: b.extra_time_note || "Penambahan Biaya", amount: String(b.extra_time_charge) });
+      }
+      if (b.video_charge > 0) {
+        initialList.push({ note: b.video_note ? `Video (${b.video_note})` : "Penambahan Video", amount: String(b.video_charge) });
+      }
+      setAdditionalFees(initialList);
     }
-
-    setEditVideoCharge(b.video_charge ? String(b.video_charge) : "");
-    setEditVideoNote(b.video_note || "");
 
     setEditShootDate(b.shoot_date || "");
     setEditStartTime(b.start_time || "");
@@ -168,7 +163,7 @@ export default function Clients() {
     try {
       const photographerIdToSend = (!editPho || editPho === "none" || editPho === "") ? null : editPho;
 
-      // Hitung akumulasi nominal penambahan & gabungan catatan
+      // Hitung total penambahan & gabungkan catatan
       const totalExtraCharge = additionalFees.reduce((acc, item) => acc + (parseFloat(item.amount) || 0), 0);
       const combinedNotes = additionalFees.map(item => item.note).filter(Boolean).join(", ");
 
@@ -184,8 +179,8 @@ export default function Clients() {
         extra_time_note: combinedNotes,
         additional_fees: additionalFees,
 
-        video_charge: parseFloat(editVideoCharge) || 0,
-        video_note: editVideoNote,
+        video_charge: 0,
+        video_note: "",
 
         shoot_date: editShootDate,
         start_time: editStartTime,
@@ -605,7 +600,7 @@ export default function Clients() {
                 <p><span className="font-bold text-moss-900">Kampus / Jurusan:</span> {viewDetailOnly.university} — {viewDetailOnly.study}</p>
                 <p><span className="font-bold text-moss-900">Paket Foto:</span> {viewDetailOnly.package_name} ({rupiah(viewDetailOnly.package_price)})</p>
                 
-                {/* RENDERING DINAMIS DAFTAR BIAYA TAMBAHAN */}
+                {/* RENDERING DINAMIS BIAYA TAMBAHAN */}
                 {viewDetailOnly.additional_fees && viewDetailOnly.additional_fees.length > 0 ? (
                   viewDetailOnly.additional_fees.map((fee, idx) => (
                     <p key={idx}>
@@ -615,17 +610,25 @@ export default function Clients() {
                       {rupiah(fee.amount)}
                     </p>
                   ))
-                ) : viewDetailOnly.extra_time_charge > 0 && (
-                  <p>
-                    <span className="font-bold text-moss-900">
-                      {viewDetailOnly.extra_time_note ? viewDetailOnly.extra_time_note : "Penambahan Biaya"}:
-                    </span>{" "}
-                    {rupiah(viewDetailOnly.extra_time_charge)}
-                  </p>
-                )}
-
-                {viewDetailOnly.video_charge > 0 && (
-                  <p><span className="font-bold text-moss-900">Penambahan Video:</span> {rupiah(viewDetailOnly.video_charge)} ({viewDetailOnly.video_note || '-'})</p>
+                ) : (
+                  <>
+                    {viewDetailOnly.extra_time_charge > 0 && (
+                      <p>
+                        <span className="font-bold text-moss-900">
+                          {viewDetailOnly.extra_time_note ? viewDetailOnly.extra_time_note : "Penambahan Biaya"}:
+                        </span>{" "}
+                        {rupiah(viewDetailOnly.extra_time_charge)}
+                      </p>
+                    )}
+                    {viewDetailOnly.video_charge > 0 && (
+                      <p>
+                        <span className="font-bold text-moss-900">
+                          {viewDetailOnly.video_note ? `Video (${viewDetailOnly.video_note})` : "Penambahan Video"}:
+                        </span>{" "}
+                        {rupiah(viewDetailOnly.video_charge)}
+                      </p>
+                    )}
+                  </>
                 )}
 
                 <p><span className="font-bold text-moss-900">Jadwal Sesi:</span> {fmtDate(viewDetailOnly.shoot_date)} ({(viewDetailOnly.start_time || "").substring(0, 5)} - {(viewDetailOnly.end_time || "").substring(0, 5)} WIB)</p>
@@ -792,7 +795,7 @@ export default function Clients() {
                 </Select>
               </div>
 
-              {/* INPUT PENAMBAHAN BIAYA MULTI-ITEM (ARRAY DINAMIS) */}
+              {/* INPUT PENAMBAHAN BIAYA DINAMIS (TANPA KOLOM VIDEO) */}
               <div className="p-3 bg-neutral-50 rounded-2xl border border-moss-900/10 space-y-2.5">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-bold text-moss-900">
@@ -819,7 +822,7 @@ export default function Clients() {
                       type="text" 
                       value={fee.note} 
                       onChange={(e) => updateFeeItem(idx, "note", e.target.value)} 
-                      placeholder="Keterangan (misal: Transport)" 
+                      placeholder="Keterangan (misal: Transport / Video)" 
                       className="bg-white rounded-xl border-moss-900/20 h-9 text-xs flex-1" 
                     />
                     <Input 
@@ -841,30 +844,6 @@ export default function Clients() {
                     </Button>
                   </div>
                 ))}
-              </div>
-
-              {/* INPUT PENAMBAHAN VIDEO TERPISAH */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-neutral-50 rounded-2xl border border-moss-900/10">
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-moss-900">Video Charge (Rp)</label>
-                  <Input 
-                    type="number" 
-                    value={editVideoCharge} 
-                    onChange={(e) => setEditVideoCharge(e.target.value)} 
-                    placeholder="0" 
-                    className="bg-white rounded-xl border-moss-900/20 h-9 text-xs" 
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-moss-900">Keterangan Video</label>
-                  <Input 
-                    type="text" 
-                    value={editVideoNote} 
-                    onChange={(e) => setEditVideoNote(e.target.value)} 
-                    placeholder="Misal: Cinematic video" 
-                    className="bg-white rounded-xl border-moss-900/20 h-9 text-xs" 
-                  />
-                </div>
               </div>
 
               <div className="space-y-1.5">
@@ -934,8 +913,7 @@ export default function Clients() {
 
                     const pkgPrice = Number(selected.package_price || 0);
                     const totalAddFees = additionalFees.reduce((acc, item) => acc + (parseFloat(item.amount) || 0), 0);
-                    const videoC = Number(editVideoCharge || selected.video_charge || 0);
-                    if (Number(val) >= (pkgPrice + totalAddFees + videoC)) {
+                    if (Number(val) >= (pkgPrice + totalAddFees)) {
                       setEditPaymentType("full");
                     }
                   }} 
