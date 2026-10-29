@@ -20,9 +20,17 @@ export default function InvoicePage() {
       setInvoice(data);
       
       const pkgPrice = parseFloat(data.package_price || 0);
-      const extraTime = parseFloat(data.extra_time_charge || 0);
+      
+      // Hitung total dari array additional_fees jika ada, jika tidak pakai extra_time_charge
+      let extraFeesTotal = 0;
+      if (data.additional_fees && Array.isArray(data.additional_fees) && data.additional_fees.length > 0) {
+        extraFeesTotal = data.additional_fees.reduce((acc, item) => acc + (parseFloat(item.amount) || 0), 0);
+      } else {
+        extraFeesTotal = parseFloat(data.extra_time_charge || 0);
+      }
+
       const videoCharge = parseFloat(data.video_charge || 0);
-      const totalKeseluruhan = pkgPrice + extraTime + videoCharge;
+      const totalKeseluruhan = pkgPrice + extraFeesTotal + videoCharge;
       const calcBalance = Math.max(totalKeseluruhan - parseFloat(data.amount_paid || 0), 0);
       
       setAmountPaid(calcBalance > 0 ? calcBalance : "");
@@ -88,10 +96,18 @@ export default function InvoicePage() {
   if (!invoice) return <div className="p-10 text-center text-xs">Invoice tidak valid.</div>;
 
   const packagePrice = parseFloat(invoice.package_price || 0);
-  const extraTimeCharge = parseFloat(invoice.extra_time_charge || 0);
+  
+  // Akumulasi total penambahan biaya
+  let extraFeesTotal = 0;
+  if (invoice.additional_fees && Array.isArray(invoice.additional_fees) && invoice.additional_fees.length > 0) {
+    extraFeesTotal = invoice.additional_fees.reduce((acc, item) => acc + (parseFloat(item.amount) || 0), 0);
+  } else {
+    extraFeesTotal = parseFloat(invoice.extra_time_charge || 0);
+  }
+
   const videoCharge = parseFloat(invoice.video_charge || 0);
   
-  const totalKeseluruhan = packagePrice + extraTimeCharge + videoCharge;
+  const totalKeseluruhan = packagePrice + extraFeesTotal + videoCharge;
   const balanceDue = Math.max(totalKeseluruhan - parseFloat(invoice.amount_paid || 0), 0);
 
   const adminWhatsApp = "628211251570";
@@ -134,10 +150,18 @@ export default function InvoicePage() {
           <span className="font-medium">{rupiah(packagePrice)}</span>
         </div>
 
-        {extraTimeCharge > 0 && (
+        {/* LOOPING BIAYA TAMBAHAN DINAMIS */}
+        {invoice.additional_fees && Array.isArray(invoice.additional_fees) && invoice.additional_fees.length > 0 ? (
+          invoice.additional_fees.map((fee, idx) => (
+            <div key={idx} className="flex justify-between text-amber-700">
+              <span>{fee.note || 'Biaya Tambahan'}:</span>
+              <span className="font-medium">+{rupiah(fee.amount)}</span>
+            </div>
+          ))
+        ) : invoice.extra_time_charge > 0 && (
           <div className="flex justify-between text-amber-700">
             <span>{invoice.extra_time_note ? invoice.extra_time_note : 'Biaya Tambahan'}:</span>
-            <span className="font-medium">+{rupiah(extraTimeCharge)}</span>
+            <span className="font-medium">+{rupiah(invoice.extra_time_charge)}</span>
           </div>
         )}
 
@@ -195,7 +219,6 @@ export default function InvoicePage() {
             Pembayaran Anda sudah LUNAS! Terima kasih.
           </div>
 
-          {/* TOMBOL LIHAT BUKTI PELUNASAN: Hanya muncul di sini setelah lunas / ter-upload */}
           {invoice.proof_file_id && (
             <div className="flex items-center justify-between gap-2 bg-slate-50 p-2.5 rounded-md border border-slate-200">
               <div>
