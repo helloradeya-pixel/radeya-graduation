@@ -21,16 +21,14 @@ export default function InvoicePage() {
       
       const pkgPrice = parseFloat(data.package_price || 0);
       
-      // Hitung total dari array additional_fees jika ada, jika tidak pakai extra_time_charge
       let extraFeesTotal = 0;
       if (data.additional_fees && Array.isArray(data.additional_fees) && data.additional_fees.length > 0) {
         extraFeesTotal = data.additional_fees.reduce((acc, item) => acc + (parseFloat(item.amount) || 0), 0);
       } else {
-        extraFeesTotal = parseFloat(data.extra_time_charge || 0);
+        extraFeesTotal = parseFloat(data.extra_time_charge || 0) + parseFloat(data.video_charge || 0);
       }
 
-      const videoCharge = parseFloat(data.video_charge || 0);
-      const totalKeseluruhan = pkgPrice + extraFeesTotal + videoCharge;
+      const totalKeseluruhan = pkgPrice + extraFeesTotal;
       const calcBalance = Math.max(totalKeseluruhan - parseFloat(data.amount_paid || 0), 0);
       
       setAmountPaid(calcBalance > 0 ? calcBalance : "");
@@ -97,17 +95,14 @@ export default function InvoicePage() {
 
   const packagePrice = parseFloat(invoice.package_price || 0);
   
-  // Akumulasi total penambahan biaya
   let extraFeesTotal = 0;
   if (invoice.additional_fees && Array.isArray(invoice.additional_fees) && invoice.additional_fees.length > 0) {
     extraFeesTotal = invoice.additional_fees.reduce((acc, item) => acc + (parseFloat(item.amount) || 0), 0);
   } else {
-    extraFeesTotal = parseFloat(invoice.extra_time_charge || 0);
+    extraFeesTotal = parseFloat(invoice.extra_time_charge || 0) + parseFloat(invoice.video_charge || 0);
   }
 
-  const videoCharge = parseFloat(invoice.video_charge || 0);
-  
-  const totalKeseluruhan = packagePrice + extraFeesTotal + videoCharge;
+  const totalKeseluruhan = packagePrice + extraFeesTotal;
   const balanceDue = Math.max(totalKeseluruhan - parseFloat(invoice.amount_paid || 0), 0);
 
   const adminWhatsApp = "628211251570";
@@ -158,18 +153,21 @@ export default function InvoicePage() {
               <span className="font-medium">+{rupiah(fee.amount)}</span>
             </div>
           ))
-        ) : invoice.extra_time_charge > 0 && (
-          <div className="flex justify-between text-amber-700">
-            <span>{invoice.extra_time_note ? invoice.extra_time_note : 'Biaya Tambahan'}:</span>
-            <span className="font-medium">+{rupiah(invoice.extra_time_charge)}</span>
-          </div>
-        )}
-
-        {videoCharge > 0 && (
-          <div className="flex justify-between text-amber-700">
-            <span>Penambahan Video {invoice.video_note ? `(${invoice.video_note})` : ''}:</span>
-            <span className="font-medium">+{rupiah(videoCharge)}</span>
-          </div>
+        ) : (
+          <>
+            {invoice.extra_time_charge > 0 && (
+              <div className="flex justify-between text-amber-700">
+                <span>{invoice.extra_time_note ? invoice.extra_time_note : 'Biaya Tambahan'}:</span>
+                <span className="font-medium">+{rupiah(invoice.extra_time_charge)}</span>
+              </div>
+            )}
+            {invoice.video_charge > 0 && (
+              <div className="flex justify-between text-amber-700">
+                <span>{invoice.video_note ? `Video (${invoice.video_note})` : 'Penambahan Video'}:</span>
+                <span className="font-medium">+{rupiah(invoice.video_charge)}</span>
+              </div>
+            )}
+          </>
         )}
 
         <div className="flex justify-between font-bold border-t pt-1.5">
