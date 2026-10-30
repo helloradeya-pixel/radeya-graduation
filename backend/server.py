@@ -62,18 +62,26 @@ MIME_TYPES = {"jpg": "image/jpeg", "jpeg": "image/jpeg", "png": "image/png", "we
 RESEND_API_KEY = os.environ.get("RESEND_API_KEY")
 EMAIL_FROM_NAME = os.environ.get("EMAIL_FROM_NAME", "Radeyaphoto Studio")
 
-# Didefinisikan di atas agar bisa dipakai semua fungsi
 def now_iso():
     return datetime.now(timezone.utc).isoformat()
+
+def calc_additional_fees(b: dict) -> float:
+    """Helper untuk menghitung total biaya tambahan dari array additional_fees atau fallback legacy"""
+    if b.get("additional_fees") and isinstance(b["additional_fees"], list) and len(b["additional_fees"]) > 0:
+        total = 0.0
+        for item in b["additional_fees"]:
+            if isinstance(item, dict):
+                total += float(item.get("amount", 0) or 0)
+            elif hasattr(item, "amount"):
+                total += float(item.amount or 0)
+        return total
+    return float(b.get("extra_time_charge", 0) or 0) + float(b.get("video_charge", 0) or 0)
 
 # ========================================================
 # HELPER STORAGE SYSTEM (BASE64 + AUTO COMPRESS + AUTO CLEANUP)
 # ========================================================
 
 def compress_image(image_bytes: bytes) -> tuple[bytes, str]:
-    """
-    Mengompres foto bukti transfer agar ukurannya hemat di MongoDB (~100-200KB)
-    """
     try:
         img = Image.open(io.BytesIO(image_bytes))
         
@@ -93,10 +101,6 @@ def compress_image(image_bytes: bytes) -> tuple[bytes, str]:
 
 
 async def cleanup_old_proofs(days: int = 30):
-    """
-    Menghapus data gambar bukti bayar (file_data) yang usianya lebih dari 'days' hari
-    agar storage MongoDB Atlas tetap hemat dan tidak penuh.
-    """
     try:
         cutoff_date = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
         
@@ -328,6 +332,10 @@ class PhotographerIn(BaseModel):
 class Photographer(PhotographerIn):
     photographer_id: str
 
+class FeeItem(BaseModel):
+    note: Optional[str] = ""
+    amount: Optional[float] = 0.0
+
 class BookingUpdate(BaseModel):
     status: Optional[Literal["pending", "confirmed", "completed", "cancelled"]] = None
     photographer_id: Optional[str] = None
@@ -336,6 +344,8 @@ class BookingUpdate(BaseModel):
     photographer_fee: Optional[float] = None
     photographer_paid: Optional[bool] = None
     notes: Optional[str] = None
+    
+    additional_fees: Optional[List[FeeItem]] = None
     
     extra_time_charge: Optional[float] = None
     extra_time_note: Optional[str] = None
@@ -480,7 +490,6 @@ async def delete_photographer(photographer_id: str, request: Request):
 @api_router.post("/upload/proof")
 async def upload_proof(file: UploadFile = File(...)):
     try:
-        # Jalankan cleanup otomatis file tua > 30 hari
         await cleanup_old_proofs(days=30)
 
         filename = file.filename or "proof.jpg"
@@ -500,7 +509,6 @@ async def upload_proof(file: UploadFile = File(...)):
                 detail="Ukuran file terlalu besar. Maksimal 6 MB."
             )
         
-        # Kompres gambar
         if ext in ["jpg", "jpeg", "png", "webp"]:
             data, content_type = compress_image(raw_data)
         else:
@@ -509,7 +517,6 @@ async def upload_proof(file: UploadFile = File(...)):
         file_id = f"file_{uuid.uuid4().hex[:12]}"
         encoded_data = base64.b64encode(data).decode("utf-8")
         
-        # Simpan file ke MongoDB Atlas
         await db.files.insert_one({
             "id": file_id,
             "original_filename": filename,
@@ -594,13 +601,19 @@ def gcal_link(b: dict) -> str:
     ig_handle = b['instagram'].strip().lstrip('@')
     ig_url = f"https://instagram.com/{ig_handle}"
 
-    et = float(b.get('extra_time_charge', 0))
-    vc = float(b.get('video_charge', 0))
     extra_details = ""
-    if et > 0:
-        extra_details += f"Extra Time: Rp {et:,.0f} ({b.get('extra_time_note', '-')})\n"
-    if vc > 0:
-        extra_details += f"Penambahan Video: Rp {vc:,.0f} ({b.get('video_note', '-')})\n"
+    if b.get("additional_fees") and isinstance(b["additional_fees"], list) and len(b["additional_fees"]) > 0:
+        for fee in b["additional_fees"]:
+            note = fee.get("note") or "Penambahan Biaya"
+            amt = float(fee.get("amount", 0) or 0)
+            extra_details += f"{note}: Rp {amt:,.0f}\n"
+    else:
+        et = float(b.get('extra_time_charge', 0) or 0)
+        vc = float(b.get('video_charge', 0) or 0)
+        if et > 0:
+            extra_details += f"Extra Time: Rp {et:,.0f} ({b.get('extra_time_note', '-')})\n"
+        if vc > 0:
+            extra_details += f"Penambahan Video: Rp {vc:,.0f} ({b.get('video_note', '-')})\n"
 
     details = quote_plus(
         f"=== DETAIL BOOKING RADEYAPHOTO ===\n\n"
@@ -660,6 +673,7 @@ async def create_booking(
         "full_name": full_name, "email": str(email), "instagram": instagram, "whatsapp": whatsapp,
         "university": university, "study": study,
         "package_id": package_id, "package_name": pkg["name"], "package_price": pkg["price"],
+        "additional_fees": [],
         "extra_time_charge": 0.0, "extra_time_note": "",
         "video_charge": 0.0, "video_note": "",
         "shoot_date": shoot_date, "location": location, "start_time": start_time, "end_time": end_time,
@@ -766,6 +780,10 @@ async def list_bookings(
     
     docs = await db.bookings.find(query, {"_id": 0}).sort("created_at", -1).to_list(1000)
     for d in docs:
+        pkg_price = float(d.get("package_price", 0))
+        add_fees = calc_additional_fees(d)
+        paid = float(d.get("amount_paid", 0))
+        d["balance_due"] = max((pkg_price + add_fees) - paid, 0)
         d["gcal_link"] = gcal_link(d)
     return docs
 
@@ -776,11 +794,10 @@ async def get_booking(booking_id: str):
         raise HTTPException(404, "Booking tidak ditemukan")
     
     pkg_price = float(d.get("package_price", 0))
-    extra_time = float(d.get("extra_time_charge", 0))
-    video = float(d.get("video_charge", 0))
+    add_fees = calc_additional_fees(d)
     paid = float(d.get("amount_paid", 0))
     
-    total_tagihan = pkg_price + extra_time + video
+    total_tagihan = pkg_price + add_fees
     d["balance_due"] = max(total_tagihan - paid, 0)
     
     d["gcal_link"] = gcal_link(d)
@@ -810,11 +827,12 @@ async def update_booking(booking_id: str, body: BookingUpdate, request: Request)
                 upd["photographer_fee"] = pho.get("fee_per_session", 0)
                 
     package_price = float(cur.get("package_price", 0))
-    extra_time = float(upd.get("extra_time_charge", cur.get("extra_time_charge", 0)))
-    video = float(upd.get("video_charge", cur.get("video_charge", 0)))
-    paid_amount = float(upd.get("amount_paid", cur.get("amount_paid", 0)))
     
-    total_tagihan = package_price + extra_time + video
+    merged_doc = {**cur, **upd}
+    total_add_fees = calc_additional_fees(merged_doc)
+    
+    paid_amount = float(upd.get("amount_paid", cur.get("amount_paid", 0)))
+    total_tagihan = package_price + total_add_fees
     upd["balance_due"] = max(total_tagihan - paid_amount, 0)
     
     if "payment_type" not in upd:
@@ -852,7 +870,7 @@ async def update_booking(booking_id: str, body: BookingUpdate, request: Request)
     except Exception as e:
         logger.error(f"Gagal update Notion saat update booking: {e}")
 
-    d["balance_due"] = max((float(d.get("package_price", 0)) + float(d.get("extra_time_charge", 0)) + float(d.get("video_charge", 0))) - float(d.get("amount_paid", 0)), 0)
+    d["balance_due"] = max((float(d.get("package_price", 0)) + calc_additional_fees(d)) - float(d.get("amount_paid", 0)), 0)
     d["gcal_link"] = gcal_link(d)
     return d
 
@@ -863,9 +881,8 @@ async def client_confirm_payment(booking_id: str, body: ClientPaymentConfirm):
         raise HTTPException(404, "Booking tidak ditemukan")
     
     package_price = float(cur.get("package_price", 0))
-    extra_time = float(cur.get("extra_time_charge", 0))
-    video = float(cur.get("video_charge", 0))
-    total_tagihan = package_price + extra_time + video
+    total_add_fees = calc_additional_fees(cur)
+    total_tagihan = package_price + total_add_fees
     
     previous_paid = float(cur.get("amount_paid", 0))
     new_input_amount = float(body.amount_paid)
@@ -901,17 +918,28 @@ def rupiah(v) -> str:
 
 def invoice_html(b: dict) -> str:
     pkg_price = float(b.get('package_price', 0))
-    extra_time = float(b.get('extra_time_charge', 0))
-    video = float(b.get('video_charge', 0))
-    total_tagihan = pkg_price + extra_time + video
+    total_add_fees = calc_additional_fees(b)
+    total_tagihan = pkg_price + total_add_fees
     
-    extra_time_row = f"""<tr><td style="padding:8px 0;border-bottom:1px solid #eee">Penambahan Extra Time<br>
-    <span style="color:#71717a;font-size:12px">{b.get('extra_time_note', 'Durasi tambahan')}</span></td>
-    <td align="right" style="padding:8px 0;border-bottom:1px solid #eee">{rupiah(extra_time)}</td></tr>""" if extra_time > 0 else ""
-
-    video_row = f"""<tr><td style="padding:8px 0;border-bottom:1px solid #eee">Penambahan Video<br>
-    <span style="color:#71717a;font-size:12px">{b.get('video_note', 'Paket video')}</span></td>
-    <td align="right" style="padding:8px 0;border-bottom:1px solid #eee">{rupiah(video)}</td></tr>""" if video > 0 else ""
+    extra_rows = ""
+    if b.get("additional_fees") and isinstance(b["additional_fees"], list) and len(b["additional_fees"]) > 0:
+        for fee in b["additional_fees"]:
+            note = fee.get("note") or "Penambahan Biaya"
+            amt = float(fee.get("amount", 0) or 0)
+            if amt > 0:
+                extra_rows += f"""<tr><td style="padding:8px 0;border-bottom:1px solid #eee">{note}</td>
+                <td align="right" style="padding:8px 0;border-bottom:1px solid #eee">{rupiah(amt)}</td></tr>"""
+    else:
+        extra_time = float(b.get('extra_time_charge', 0) or 0)
+        video = float(b.get('video_charge', 0) or 0)
+        if extra_time > 0:
+            extra_rows += f"""<tr><td style="padding:8px 0;border-bottom:1px solid #eee">Penambahan Extra Time<br>
+            <span style="color:#71717a;font-size:12px">{b.get('extra_time_note', 'Durasi tambahan')}</span></td>
+            <td align="right" style="padding:8px 0;border-bottom:1px solid #eee">{rupiah(extra_time)}</td></tr>"""
+        if video > 0:
+            extra_rows += f"""<tr><td style="padding:8px 0;border-bottom:1px solid #eee">Penambahan Video<br>
+            <span style="color:#71717a;font-size:12px">{b.get('video_note', 'Paket video')}</span></td>
+            <td align="right" style="padding:8px 0;border-bottom:1px solid #eee">{rupiah(video)}</td></tr>"""
 
     notes_section = f"""<p style="margin:4px 0;"><span style="font-weight:600;">Catatan:</span> {b.get('notes', '-')}</p>""" if b.get('notes') else ""
 
@@ -919,8 +947,7 @@ def invoice_html(b: dict) -> str:
     <tr><td style="padding:8px 0;border-bottom:1px solid #eee">{b['package_name']}<br>
     <span style="color:#71717a;font-size:12px">{b['shoot_date']} · {b['start_time']}-{b['end_time']} · {b['location']}</span></td>
     <td align="right" style="padding:8px 0;border-bottom:1px solid #eee">{rupiah(pkg_price)}</td></tr>
-    {extra_time_row}
-    {video_row}"""
+    {extra_rows}"""
     
     return f"""<div style="font-family:sans-serif;max-width:640px;margin:0 auto;background:#ffffff;padding:24px;border-radius:8px;border:1px solid rgba(6,95,70,0.1);color:#2C2A29;">
 <table width="100%" cellpadding="0" cellspacing="0"><tr>
@@ -968,10 +995,9 @@ async def get_invoice(booking_id: str):
     if not b:
         raise HTTPException(404, "Booking tidak ditemukan")
     pkg = float(b.get("package_price", 0))
-    et = float(b.get("extra_time_charge", 0))
-    vc = float(b.get("video_charge", 0))
+    add_fees = calc_additional_fees(b)
     paid = float(b.get("amount_paid", 0))
-    b["balance_due"] = max((pkg + et + vc) - paid, 0)
+    b["balance_due"] = max((pkg + add_fees) - paid, 0)
     return {"invoice_number": b["invoice_number"], "html": invoice_html(b), "booking": b}
 
 @api_router.post("/bookings/{booking_id}/send-invoice")
@@ -981,10 +1007,9 @@ async def send_invoice(booking_id: str, request: Request):
     if not b:
         raise HTTPException(404, "Booking tidak ditemukan")
     pkg = float(b.get("package_price", 0))
-    et = float(b.get("extra_time_charge", 0))
-    vc = float(b.get("video_charge", 0))
+    add_fees = calc_additional_fees(b)
     paid = float(b.get("amount_paid", 0))
-    b["balance_due"] = max((pkg + et + vc) - paid, 0)
+    b["balance_due"] = max((pkg + add_fees) - paid, 0)
     try:
         eid = await send_email(b["email"], f"Invoice {b['invoice_number']} — Booking Foto Graduation", invoice_html(b))
     except Exception as e:
@@ -1021,7 +1046,7 @@ async def analytics(
     
     active_bookings = [b for b in bookings if b.get("status") != "cancelled"]
     
-    outstanding = sum(max((float(b.get("package_price", 0)) + float(b.get("extra_time_charge", 0)) + float(b.get("video_charge", 0))) - float(b.get("amount_paid", 0)), 0) for b in active_bookings)
+    outstanding = sum(max((float(b.get("package_price", 0)) + calc_additional_fees(b)) - float(b.get("amount_paid", 0)), 0) for b in active_bookings)
     total_turnover = raw_total_income + outstanding
     
     fee_total = sum(b.get("photographer_fee", 0) for b in active_bookings if b.get("photographer_id"))
@@ -1065,7 +1090,7 @@ async def analytics(
 
     per_pkg = {}
     for b in active_bookings:
-        pkg_revenue = float(b.get("package_price", 0)) + float(b.get("extra_time_charge", 0)) + float(b.get("video_charge", 0))
+        pkg_revenue = float(b.get("package_price", 0)) + calc_additional_fees(b)
         p = per_pkg.setdefault(b["package_name"], {"name": b["package_name"], "count": 0, "revenue": 0.0})
         p["count"] += 1
         p["revenue"] += pkg_revenue
@@ -1086,7 +1111,7 @@ async def analytics(
         is_dp = b["payment_type"] == "dp"
         mm["dp" if is_dp else "full"] += b["amount_paid"]
         
-        total_price_client = float(b.get("package_price", 0)) + float(b.get("extra_time_charge", 0)) + float(b.get("video_charge", 0))
+        total_price_client = float(b.get("package_price", 0)) + calc_additional_fees(b)
         mm["clients"].append({
             "booking_id": b.get("booking_id"),
             "client_name": b.get("full_name"),
@@ -1104,7 +1129,7 @@ async def analytics(
 
     upcoming = sorted([b for b in active_bookings if b.get("shoot_date", "") >= datetime.now(timezone.utc).strftime("%Y-%m-%d")], key=lambda x: (x["shoot_date"], x["start_time"]))[:5]
     for u in upcoming:
-        u["balance_due"] = max((float(u.get("package_price", 0)) + float(u.get("extra_time_charge", 0)) + float(u.get("video_charge", 0))) - float(u.get("amount_paid", 0)), 0)
+        u["balance_due"] = max((float(u.get("package_price", 0)) + calc_additional_fees(u)) - float(u.get("amount_paid", 0)), 0)
         u["gcal_link"] = gcal_link(u)
 
     return {
