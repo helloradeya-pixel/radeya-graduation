@@ -12,7 +12,7 @@ import httpx
 import bcrypt
 from PIL import Image
 from dotenv import load_dotenv
-from fastapi import FastAPI, APIRouter, HTTPException, UploadFile, File, Form, Header, Query, Request, Response
+from fastapi import FastAPI, APIRouter, HTTPException, UploadFile, File, Form, Header, Query, Request, Response, BackgroundTasks
 from fastapi.responses import Response as FastResponse
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -76,6 +76,94 @@ def calc_additional_fees(b: dict) -> float:
                 total += float(item.amount or 0)
         return total
     return float(b.get("extra_time_charge", 0) or 0) + float(b.get("video_charge", 0) or 0)
+
+# ========================================================
+# HELPER BACKGROUND TASKS (NON-BLOCKING / FAST UI)
+# ========================================================
+
+async def run_new_booking_syncs(doc: dict, fbc: str, fbp: str, event_id: str, pkg_name: str):
+    """Jalan di background pas ada booking baru masuk"""
+    try:
+        await send_capi_purchase(doc, fbc=fbc, fbp=fbp, event_id=event_id)
+    except Exception as e:
+        logger.error(f"[BACKGROUND] Gagal kirim CAPI: {e}")
+
+    sheet_synced = False
+    drive_link = ""
+    try:
+        sheet_url = "https://script.google.com/macros/s/AKfycbzeRuDOGTgYNquypvAqPuvSoLKx1JRcCkDrVjohYdWmEo3dtKD5X46ruMkYV4d7VIHU/exec"
+        sheet_payload = {
+            "invoice_number": doc['invoice_number'],
+            "full_name": doc['full_name'],
+            "email": str(doc['email']),
+            "instagram": doc['instagram'],
+            "whatsapp": doc['whatsapp'],
+            "university": doc['university'],
+            "study": doc['study'],
+            "package_name": pkg_name,
+            "shoot_date": doc['shoot_date'],
+            "time_slot": f"{doc['start_time']} - {doc['end_time']}",
+            "location": doc['location'],
+            "payment_type": "DP" if doc['payment_type'] == "dp" else "Full Payment",
+            "amount_paid": float(doc['amount_paid']),
+            "notes": doc.get('notes', '-'),
+            "status": "pending"
+        }
+        async with httpx.AsyncClient(timeout=15, follow_redirects=True) as sheet_client:
+            resp = await sheet_client.post(sheet_url, json=sheet_payload)
+            content_type = resp.headers.get("content-type", "")
+            if resp.status_code < 400 and "application/json" in content_type:
+                sheet_synced = True
+                res_data = resp.json()
+                drive_link = res_data.get("drive_link", "")
+    except Exception as e:
+        logger.error(f"[BACKGROUND] Gagal kirim ke spreadsheet/drive: {e}")
+
+    await db.bookings.update_one(
+        {"booking_id": doc['booking_id']},
+        {"$set": {"sheet_synced": sheet_synced, "drive_link": drive_link}}
+    )
+
+    try:
+        await send_to_notion(doc, pkg_name, drive_link=drive_link)
+    except Exception as e:
+        logger.error(f"[BACKGROUND] Gagal kirim ke Notion: {e}")
+
+
+async def run_update_booking_syncs(booking_id: str):
+    """Jalan di background pas admin update booking / assign FG"""
+    d = await db.bookings.find_one({"booking_id": booking_id}, {"_id": 0})
+    if not d:
+        return
+
+    try:
+        sheet_url = "https://script.google.com/macros/s/AKfycbzeRuDOGTgYNquypvAqPuvSoLKx1JRcCkDrVjohYdWmEo3dtKD5X46ruMkYV4d7VIHU/exec"
+        payload = {
+            "invoice_number": d['invoice_number'],
+            "full_name": d['full_name'],
+            "email": d['email'],
+            "instagram": d['instagram'],
+            "whatsapp": d['whatsapp'],
+            "university": d['university'],
+            "study": d['study'],
+            "package_name": d['package_name'],
+            "shoot_date": d['shoot_date'],
+            "time_slot": f"{d['start_time']} - {d['end_time']}",
+            "location": d['location'],
+            "payment_type": "DP" if d['payment_type'] == 'dp' else "Full Payment",
+            "amount_paid": float(d['amount_paid']),
+            "notes": d.get('notes', '-'),
+            "status": d['status']
+        }
+        async with httpx.AsyncClient(timeout=15) as client:
+            await client.post(sheet_url, json=payload)
+    except Exception as e:
+        logger.error(f"[BACKGROUND] Gagal sinkronisasi Sheets saat update: {e}")
+
+    try:
+        await update_notion_booking(d, d['package_name'])
+    except Exception as e:
+        logger.error(f"[BACKGROUND] Gagal update Notion saat update booking: {e}")
 
 # ========================================================
 # HELPER STORAGE SYSTEM (BASE64 + AUTO COMPRESS + AUTO CLEANUP)
@@ -648,6 +736,7 @@ async def next_invoice_number() -> str:
 
 @api_router.post("/bookings")
 async def create_booking(
+    background_tasks: BackgroundTasks,
     full_name: str = Form(...), email: str = Form(...), instagram: str = Form(...),
     whatsapp: str = Form(...), university: str = Form(...), study: str = Form(...),
     package_id: str = Form(...), shoot_date: str = Form(...), location: str = Form(...),
@@ -683,57 +772,13 @@ async def create_booking(
         "drive_link": "", "status": "pending", "photographer_id": None, "photographer_name": None,
         "photographer_fee": 0.0, "photographer_paid": False,
         "invoice_sent": False, "created_at": now_iso(),
+        "sheet_synced": False
     }
     
     await db.bookings.insert_one(dict(doc))
     
-    try:
-        await send_capi_purchase(doc, fbc=fbc, fbp=fbp, event_id=event_id)
-    except Exception as e:
-        logger.error(f"Gagal kirim CAPI: {e}")
-
-    sheet_synced = False
-    drive_link = ""
-    try:
-        sheet_url = "https://script.google.com/macros/s/AKfycbzeRuDOGTgYNquypvAqPuvSoLKx1JRcCkDrVjohYdWmEo3dtKD5X46ruMkYV4d7VIHU/exec"
-        sheet_payload = {
-            "invoice_number": doc['invoice_number'],
-            "full_name": full_name,
-            "email": str(email),
-            "instagram": instagram,
-            "whatsapp": whatsapp,
-            "university": university,
-            "study": study,
-            "package_name": pkg['name'],
-            "shoot_date": shoot_date,
-            "time_slot": f"{start_time} - {end_time}",
-            "location": location,
-            "payment_type": "DP" if actual_payment_type == "dp" else "Full Payment",
-            "amount_paid": float(amount_paid),
-            "notes": cleaned_notes if cleaned_notes else "-",
-            "status": "pending"
-        }
-        async with httpx.AsyncClient(timeout=15, follow_redirects=True) as sheet_client:
-            resp = await sheet_client.post(sheet_url, json=sheet_payload)
-            content_type = resp.headers.get("content-type", "")
-            if resp.status_code < 400 and "application/json" in content_type:
-                sheet_synced = True
-                res_data = resp.json()
-                drive_link = res_data.get("drive_link", "")
-    except Exception as e:
-        logger.error(f"Gagal kirim ke spreadsheet/drive: {e}")
-
-    await db.bookings.update_one(
-        {"booking_id": booking_id},
-        {"$set": {"sheet_synced": sheet_synced, "drive_link": drive_link}}
-    )
-    doc["sheet_synced"] = sheet_synced
-    doc["drive_link"] = drive_link
-
-    try:
-        await send_to_notion(doc, pkg["name"], drive_link=drive_link)
-    except Exception as e:
-        logger.error(f"Gagal kirim ke Notion: {e}")
+    # Non-blocking sync di background
+    background_tasks.add_task(run_new_booking_syncs, doc, fbc, fbp, event_id, pkg["name"])
 
     doc["gcal_link"] = gcal_link(doc)
     from urllib.parse import quote
@@ -778,7 +823,7 @@ async def list_bookings(
         query["$or"] = [{"full_name": {"$regex": q, "$options": "i"}}, {"email": {"$regex": q, "$options": "i"}},
                         {"university": {"$regex": q, "$options": "i"}}, {"invoice_number": {"$regex": q, "$options": "i"}}]
     
-    docs = await db.bookings.find(query, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    docs = await db.bookings.find(query, {"_id": 0}).sort("created_at", -1).to_list(200)
     for d in docs:
         pkg_price = float(d.get("package_price", 0))
         add_fees = calc_additional_fees(d)
@@ -804,18 +849,23 @@ async def get_booking(booking_id: str):
     return d
 
 @api_router.put("/bookings/{booking_id}")
-async def update_booking(booking_id: str, body: BookingUpdate, request: Request):
+async def update_booking(
+    booking_id: str, 
+    body: BookingUpdate, 
+    request: Request,
+    background_tasks: BackgroundTasks
+):
     await get_current_user(request)
     cur = await db.bookings.find_one({"booking_id": booking_id}, {"_id": 0})
     if not cur:
         raise HTTPException(404, "Booking tidak ditemukan")
     
-    body_dict = body.model_dump()
-    upd = {k: v for k, v in body_dict.items() if v is not None}
+    # Hanya ekstrak field yang sengaja dikirim oleh frontend (mencegah data FG terhapus otomatis)
+    upd = body.model_dump(exclude_unset=True)
     
-    if "photographer_id" in body_dict:
-        pho_id = body_dict["photographer_id"]
-        if not pho_id or pho_id == "none" or pho_id == "" or pho_id == "null":
+    if "photographer_id" in upd:
+        pho_id = upd["photographer_id"]
+        if not pho_id or pho_id in ["none", "", "null"]:
             upd["photographer_id"] = None
             upd["photographer_name"] = None
             upd["photographer_fee"] = 0.0
@@ -827,7 +877,6 @@ async def update_booking(booking_id: str, body: BookingUpdate, request: Request)
                 upd["photographer_fee"] = pho.get("fee_per_session", 0)
                 
     package_price = float(cur.get("package_price", 0))
-    
     merged_doc = {**cur, **upd}
     total_add_fees = calc_additional_fees(merged_doc)
     
@@ -841,34 +890,8 @@ async def update_booking(booking_id: str, body: BookingUpdate, request: Request)
     await db.bookings.update_one({"booking_id": booking_id}, {"$set": upd})
     d = await db.bookings.find_one({"booking_id": booking_id}, {"_id": 0})
     
-    try:
-        sheet_url = "https://script.google.com/macros/s/AKfycbzeRuDOGTgYNquypvAqPuvSoLKx1JRcCkDrVjohYdWmEo3dtKD5X46ruMkYV4d7VIHU/exec"
-        payload = {
-            "invoice_number": d['invoice_number'],
-            "full_name": d['full_name'],
-            "email": d['email'],
-            "instagram": d['instagram'],
-            "whatsapp": d['whatsapp'],
-            "university": d['university'],
-            "study": d['study'],
-            "package_name": d['package_name'],
-            "shoot_date": d['shoot_date'],
-            "time_slot": f"{d['start_time']} - {d['end_time']}",
-            "location": d['location'],
-            "payment_type": "DP" if d['payment_type'] == 'dp' else "Full Payment",
-            "amount_paid": float(d['amount_paid']),
-            "notes": d.get('notes', '-'),
-            "status": d['status']
-        }
-        async with httpx.AsyncClient(timeout=15) as client:
-            await client.post(sheet_url, json=payload)
-    except Exception as e:
-        logger.error(f"Gagal sinkronisasi Sheets/Calendar saat update: {e}")
-
-    try:
-        await update_notion_booking(d, d['package_name'])
-    except Exception as e:
-        logger.error(f"Gagal update Notion saat update booking: {e}")
+    # Sync background ke Sheets & Notion
+    background_tasks.add_task(run_update_booking_syncs, booking_id)
 
     d["balance_due"] = max((float(d.get("package_price", 0)) + calc_additional_fees(d)) - float(d.get("amount_paid", 0)), 0)
     d["gcal_link"] = gcal_link(d)
@@ -1033,13 +1056,13 @@ async def analytics(
     elif month and month != "all":
         query["shoot_date"] = {"$regex": f"^{month}"}
         
-    bookings = await db.bookings.find(query, {"_id": 0}).to_list(5000)
+    bookings = await db.bookings.find(query, {"_id": 0}).to_list(1000)
     
     dp_income = sum(b["amount_paid"] for b in bookings if b["payment_type"] == "dp")
     full_income = sum(b["amount_paid"] for b in bookings if b["payment_type"] == "full")
     raw_total_income = dp_income + full_income
 
-    prive_docs = await db.prive_records.find({}, {"_id": 0}).to_list(5000)
+    prive_docs = await db.prive_records.find({}, {"_id": 0}).to_list(1000)
     total_prive = sum(p["amount"] for p in prive_docs)
     
     total_income = max(raw_total_income - total_prive, 0)
@@ -1127,7 +1150,15 @@ async def analytics(
     for b in bookings:
         status_counts[b["status"]] = status_counts.get(b["status"], 0) + 1
 
-    upcoming = sorted([b for b in active_bookings if b.get("shoot_date", "") >= datetime.now(timezone.utc).strftime("%Y-%m-%d")], key=lambda x: (x["shoot_date"], x["start_time"]))[:5]
+    # Timezone WIB (+7)
+    wib_now = datetime.now(timezone.utc) + timedelta(hours=7)
+    today_wib = wib_now.strftime("%Y-%m-%d")
+
+    upcoming = sorted(
+        [b for b in active_bookings if b.get("shoot_date", "") >= today_wib], 
+        key=lambda x: (x["shoot_date"], x["start_time"])
+    )[:5]
+
     for u in upcoming:
         u["balance_due"] = max((float(u.get("package_price", 0)) + calc_additional_fees(u)) - float(u.get("amount_paid", 0)), 0)
         u["gcal_link"] = gcal_link(u)
