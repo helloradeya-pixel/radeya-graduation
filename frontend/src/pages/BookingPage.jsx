@@ -340,7 +340,7 @@ export default function BookingPage() {
               <Input data-testid="input-end-time" type="time" required value={f.end_time} onChange={set("end_time")} className="h-11 rounded-xl bg-[#F8F6F0]/50 border-[#EBE7DF] w-full" />
             </Field>
             <Field label="Catatan (opsional)" full>
-              <Textarea data-testid="input-notes" value={f.notes} onChange={set("notes")} placeholder="Request khusus,penambahan video,dll." rows={3} className="rounded-xl bg-[#F8F6F0]/50 border-[#EBE7DF] w-full" />
+              <Textarea data-testid="input-notes" value={f.notes} onChange={set("notes")} placeholder="Request khusus, Strobist ,dll." rows={3} className="rounded-xl bg-[#F8F6F0]/50 border-[#EBE7DF] w-full" />
             </Field>
           </Section>
 
