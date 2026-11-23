@@ -424,74 +424,48 @@ export default function BookingPage() {
           <div className="rounded-2xl bg-[#F8F6F0] p-6 border border-[#EBE7DF] space-y-4">
             <div className="flex items-center gap-2 text-[#2C2A29] font-serif font-semibold text-base">
               <FileText className="h-5 w-5 text-[#BEAF9D]" />
-              <span>Terms & Conditions (T&C)</span>
+              <span>Syarat dan Ketentuan Pemesanan (T&C)</span>
             </div>
-            <p className="text-xs sm:text-sm text-[#666666]">
-              Sebelum dan sesudah pembayaran DP, klien wajib telah membaca dan menyetujui seluruh ketentuan berikut.
-            </p>
             
             <div className="space-y-4 text-xs sm:text-sm text-[#666666] leading-relaxed">
               <div>
-                <span className="font-semibold text-[#2C2A29]">1. Booking & Pembayaran</span>
+                <span className="font-semibold text-[#2C2A29]">1. Pembatalan</span>
+                <p className="mt-0.5">DP (Down Payment) yang sudah dibayarkan tidak dapat dikembalikan (non-refundable) apabila terjadi pembatalan dari pihak klien.</p>
+              </div>
+
+              <div>
+                <span className="font-semibold text-[#2C2A29]">2. Pelunasan (Full Payment)</span>
+                <p className="mt-0.5">Pelunasan wajib dilakukan paling lambat H-1 sebelum tanggal sesi pemotretan.</p>
+              </div>
+
+              <div>
+                <span className="font-semibold text-[#2C2A29]">3. Perubahan Jadwal (Reschedule)</span>
+                <p className="mt-0.5">Sesi foto tidak dapat di-reschedule pada Hari H. Apabila klien berhalangan hadir tanpa informasi, maka pemesanan dianggap cancel (batal). Reschedule hanya dapat dilakukan sebelum Hari H apabila slot tanggal dan jam pengganti masih tersedia. Kabari admin secepatnya ya!</p>
+              </div>
+
+              <div>
+                <span className="font-semibold text-[#2C2A29]">4. Waktu & Ketepatan Sesi</span>
+                <p className="mt-0.5">Pastikan tanggal dan jam sesi foto yang telah dipesan sudah sesuai. Klien diharapkan hadir tepat waktu dengan batas toleransi keterlambatan maksimal 5 menit agar durasi sesi tetap optimal.</p>
+              </div>
+
+              <div>
+                <span className="font-semibold text-[#2C2A29]">5. Penyerahan File & Editing</span>
                 <ul className="mt-1 space-y-1 list-disc list-inside">
-                  <li>Follow Instagram <strong>@radeya.graduation</strong> dan TikTok <strong>@radeyaphoto</strong>[span_0](start_span)[span_0](end_span).</li>
-                  <li>Pastikan ketersediaan slot kepada admin sebelum booking[span_1](start_span)[span_1](end_span).</li>
-                  <li>Booking dikonfirmasi setelah DP 200rb diterima melalui <strong>BLU by BCA Digital 005506102026 a.n. Ade Sutiawan</strong>[span_2](start_span)[span_2](end_span).</li>
-                  <li>DP bersifat <strong>non-refundable</strong>, kecuali dalam kondisi force majeure ketidaksiapan dari pihak RADEYA[span_3](start_span)[span_3](end_span).</li>
-                  <li>Wajib pelunasan maksimal <strong>H-1</strong> sebelum sesi[span_4](start_span)[span_4](end_span).</li>
+                  <li>Seluruh file foto mentah (raw/original) dapat diakses maksimal <strong>H+1</strong> setelah sesi pemotretan.</li>
+                  <li>Batas waktu pemilihan foto untuk di-edit adalah <strong>H+7</strong> setelah file original diberikan.</li>
+                  <li>Hasil foto pilihan (edited) dapat diakses dalam <strong>H+3 hingga maksimal H+7</strong> setelah klien menyerahkan daftar foto pilihan (proses pengerjaan menyesuaikan antrean pada periode padat wisuda).</li>
+                  <li>Editing foto terbatas pada penyesuaian warna (color toning) dan pencahayaan (exposure adjustment).</li>
                 </ul>
               </div>
 
               <div>
-                <span className="font-semibold text-[#2C2A29]">2. Jadwal & Reschedule</span>
-                <ul className="mt-1 space-y-1 list-disc list-inside">
-                  <li>Informasi final mengenai jam, lokasi, dan lainnya diberikan maksimal <strong>H-10</strong>, menyesuaikan ketersediaan slot[span_5](start_span)[span_5](end_span).</li>
-                  <li>Reschedule diperbolehkan <strong>1 kali</strong>, maksimal <strong>H-10</strong> dan mengikuti ketersediaan jadwal[span_6](start_span)[span_6](end_span).</li>
-                  <li>Reschedule lainnya sebelum <strong>H-5</strong> dikenakan biaya <strong>Rp100.000</strong>[span_7](start_span)[span_7](end_span).</li>
-                  <li>Reschedule setelah <strong>H-5</strong> dikenakan biaya <strong>Rp200.000</strong>[span_8](start_span)[span_8](end_span).</li>
-                  <li>Reschedule di <strong>Hari H</strong> dikenakan <strong>Rp300.000</strong>[span_9](start_span)[span_9](end_span).</li>
-                  <li>Pembatalan dari pihak klien tidak disertai pengembalian DP[span_10](start_span)[span_10](end_span).</li>
-                  <li>Apabila terjadi hujan deras atau kondisi cuaca/lokasi yang tidak memungkinkan, perubahan jadwal dapat dikoordinasikan bersama admin[span_11](start_span)[span_11](end_span). Pengecualian biaya reschedule akan disesuaikan dengan kondisi dan hasil koordinasi[span_12](start_span)[span_12](end_span).</li>
-                </ul>
+                <span className="font-semibold text-[#2C2A29]">6. Penyimpanan Berkas (File Storage)</span>
+                <p className="mt-0.5">Hasil foto akan disimpan melalui tautan Google Drive dengan masa aktif maksimal 1 bulan sejak file dikirimkan. Setelah melewati batas waktu tersebut, file akan terhapus otomatis. Klien dianjurkan untuk segera melakukan backup mandiri.</p>
               </div>
 
               <div>
-                <span className="font-semibold text-[#2C2A29]">3. Ketentuan Sesi Foto</span>
-                <ul className="mt-1 space-y-1 list-disc list-inside">
-                  <li>Durasi pemotretan mengikuti paket yang dipilih dan <strong>dihitung sejak jam booking</strong>[span_13](start_span)[span_13](end_span).</li>
-                  <li>Klien wajib <strong>hadir tepat waktu</strong>[span_14](start_span)[span_14](end_span). Keterlambatan tetap mengurangi durasi sesi dan tidak mendapatkan tambahan waktu[span_15](start_span)[span_15](end_span).</li>
-                  <li>Permintaan pose, referensi, dan mood board hanya berasal dari portofolio IG <strong>@radeya.graduation</strong>[span_16](start_span)[span_16](end_span).</li>
-                  <li>Penambahan peserta, durasi, atau layanan lainnya mengikuti <strong>ketentuan add-ons</strong> dan wajib dikonfirmasi kepada admin[span_17](start_span)[span_17](end_span).</li>
-                </ul>
-              </div>
-
-              <div>
-                <span className="font-semibold text-[#2C2A29]">4. Pengiriman & Editing</span>
-                <ul className="mt-1 space-y-1 list-disc list-inside">
-                  <li>Seluruh file foto dikirim maksimal <strong>H+1</strong> setelah pemotretan melalui Google Drive[span_18](start_span)[span_18](end_span).</li>
-                  <li>Klien wajib memilih foto yang akan diedit maksimal <strong>7 hari</strong> setelah file diterima[span_19](start_span)[span_19](end_span).</li>
-                  <li>Keterlambatan pemilihan foto dari klien dapat menyebabkan mundurnya estimasi pengerjaan editing[span_20](start_span)[span_20](end_span).</li>
-                  <li>Proses editing berlangsung <strong>1-14 hari kerja</strong> setelah pilihan foto diterima[span_21](start_span)[span_21](end_span).</li>
-                  <li>Hasil akhir dikirim melalui WhatsApp admin[span_22](start_span)[span_22](end_span).</li>
-                  <li>Editing standar mencakup <strong>penyesuaian warna, tone, dan pencahayaan</strong>[span_23](start_span)[span_23](end_span). Retouch detail atau manipulasi foto khusus tidak termasuk dalam layanan standar[span_24](start_span)[span_24](end_span).</li>
-                </ul>
-              </div>
-
-              <div>
-                <span className="font-semibold text-[#2C2A29]">5. Penyimpanan File</span>
-                <ul className="mt-1 space-y-1 list-disc list-inside">
-                  <li>File Google Drive dapat diakses maksimal <strong>H+30</strong> setelah hasil akhir dikirim[span_25](start_span)[span_25](end_span).</li>
-                  <li>Permintaan pengiriman ulang setelah H+30 dikenakan biaya <strong>Rp150.000</strong>, selama file masih tersedia di arsip Radeya[span_26](start_span)[span_26](end_span).</li>
-                </ul>
-              </div>
-
-              <div>
-                <span className="font-semibold text-[#2C2A29]">6. Publikasi & Ketentuan Lain</span>
-                <ul className="mt-1 space-y-1 list-disc list-inside">
-                  <li>Klien wajib mencantumkan tag <strong>@radeya.graduation</strong> saat mengunggah hasil foto ke Instagram atau TikTok[span_27](start_span)[span_27](end_span).</li>
-                  <li>Seluruh perubahan jadwal, lokasi, peserta, dan layanan wajib dikomunikasikan melalui admin[span_28](start_span)[span_28](end_span).</li>
-                  <li>Hal-hal di luar ketentuan ini akan dikoordinasikan lebih lanjut bersama admin Radeya Graduation[span_29](start_span)[span_29](end_span).</li>
-                </ul>
+                <span className="font-semibold text-[#2C2A29]">7. Ketentuan Umum</span>
+                <p className="mt-0.5">Dengan melakukan pembayaran DP, klien dianggap telah membaca dan menyetujui seluruh syarat dan ketentuan di atas.</p>
               </div>
             </div>
           </div>
